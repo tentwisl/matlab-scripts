@@ -157,9 +157,10 @@ public class VillagerCommandHandler extends EntityCommandHandler<VillagerEntityM
                     memories.modHearts(-200);
                 }
                 entity.getVillagerBrain().modifyMoodValue(-5);
-                entity.getRelationships().endRelationShip(RelationshipState.SINGLE);
+                // Dissolve only this specific marriage, leaving other spouses intact on both sides
+                entity.getRelationships().endRelationshipWith(player.getUuid());
                 PlayerSaveData playerData = PlayerSaveData.get(player);
-                playerData.endRelationShip(RelationshipState.SINGLE);
+                playerData.endRelationshipWith(entity.getUuid());
                 return true;
             }
             case "execute" -> {

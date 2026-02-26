@@ -23,19 +23,17 @@ public class MatchmakersRingItem extends Item implements SpecialCaseGift {
             return false;
         }
 
-        // ensure our target isn't married already or young
-        if (villager.getRelationships().isMarried() || villager.getAgeState() != AgeState.ADULT) {
+        // ensure target is an adult
+        if (villager.getAgeState() != AgeState.ADULT) {
             villager.sendChatMessage(player, "interaction.matchmaker.fail.married");
             return false;
         }
 
-        // look for partner
+        // look for nearest adult non-baby villager (family and attraction checks intentionally removed)
         Optional<VillagerEntityMCA> target = WorldUtils.getCloseEntities(villager.getWorld(), villager, 5.0).stream()
                 .filter(v -> v != villager && v instanceof VillagerEntityMCA)
                 .map(VillagerEntityMCA.class::cast)
-                .filter(v -> !v.isBaby() && !v.getRelationships().isMarried())
-                .filter(v -> !v.getRelationships().getFamilyEntry().isRelative(villager.getUuid()))
-                .filter(villager::canBeAttractedTo)
+                .filter(v -> !v.isBaby())
                 .min(Comparator.comparingDouble(villager::distanceTo));
 
         // ensure we found a nearby villager

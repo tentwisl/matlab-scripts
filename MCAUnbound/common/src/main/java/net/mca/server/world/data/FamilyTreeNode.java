@@ -18,6 +18,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -43,6 +44,9 @@ public final class FamilyTreeNode implements Serializable {
 
     private UUID partner = Util.NIL_UUID;
     private RelationshipState relationshipState = RelationshipState.SINGLE;
+
+    // All current spouses (supports polygamy). partner is kept as the primary/most-recent spouse for display.
+    private final Set<UUID> spouses = new HashSet<>();
 
     private boolean deceased;
 
@@ -77,6 +81,12 @@ public final class FamilyTreeNode implements Serializable {
             partner = nbt.getUuid("spouse");
         }
         relationshipState = RelationshipState.byId(nbt.getInt("marriageState"));
+        // Load multi-spouse set; fall back to legacy single spouse if new key absent
+        if (nbt.contains("spouses")) {
+            spouses.addAll(NbtHelper.toList(nbt.getList("spouses", NbtElement.COMPOUND_TYPE), c -> ((NbtCompound)c).getUuid("uuid")));
+        } else if (isValid(partner) && relationshipState.isMarried()) {
+            spouses.add(partner);
+        }
     }
 
     public UUID id() {
@@ -167,19 +177,51 @@ public final class FamilyTreeNode implements Serializable {
     }
 
     public void updatePartner(@Nullable Entity newPartner, @Nullable RelationshipState state) {
-        //cancel relationship with previous partner
-        if (!this.partner.equals(Util.NIL_UUID) && (newPartner == null || !this.partner.equals(newPartner.getUuid()))) {
-            getRoot().getOrEmpty(this.partner).ifPresent(n -> {
-                n.partner = Util.NIL_UUID;
-                n.relationshipState = RelationshipState.SINGLE;
-            });
-        }
+        RelationshipState newState = (state == null && newPartner == null) ? RelationshipState.SINGLE : state;
 
-        this.partner = newPartner == null ? Util.NIL_UUID : newPartner.getUuid();
-        this.relationshipState = state == null && newPartner == null ? RelationshipState.SINGLE : state;
+        if (newPartner == null) {
+            // End ALL relationships – notify every spouse so they remove this entity too
+            for (UUID spouseId : new HashSet<>(spouses)) {
+                getRoot().getOrEmpty(spouseId).ifPresent(n -> {
+                    n.spouses.remove(this.id);
+                    if (n.partner.equals(this.id)) {
+                        n.partner = n.spouses.isEmpty() ? Util.NIL_UUID : n.spouses.iterator().next();
+                    }
+                    if (n.spouses.isEmpty() && n.relationshipState.isMarried()) {
+                        n.relationshipState = RelationshipState.SINGLE;
+                    }
+                    n.markDirty();
+                });
+            }
+            spouses.clear();
+            this.partner = Util.NIL_UUID;
+            this.relationshipState = newState != null ? newState : RelationshipState.SINGLE;
+        } else {
+            UUID spouseId = newPartner.getUuid();
+            assert newState != null;
 
-        // ensure the family tree has an entry
-        if (newPartner != null) {
+            if (newState == RelationshipState.MARRIED_TO_PLAYER || newState == RelationshipState.MARRIED_TO_VILLAGER) {
+                // Polygamy: add to spouses set without cancelling existing marriages
+                spouses.add(spouseId);
+            } else {
+                // ENGAGED / PROMISED are exclusive to one partner at a time –
+                // cancel the previous non-marriage relationship if there was one
+                if ((this.relationshipState == RelationshipState.ENGAGED || this.relationshipState == RelationshipState.PROMISED)
+                        && isValid(this.partner) && !this.partner.equals(spouseId)) {
+                    getRoot().getOrEmpty(this.partner).ifPresent(n -> {
+                        if (n.partner.equals(this.id)) {
+                            n.partner = Util.NIL_UUID;
+                            if (n.relationshipState == RelationshipState.ENGAGED || n.relationshipState == RelationshipState.PROMISED) {
+                                n.relationshipState = RelationshipState.SINGLE;
+                            }
+                            n.markDirty();
+                        }
+                    });
+                }
+            }
+
+            this.partner = spouseId;
+            this.relationshipState = newState;
             rootNode.getOrCreate(newPartner);
         }
 
@@ -187,9 +229,38 @@ public final class FamilyTreeNode implements Serializable {
     }
 
     public void updatePartner(FamilyTreeNode spouse) {
+        spouses.add(spouse.id());
         this.partner = spouse.id();
         this.relationshipState = spouse.isPlayer ? RelationshipState.MARRIED_TO_PLAYER : RelationshipState.MARRIED_TO_VILLAGER;
         markDirty();
+    }
+
+    /**
+     * Remove a specific spouse without affecting other marriages.
+     */
+    public void removeSpouseById(UUID spouseId) {
+        spouses.remove(spouseId);
+        if (partner.equals(spouseId)) {
+            partner = spouses.isEmpty() ? Util.NIL_UUID : spouses.iterator().next();
+        }
+        if (spouses.isEmpty() && relationshipState.isMarried()) {
+            relationshipState = RelationshipState.SINGLE;
+        }
+        markDirty();
+    }
+
+    /**
+     * Returns all current spouses (read-only view).
+     */
+    public Set<UUID> getSpouses() {
+        return Collections.unmodifiableSet(spouses);
+    }
+
+    /**
+     * Returns true if the given UUID is a current spouse of this entity.
+     */
+    public boolean isSpouse(UUID uuid) {
+        return spouses.contains(uuid);
     }
 
     public Set<UUID> children() {
@@ -378,7 +449,7 @@ public final class FamilyTreeNode implements Serializable {
         if (!children.isEmpty()) {
             return true;
         }
-        if (!partner.equals(Util.NIL_UUID)) {
+        if (!spouses.isEmpty()) {
             return true;
         }
         return !getParents().allMatch(FamilyTreeNode::probablyGenerated);
@@ -423,6 +494,11 @@ public final class FamilyTreeNode implements Serializable {
         nbt.put("children", NbtHelper.fromList(children, child -> {
             NbtCompound n = new NbtCompound();
             n.putUuid("uuid", child);
+            return n;
+        }));
+        nbt.put("spouses", NbtHelper.fromList(spouses, spouseId -> {
+            NbtCompound n = new NbtCompound();
+            n.putUuid("uuid", spouseId);
             return n;
         }));
         return nbt;

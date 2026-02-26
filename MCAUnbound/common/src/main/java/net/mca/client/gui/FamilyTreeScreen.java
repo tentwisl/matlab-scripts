@@ -199,7 +199,11 @@ public class FamilyTreeScreen extends Screen {
 
         private Bounds bounds;
 
+        // A primary display spouse kept for the insertParents() helper; populated from the full spouseList.
         TreeNode spouse;
+
+        // All current spouses, rendered stacked to the left of this node.
+        final List<TreeNode> spouseList = new ArrayList<>();
 
         final UUID id;
 
@@ -233,7 +237,11 @@ public class FamilyTreeScreen extends Screen {
                 this.label.add(Text.translatable("gui.family_tree.label.orphan").formatted(Formatting.GRAY));
             }
 
-            if (node.getRelationshipState() != RelationshipState.SINGLE) {
+            int spouseCount = node.getSpouses().size();
+            if (spouseCount > 1) {
+                this.label.add(Text.translatable("marriage." + node.getRelationshipState().base().getIcon())
+                        .append(Text.literal(" ×" + spouseCount).formatted(Formatting.YELLOW)));
+            } else if (node.getRelationshipState() != RelationshipState.SINGLE) {
                 this.label.add(Text.translatable("marriage." + node.getRelationshipState().base().getIcon()));
             }
 
@@ -245,12 +253,21 @@ public class FamilyTreeScreen extends Screen {
                     }
                 });
 
-                FamilyTreeNode spouse = family.get(node.partner());
-
-                if (spouse != null) {
-                    this.spouse = new TreeNode(spouse, parsed, false);
-                } else if (!children.isEmpty()) {
-                    this.spouse = new TreeNode();
+                // Build list of all spouse nodes (supports polygamy)
+                for (UUID spouseId : node.getSpouses()) {
+                    FamilyTreeNode spouseNode = family.get(spouseId);
+                    if (spouseNode != null) {
+                        TreeNode sn = new TreeNode(spouseNode, parsed, false);
+                        spouseList.add(sn);
+                    }
+                }
+                // Fallback: if no spouse in the data set but children exist, show a placeholder
+                if (spouseList.isEmpty() && !children.isEmpty()) {
+                    spouseList.add(new TreeNode());
+                }
+                // Keep primary spouse reference for insertParents compatibility
+                if (!spouseList.isEmpty()) {
+                    this.spouse = spouseList.get(0);
                 }
             }
         }
@@ -340,11 +357,12 @@ public class FamilyTreeScreen extends Screen {
                 }
             }
 
-            if (spouse != null) {
-                int x = bounds.left - SPOUSE_HORIZONTAL_SPACING;
-                int y = bounds.top + bounds.bottom / 2;
-
-                context.drawHorizontalLine(x, bounds.left - 1, y, 0xffffffff);
+            // Render all spouses stacked vertically to the left
+            if (!spouseList.isEmpty()) {
+                int lineY = bounds.top + bounds.bottom / 2;
+                // Draw the horizontal connector line and relationship icon once
+                int connectorX = bounds.left - SPOUSE_HORIZONTAL_SPACING;
+                context.drawHorizontalLine(connectorX, bounds.left - 1, lineY, 0xffffffff);
 
                 if (relationship == RelationshipState.MARRIED_TO_PLAYER ||
                         relationship == RelationshipState.MARRIED_TO_VILLAGER ||
@@ -352,17 +370,38 @@ public class FamilyTreeScreen extends Screen {
                         relationship == RelationshipState.PROMISED ||
                         relationship == RelationshipState.WIDOW) {
                     Icon icon = MCAScreens.getInstance().getIcon(relationship.getIcon());
-                    context.drawTexture(InteractScreen.ICON_TEXTURES, bounds.left - SPOUSE_HORIZONTAL_SPACING / 2 - 8, y - 8, 0, icon.u(), icon.v(), 16, 16, 256, 256);
+                    context.drawTexture(InteractScreen.ICON_TEXTURES, bounds.left - SPOUSE_HORIZONTAL_SPACING / 2 - 8, lineY - 8, 0, icon.u(), icon.v(), 16, 16, 256, 256);
                 }
 
-                y -= spouse.label.size() * textRenderer.fontHeight / 2;
-                x -= spouse.getWidth() / 2 - 6;
+                // Determine total height of all spouses so we can center them
+                int totalSpouseHeight = 0;
+                for (TreeNode s : spouseList) {
+                    totalSpouseHeight += s.label.size() * textRenderer.fontHeight + 4;
+                }
+                int spouseOffsetY = lineY - totalSpouseHeight / 2;
 
-                matrices.push();
-                matrices.translate(x, y, 0);
+                // Draw vertical connector if there are multiple spouses
+                if (spouseList.size() > 1) {
+                    context.drawVerticalLine(connectorX, lineY, spouseOffsetY + totalSpouseHeight, 0xffffffff);
+                }
 
-                spouse.render(context, mouseX - x, mouseY - y);
-                matrices.pop();
+                for (TreeNode s : spouseList) {
+                    int spouseNodeH = s.label.size() * textRenderer.fontHeight + 4;
+                    int cx = connectorX - s.getWidth() / 2 + 6;
+                    int cy = spouseOffsetY;
+
+                    // Draw a horizontal tick to each additional spouse
+                    if (spouseList.size() > 1) {
+                        context.drawHorizontalLine(connectorX, connectorX - 6, spouseOffsetY + spouseNodeH / 2, 0xffffffff);
+                    }
+
+                    matrices.push();
+                    matrices.translate(cx, cy, 0);
+                    s.render(context, mouseX - cx, mouseY - cy);
+                    matrices.pop();
+
+                    spouseOffsetY += spouseNodeH + 4;
+                }
             }
         }
 
@@ -382,8 +421,10 @@ public class FamilyTreeScreen extends Screen {
                     labelWidth += 20;
                 }
                 width = Math.max(labelWidth + 10, children.stream().mapToInt(TreeNode::getWidth).sum()) + (HORIZONTAL_SPACING / 2);
-                if (spouse != null) {
-                    width += spouse.getWidth() + SPOUSE_HORIZONTAL_SPACING;
+                if (!spouseList.isEmpty()) {
+                    // Use the widest spouse for width calculation (all spouses are stacked vertically)
+                    int maxSpouseWidth = spouseList.stream().mapToInt(TreeNode::getWidth).max().orElse(0);
+                    width += maxSpouseWidth + SPOUSE_HORIZONTAL_SPACING;
                 }
             }
             return width;

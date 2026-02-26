@@ -50,7 +50,16 @@ public interface EntityRelationship {
     }
 
     default Optional<Entity> getPartner() {
-        return Optional.ofNullable(getWorld().getEntity(getFamilyEntry().partner()));
+        // Returns the primary (most recently set) spouse entity, if present in the world.
+        UUID primary = getFamilyEntry().partner();
+        if (primary.equals(Util.NIL_UUID)) {
+            // Fall back to first entry in the spouses set
+            return getFamilyEntry().getSpouses().stream()
+                    .map(getWorld()::getEntity)
+                    .filter(java.util.Objects::nonNull)
+                    .findFirst();
+        }
+        return Optional.ofNullable(getWorld().getEntity(primary));
     }
 
     //try to load a PlayerSaveData before loading the entity
@@ -76,16 +85,27 @@ public interface EntityRelationship {
             getRelationshipStream(getFamilyEntry().siblings().stream())
                     .forEach(r -> r.onTragedy(cause, burialSite, RelationshipType.SIBLING, victim));
 
-            getRelationshipStream(Stream.of(getFamilyEntry().partner()))
+            // Notify ALL spouses (supports polygamy)
+            getRelationshipStream(getFamilyEntry().getSpouses().stream())
                     .forEach(r -> r.onTragedy(cause, burialSite, RelationshipType.SPOUSE, victim));
         }
 
-        // end the marriage for both the deceased one and the spouse
-        if (type == RelationshipType.SPOUSE || type == RelationshipType.SELF) {
+        // Handle marriage endings for death events
+        if (type == RelationshipType.SELF) {
+            // This entity died – end all its marriages
             if (getRelationshipState().isMarried()) {
                 endRelationShip(RelationshipState.WIDOW);
             } else {
                 endRelationShip(RelationshipState.SINGLE);
+            }
+        } else if (type == RelationshipType.SPOUSE) {
+            // A specific spouse died – remove only that spouse from our list
+            if (victim != null) {
+                endRelationshipWith(victim.getUuid());
+            }
+            // Become WIDOW only if we have no remaining spouses
+            if (getFamilyEntry().getSpouses().isEmpty() && getRelationshipState().isMarried()) {
+                getFamilyEntry().updatePartner(null, RelationshipState.WIDOW);
             }
         }
     }
@@ -116,25 +136,37 @@ public interface EntityRelationship {
         getFamilyEntry().updatePartner(null, newState);
     }
 
+    /**
+     * Remove a single spouse relationship without affecting other marriages.
+     */
+    default void endRelationshipWith(UUID partnerUUID) {
+        getFamilyEntry().removeSpouseById(partnerUUID);
+        getFamilyTree().getOrEmpty(partnerUUID).ifPresent(n -> n.removeSpouseById(getUUID()));
+    }
+
     default RelationshipState getRelationshipState() {
         return getFamilyEntry().getRelationshipState();
     }
 
     default Optional<UUID> getPartnerUUID() {
-        UUID spouse = getFamilyEntry().partner();
-        if (spouse.equals(Util.NIL_UUID)) {
-            return Optional.empty();
-        } else {
-            return Optional.of(spouse);
+        // Return primary spouse UUID for backwards compat; if absent, try first in spouses set
+        UUID primary = getFamilyEntry().partner();
+        if (!primary.equals(Util.NIL_UUID)) {
+            return Optional.of(primary);
         }
+        return getFamilyEntry().getSpouses().stream().findFirst();
     }
 
     default Optional<Text> getPartnerName() {
-        return getFamilyTree().getOrEmpty(getFamilyEntry().partner()).map(FamilyTreeNode::getName).map(Text::literal);
+        return getPartnerUUID()
+                .flatMap(id -> getFamilyTree().getOrEmpty(id))
+                .map(FamilyTreeNode::getName)
+                .map(Text::literal);
     }
 
+    /** True if the entity has at least one current spouse. */
     default boolean isMarried() {
-        return getRelationshipState() == RelationshipState.MARRIED_TO_PLAYER || getRelationshipState() == RelationshipState.MARRIED_TO_VILLAGER;
+        return !getFamilyEntry().getSpouses().isEmpty();
     }
 
     default boolean isEngaged() {
@@ -149,8 +181,9 @@ public interface EntityRelationship {
         return getPartnerUUID().orElse(Util.NIL_UUID).equals(uuid) && isPromised();
     }
 
+    /** True if the given UUID is in this entity's spouses set. */
     default boolean isMarriedTo(UUID uuid) {
-        return getPartnerUUID().orElse(Util.NIL_UUID).equals(uuid) && isMarried();
+        return getFamilyEntry().isSpouse(uuid);
     }
 
     default boolean isEngagedWith(UUID uuid) {
