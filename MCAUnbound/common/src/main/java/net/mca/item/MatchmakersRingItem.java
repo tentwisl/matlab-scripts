@@ -23,8 +23,8 @@ public class MatchmakersRingItem extends Item implements SpecialCaseGift {
             return false;
         }
 
-        // ensure target is an adult
-        if (villager.getAgeState() != AgeState.ADULT) {
+        // ensure target is a teen or adult
+        if (villager.getAgeState() != AgeState.ADULT && villager.getAgeState() != AgeState.TEEN) {
             villager.sendChatMessage(player, "interaction.matchmaker.fail.married");
             return false;
         }
