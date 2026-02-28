@@ -1,10 +1,6 @@
 pluginManagement {
     repositories {
         maven {
-            name = 'Fabric'
-            url = 'https://maven.fabricmc.net/'
-        }
-        maven {
             name = 'Architectury'
             url "https://maven.architectury.dev/"
         }
@@ -17,8 +13,6 @@ pluginManagement {
 }
 
 include('common')
-include('fabric')
-include('quilt')
 include('forge')
 
 rootProject.name = 'minecraft-comes-alive'

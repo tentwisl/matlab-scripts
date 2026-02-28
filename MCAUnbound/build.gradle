@@ -2,7 +2,6 @@ plugins {
     id 'java-library'
     id 'architectury-plugin' version '3.4-SNAPSHOT'
     id 'dev.architectury.loom' version '1.7-SNAPSHOT' apply false
-    id "io.github.pacifistmc.forgix" version "1.2.9"
 }
 
 architectury {
@@ -42,9 +41,6 @@ allprojects {
     archivesBaseName = rootProject.name
     version = getAppVersion()
 
-    build.finalizedBy(mergeJars)
-    assemble.finalizedBy(mergeJars)
-
     java {
         withSourcesJar()
 
@@ -70,21 +66,3 @@ allprojects {
     }
 }
 
-forgix {
-    group = rootProject.groupId
-    mergedJarName = "${rootProject.name}-${rootProject.version}-universal.jar"
-    outputDir = "build/libs"
-
-    forge {
-        jarLocation = "build/libs/${rootProject.name}-${rootProject.version}.jar"
-        mixin "mca.mixin.json"
-    }
-
-    fabric {
-        jarLocation = "build/libs/${rootProject.name}-${rootProject.version}.jar"
-    }
-
-    quilt {
-        jarLocation = "build/libs/${rootProject.name}-${rootProject.version}.jar"
-    }
-}
