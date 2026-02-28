@@ -221,7 +221,14 @@ public final class FamilyTreeNode implements Serializable {
             }
 
             this.partner = spouseId;
-            this.relationshipState = newState;
+            // Preserve an existing married state when setting ENGAGED/PROMISED so that
+            // a player (or villager) with multiple spouses doesn't lose their married
+            // status just because they're beginning engagement with an additional partner.
+            if (newState == RelationshipState.MARRIED_TO_PLAYER
+                    || newState == RelationshipState.MARRIED_TO_VILLAGER
+                    || spouses.isEmpty()) {
+                this.relationshipState = newState;
+            }
             rootNode.getOrCreate(newPartner);
         }
 
