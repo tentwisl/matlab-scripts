@@ -29,10 +29,9 @@ import org.lwjgl.opengl.GL11;
 import java.util.*;
 
 public class FamilyTreeScreen extends Screen {
-    private static final int HORIZONTAL_SPACING = 20;
-    private static final int VERTICAL_SPACING = 60;
-
-    private static final int SPOUSE_HORIZONTAL_SPACING = 50;
+    private static final int GENERATION_SPACING = 80;
+    private static final int SIBLING_SPACING = 16;
+    private static final int SPOUSE_SPACING = 8;
 
     private UUID focusedEntityId;
 
@@ -153,8 +152,8 @@ public class FamilyTreeScreen extends Screen {
     }
 
     private void rebuildTree() {
-        scrollX = 14;
-        scrollY = -69;
+        scrollX = -(width / 4);
+        scrollY = 0;
         FamilyTreeNode focusedNode = family.get(focusedEntityId);
 
         // garbage collect
@@ -188,8 +187,10 @@ public class FamilyTreeScreen extends Screen {
 
     private final class TreeNode {
         private boolean widthComputed;
+        private boolean heightComputed;
 
         private int width;
+        private int subtreeHeight;
 
         private int labelWidth;
 
@@ -282,22 +283,24 @@ public class FamilyTreeScreen extends Screen {
                 focused = this;
             }
 
-            int childrenStartX = -getWidth() / 2;
+            if (!children.isEmpty()) {
+                int totalChildH = children.stream().mapToInt(TreeNode::getSubtreeHeight).sum()
+                        + SIBLING_SPACING * (children.size() - 1);
+                int childrenStartY = -totalChildH / 2;
 
-            for (TreeNode node : children) {
-                childrenStartX += (node.getWidth() + HORIZONTAL_SPACING) / 2;
+                for (TreeNode node : children) {
+                    int nodeSubH = node.getSubtreeHeight();
+                    int cy = childrenStartY + nodeSubH / 2;
 
-                int x = childrenStartX + HORIZONTAL_SPACING / 2;
-                int y = VERTICAL_SPACING;
+                    drawHook(context, GENERATION_SPACING, cy);
 
-                drawHook(context, x, y);
+                    matrices.push();
+                    matrices.translate(GENERATION_SPACING, cy, 0);
+                    node.render(context, mouseX - GENERATION_SPACING, mouseY - cy);
+                    matrices.pop();
 
-                matrices.push();
-                matrices.translate(x, y, 0);
-                node.render(context, mouseX - x, mouseY - y);
-                matrices.pop();
-
-                childrenStartX += (node.getWidth() + HORIZONTAL_SPACING) / 2;
+                    childrenStartY += nodeSubH + SIBLING_SPACING;
+                }
             }
 
             matrices.push();
@@ -357,60 +360,47 @@ public class FamilyTreeScreen extends Screen {
                 }
             }
 
-            // Render all spouses stacked vertically to the left
+            // Render all spouses stacked above this node
             if (!spouseList.isEmpty()) {
-                int lineY = bounds.top + bounds.bottom / 2;
-                // Draw the horizontal connector line and relationship icon once
-                int connectorX = bounds.left - SPOUSE_HORIZONTAL_SPACING;
-                context.drawHorizontalLine(connectorX, bounds.left - 1, lineY, 0xffffffff);
-
-                if (relationship == RelationshipState.MARRIED_TO_PLAYER ||
-                        relationship == RelationshipState.MARRIED_TO_VILLAGER ||
-                        relationship == RelationshipState.ENGAGED ||
-                        relationship == RelationshipState.PROMISED ||
-                        relationship == RelationshipState.WIDOW) {
+                if (relationship == RelationshipState.MARRIED_TO_PLAYER
+                        || relationship == RelationshipState.MARRIED_TO_VILLAGER
+                        || relationship == RelationshipState.ENGAGED
+                        || relationship == RelationshipState.PROMISED
+                        || relationship == RelationshipState.WIDOW) {
                     Icon icon = MCAScreens.getInstance().getIcon(relationship.getIcon());
-                    context.drawTexture(InteractScreen.ICON_TEXTURES, bounds.left - SPOUSE_HORIZONTAL_SPACING / 2 - 8, lineY - 8, 0, icon.u(), icon.v(), 16, 16, 256, 256);
+                    context.drawTexture(InteractScreen.ICON_TEXTURES, -8, bounds.top - SPOUSE_SPACING - 16, 0, icon.u(), icon.v(), 16, 16, 256, 256);
                 }
 
-                // Determine total height of all spouses so we can center them
-                int totalSpouseHeight = 0;
+                // Compute topmost Y so we can draw the full spine before rendering nodes
+                int topY = bounds.top - SPOUSE_SPACING;
                 for (TreeNode s : spouseList) {
-                    totalSpouseHeight += s.label.size() * textRenderer.fontHeight + 4;
+                    Bounds sb = s.getBounds();
+                    topY -= (sb.bottom - sb.top) + SPOUSE_SPACING;
                 }
-                int spouseOffsetY = lineY - totalSpouseHeight / 2;
+                context.drawVerticalLine(0, topY, bounds.top, 0xffffffff);
 
-                // Draw vertical connector if there are multiple spouses
-                if (spouseList.size() > 1) {
-                    context.drawVerticalLine(connectorX, lineY, spouseOffsetY + totalSpouseHeight, 0xffffffff);
-                }
-
+                int spouseOffsetY = bounds.top - SPOUSE_SPACING;
                 for (TreeNode s : spouseList) {
-                    int spouseNodeH = s.label.size() * textRenderer.fontHeight + 4;
-                    int cx = connectorX - s.getWidth() / 2 + 6;
-                    int cy = spouseOffsetY;
-
-                    // Draw a horizontal tick to each additional spouse
-                    if (spouseList.size() > 1) {
-                        context.drawHorizontalLine(connectorX, connectorX - 6, spouseOffsetY + spouseNodeH / 2, 0xffffffff);
-                    }
+                    Bounds sb = s.getBounds();
+                    int sH = sb.bottom - sb.top;
+                    int cy = spouseOffsetY - sH;
 
                     matrices.push();
-                    matrices.translate(cx, cy, 0);
-                    s.render(context, mouseX - cx, mouseY - cy);
+                    matrices.translate(0, cy, 0);
+                    s.render(context, mouseX, mouseY - cy);
                     matrices.pop();
 
-                    spouseOffsetY += spouseNodeH + 4;
+                    spouseOffsetY = cy - SPOUSE_SPACING;
                 }
             }
         }
 
         private void drawHook(DrawContext context, int endX, int endY) {
-            int midY = endY / 2;
+            int midX = endX / 2;
 
-            context.drawVerticalLine(0, 0, midY, 0xffffffff);
-            context.drawHorizontalLine(0, endX, midY, 0xffffffff);
-            context.drawVerticalLine(endX, midY, endY, 0xffffffff);
+            context.drawHorizontalLine(0, midX, 0, 0xffffffff);
+            context.drawVerticalLine(midX, 0, endY, 0xffffffff);
+            context.drawHorizontalLine(midX, endX, endY, 0xffffffff);
         }
 
         public int getWidth() {
@@ -420,14 +410,24 @@ public class FamilyTreeScreen extends Screen {
                 if (deceased) {
                     labelWidth += 20;
                 }
-                width = Math.max(labelWidth + 10, children.stream().mapToInt(TreeNode::getWidth).sum()) + (HORIZONTAL_SPACING / 2);
-                if (!spouseList.isEmpty()) {
-                    // Use the widest spouse for width calculation (all spouses are stacked vertically)
-                    int maxSpouseWidth = spouseList.stream().mapToInt(TreeNode::getWidth).max().orElse(0);
-                    width += maxSpouseWidth + SPOUSE_HORIZONTAL_SPACING;
-                }
+                width = labelWidth + 12;
             }
             return width;
+        }
+
+        public int getSubtreeHeight() {
+            if (!heightComputed) {
+                heightComputed = true;
+                int nodeH = getBounds().bottom - getBounds().top;
+                if (children.isEmpty()) {
+                    subtreeHeight = nodeH;
+                } else {
+                    subtreeHeight = Math.max(nodeH,
+                            children.stream().mapToInt(TreeNode::getSubtreeHeight).sum()
+                                    + SIBLING_SPACING * (children.size() - 1));
+                }
+            }
+            return subtreeHeight;
         }
 
         public Bounds getBounds() {

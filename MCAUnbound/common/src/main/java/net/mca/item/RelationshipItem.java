@@ -3,6 +3,7 @@ package net.mca.item;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.entity.ai.Memories;
 import net.mca.entity.ai.Relationship;
+import net.mca.entity.ai.relationship.AgeState;
 import net.minecraft.server.network.ServerPlayerEntity;
 
 public abstract class RelationshipItem extends TooltippedItem implements SpecialCaseGift {
@@ -19,7 +20,7 @@ public abstract class RelationshipItem extends TooltippedItem implements Special
 
         // Only block if the target is a baby or if this exact player is already
         // married/engaged to this specific villager, or hearts are too low.
-        if (villager.isBaby()) {
+        if (villager.getAgeState().ordinal() < AgeState.TEEN.ordinal()) {
             response = "interaction.relationship.fail.isbaby";
         } else if (Relationship.IS_MARRIED.test(villager, player)) {
             response = "interaction.relationship.fail.marriedtogiver";
