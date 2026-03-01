@@ -2,6 +2,39 @@
   "silent": true,
   "answers": [
     {
+      "name": "nation_appoint_cabinet",
+      "constraints": "adult,has_player_nation",
+      "results": [
+        {
+          "actions": {
+            "next": "nation_appoint_cabinet"
+          }
+        }
+      ]
+    },
+    {
+      "name": "nation_appoint_congress",
+      "constraints": "adult,has_player_nation",
+      "results": [
+        {
+          "actions": {
+            "next": "nation_appoint_congress"
+          }
+        }
+      ]
+    },
+    {
+      "name": "nation_allegiance",
+      "constraints": "adult",
+      "results": [
+        {
+          "actions": {
+            "next": "nation_allegiance"
+          }
+        }
+      ]
+    },
+    {
       "name": "rock_paper_scissor",
       "constraints": "!adult",
       "results": [

@@ -22,6 +22,8 @@ import net.mca.fabric.resources.FabricHairList;
 import net.mca.fabric.resources.FabricNames;
 import net.mca.fabric.resources.FabricTasks;
 import net.mca.item.ItemsMCA;
+import net.mca.nation.NationManager;
+import net.mca.nation.NationSpawner;
 import net.mca.network.MessagesMCA;
 import net.mca.server.ServerInteractionManager;
 import net.mca.server.command.AdminCommand;
@@ -53,7 +55,12 @@ public final class MCAFabric implements ModInitializer {
         ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(new FabricNames());
         ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(new FabricBuildingTypes());
 
-        ServerTickEvents.END_WORLD_TICK.register(w -> VillageManager.get(w).tick());
+        ServerTickEvents.END_WORLD_TICK.register(w -> {
+            VillageManager.get(w).tick();
+            NationManager nm = NationManager.get(w);
+            nm.tick();
+            if (!nm.isAiNationsSeeded()) NationSpawner.seedAiNations(w, nm);
+        });
         ServerTickEvents.END_SERVER_TICK.register(s -> ServerInteractionManager.getInstance().tick());
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->

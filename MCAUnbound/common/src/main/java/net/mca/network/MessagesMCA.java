@@ -62,5 +62,12 @@ public interface MessagesMCA {
         NetworkHandler.registerMessage(DiplomacyTableDataResponse.class);
         NetworkHandler.registerMessage(TownHallDataResponse.class);
         NetworkHandler.registerMessage(NationsDebugResponse.class);
+        // Nation appointment packets
+        NetworkHandler.registerMessage(GetNearbyVillagersRequest.class);
+        NetworkHandler.registerMessage(NearbyVillagersResponse.class);
+        NetworkHandler.registerMessage(AppointCabinetPacket.class);
+        NetworkHandler.registerMessage(AppointCongressPacket.class);
+        NetworkHandler.registerMessage(DismissCabinetPacket.class);
+        NetworkHandler.registerMessage(RemoveCongressPacket.class);
     }
 }

@@ -9,6 +9,8 @@ import net.mca.advancement.criterion.CriterionMCA;
 import net.mca.block.BlocksMCA;
 import net.mca.entity.EntitiesMCA;
 import net.mca.item.ItemsMCA;
+import net.mca.nation.NationManager;
+import net.mca.nation.NationSpawner;
 import net.mca.network.MessagesMCA;
 import net.mca.quilt.cobalt.network.NetworkHandlerImpl;
 import net.mca.quilt.resources.*;
@@ -49,7 +51,12 @@ public final class MCAQuilt implements ModInitializer {
         ResourceLoader.get(ResourceType.SERVER_DATA).registerReloader(new QuiltNames());
         ResourceLoader.get(ResourceType.SERVER_DATA).registerReloader(new QuiltBuildingTypes());
 
-        ServerWorldTickEvents.END.register((s, w) -> VillageManager.get(w).tick());
+        ServerWorldTickEvents.END.register((s, w) -> {
+            VillageManager.get(w).tick();
+            NationManager nm = NationManager.get(w);
+            nm.tick();
+            if (!nm.isAiNationsSeeded()) NationSpawner.seedAiNations(w, nm);
+        });
         ServerTickEvents.END.register(s -> ServerInteractionManager.getInstance().tick());
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->

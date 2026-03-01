@@ -34,65 +34,63 @@ public final class NationSpawner {
     public static void seedAiNations(ServerWorld world, NationManager nationManager) {
         if (nationManager.isAiNationsSeeded()) return;
 
+        // Gather existing MCA villages (may be empty on first world load — that's fine).
         VillageManager villageManager = VillageManager.get(world);
         List<Village> villages = new ArrayList<>();
         for (Village v : villageManager) {
             villages.add(v);
         }
 
-        if (villages.isEmpty()) {
-            // No villages yet — will be retried next tick until villages exist
-            return;
+        // Shuffle so AI nations get spread across available villages.
+        if (!villages.isEmpty()) {
+            Collections.shuffle(villages, new Random(world.getSeed()));
         }
 
-        // Shuffle villages so AI nations get spread out
-        Collections.shuffle(villages, new Random(world.getSeed()));
-
         NationPersonality[] personalities = NationPersonality.values();
-        int created = 0;
 
-        for (int i = 0; i < Math.min(AI_NATION_COUNT, villages.size()) && created < AI_NATION_COUNT; i++) {
-            Village capital = villages.get(i);
+        for (int i = 0; i < AI_NATION_COUNT; i++) {
             NationPersonality personality = personalities[i % personalities.length];
             GovernmentType gov = personality.preferredGovernment();
 
-            UUID nationId = UUID.randomUUID();
-            // AI nations get a synthetic NPC UUID as founder
-            UUID founderUUID = UUID.randomUUID();
+            UUID nationId   = UUID.randomUUID();
+            UUID founderUUID = UUID.randomUUID(); // synthetic NPC founder
 
-            String name  = NATION_NAMES[created % NATION_NAMES.length];
-            String color = FLAG_COLORS[created % FLAG_COLORS.length];
+            String name  = NATION_NAMES[i % NATION_NAMES.length];
+            String color = FLAG_COLORS[i % FLAG_COLORS.length];
 
             Nation nation = new Nation(nationId, name, founderUUID, gov);
             nation.setPersonality(personality);
             nation.setAiControlled(true);
             nation.setFlagColorHex(color);
-            nation.setCapitalCityVillageId(capital.getId());
             nation.setFoundedDay(world.getTime() / 24000L);
-            // Start with modest stats
-            nation.getStats().setMilitaryStrength(5 + (int)(Math.random() * 10));
-            nation.getStats().setEconomicOutput(10 + (int)(Math.random() * 20));
-            nation.getStats().setApprovalRating(50 + (int)(Math.random() * 30));
+            // Start with modest randomised stats
+            Random rng = new Random(world.getSeed() + i);
+            nation.getStats().setMilitaryStrength(5  + rng.nextInt(10));
+            nation.getStats().setEconomicOutput(10   + rng.nextInt(20));
+            nation.getStats().setApprovalRating(50   + rng.nextInt(30));
+
+            // Assign a capital village if one is available
+            if (i < villages.size()) {
+                Village capital = villages.get(i);
+                nation.setCapitalCityVillageId(capital.getId());
+                CityData cityData = nationManager.getOrCreateCity(capital.getId());
+                cityData.setOwningNationId(nationId);
+                cityData.setTier(CityTier.VILLAGE);
+                nationManager.saveCity(cityData);
+            }
+            // If no village is available, capitalCityVillageId stays -1;
+            // it will be assigned when the first suitable village is discovered.
 
             nationManager.addNation(nation);
-
-            // Mark capital city as owned by this nation
-            CityData cityData = nationManager.getOrCreateCity(capital.getId());
-            cityData.setOwningNationId(nationId);
-            cityData.setTier(CityTier.VILLAGE);
-            nationManager.saveCity(cityData);
-
-            created++;
         }
 
-        // Set up initial diplomacy relations between AI nations (start neutral)
+        // Bootstrap diplomacy relations between all AI nations
         List<Nation> aiNations = new ArrayList<>(nationManager.getAllNations());
         for (int a = 0; a < aiNations.size(); a++) {
             for (int b = a + 1; b < aiNations.size(); b++) {
                 UUID idA = aiNations.get(a).getNationId();
                 UUID idB = aiNations.get(b).getNationId();
                 DiplomacyRelation rel = nationManager.getOrCreateRelation(idA, idB);
-                // Aggressive + Militarist nations start slightly hostile to each other
                 NationPersonality pA = aiNations.get(a).getPersonality();
                 NationPersonality pB = aiNations.get(b).getPersonality();
                 if (pA.warTendency() > 50 && pB.warTendency() > 50) {

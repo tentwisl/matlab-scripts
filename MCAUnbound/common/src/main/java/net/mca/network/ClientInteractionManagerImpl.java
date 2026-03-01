@@ -285,4 +285,12 @@ public class ClientInteractionManagerImpl implements ClientInteractionManager {
             client.execute(() -> newScreen.loadData(response));
         }
     }
+
+    @Override
+    public void handleNearbyVillagersResponse(net.mca.network.s2c.NearbyVillagersResponse response) {
+        Screen screen = client.currentScreen;
+        if (screen instanceof net.mca.client.gui.DiplomacyTableScreen gui) {
+            gui.loadNearbyVillagers(response);
+        }
+    }
 }

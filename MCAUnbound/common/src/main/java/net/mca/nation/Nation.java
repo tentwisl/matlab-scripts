@@ -11,6 +11,7 @@ import net.minecraft.nbt.NbtString;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,8 +27,10 @@ public class Nation implements Serializable {
     // ── Identity ──────────────────────────────────────────────────────────────
     private final UUID nationId;
     private String name;
-    /** Hex RGB, e.g. "FF4400" */
+    /** Hex RGB, e.g. "FF4400" — base flag color; also used as first layer color. */
     private String flagColorHex = "AAAAAA";
+    /** Ordered flag layers (bottom → top), max 4. */
+    private final List<FlagLayer> flagLayers = new ArrayList<>();
 
     // ── Government ────────────────────────────────────────────────────────────
     private GovernmentType governmentType = GovernmentType.MONARCHY;
@@ -85,8 +88,8 @@ public class Nation implements Serializable {
         flagColorHex   = nbt.getString("flagColorHex");
         governmentType = GovernmentType.valueOf(nbt.getString("governmentType"));
         founderEntityId = nbt.getUuid("founderEntityId");
-        if (nbt.contains("ownerPlayerId"))       ownerPlayerId         = nbt.getUuid("ownerPlayerId");
-        if (nbt.contains("leaderEntityId"))      leaderEntityId        = nbt.getUuid("leaderEntityId");
+        if (nbt.contains("ownerPlayerId"))        ownerPlayerId        = nbt.getUuid("ownerPlayerId");
+        if (nbt.contains("leaderEntityId"))       leaderEntityId       = nbt.getUuid("leaderEntityId");
         if (nbt.contains("puppetMasterNationId")) puppetMasterNationId = nbt.getUuid("puppetMasterNationId");
         capitalCityVillageId = nbt.getInt("capitalCityVillageId");
         personality    = NationPersonality.valueOf(nbt.getString("personality"));
@@ -100,6 +103,9 @@ public class Nation implements Serializable {
         NbtList eList = nbt.getList("recentEvents", NbtElement.STRING_TYPE);
         for (int i = 0; i < eList.size(); i++) recentEvents.add(eList.getString(i));
 
+        NbtList fList = nbt.getList("flagLayers", NbtElement.COMPOUND_TYPE);
+        for (int i = 0; i < fList.size(); i++) flagLayers.add(new FlagLayer(fList.getCompound(i)));
+
         policy   = new NationPolicy(nbt.getCompound("policy"));
         stats    = new NationStats(nbt.getCompound("stats"));
         heir     = new HeirData(nbt.getCompound("heir"));
@@ -109,19 +115,19 @@ public class Nation implements Serializable {
 
     public NbtCompound save() {
         NbtCompound nbt = new NbtCompound();
-        nbt.putUuid("nationId",          nationId);
-        nbt.putString("name",            name);
-        nbt.putString("flagColorHex",    flagColorHex);
-        nbt.putString("governmentType",  governmentType.name());
-        nbt.putUuid("founderEntityId",   founderEntityId);
-        if (ownerPlayerId         != null) nbt.putUuid("ownerPlayerId",         ownerPlayerId);
-        if (leaderEntityId        != null) nbt.putUuid("leaderEntityId",        leaderEntityId);
-        if (puppetMasterNationId  != null) nbt.putUuid("puppetMasterNationId",  puppetMasterNationId);
+        nbt.putUuid("nationId",           nationId);
+        nbt.putString("name",             name);
+        nbt.putString("flagColorHex",     flagColorHex);
+        nbt.putString("governmentType",   governmentType.name());
+        nbt.putUuid("founderEntityId",    founderEntityId);
+        if (ownerPlayerId        != null) nbt.putUuid("ownerPlayerId",        ownerPlayerId);
+        if (leaderEntityId       != null) nbt.putUuid("leaderEntityId",       leaderEntityId);
+        if (puppetMasterNationId != null) nbt.putUuid("puppetMasterNationId", puppetMasterNationId);
         nbt.putInt("capitalCityVillageId", capitalCityVillageId);
-        nbt.putString("personality",     personality.name());
-        nbt.putBoolean("isAiControlled", isAiControlled);
-        nbt.putBoolean("isPuppet",       isPuppet);
-        nbt.putLong("foundedDay",        foundedDay);
+        nbt.putString("personality",      personality.name());
+        nbt.putBoolean("isAiControlled",  isAiControlled);
+        nbt.putBoolean("isPuppet",        isPuppet);
+        nbt.putLong("foundedDay",         foundedDay);
 
         NbtList dList = new NbtList();
         districtIds.forEach(id -> dList.add(NbtString.of(id.toString())));
@@ -130,6 +136,10 @@ public class Nation implements Serializable {
         NbtList eList = new NbtList();
         recentEvents.forEach(e -> eList.add(NbtString.of(e)));
         nbt.put("recentEvents", eList);
+
+        NbtList fList = new NbtList();
+        flagLayers.forEach(fl -> fList.add(fl.save()));
+        nbt.put("flagLayers", fList);
 
         nbt.put("policy",   policy.save());
         nbt.put("stats",    stats.save());
@@ -146,6 +156,14 @@ public class Nation implements Serializable {
     public void   setName(String name)                       { this.name = name; }
     public String getFlagColorHex()                          { return flagColorHex; }
     public void   setFlagColorHex(String hex)                { this.flagColorHex = hex; }
+
+    /** Unmodifiable view of flag layers; use {@link #setFlagLayers} to replace. */
+    public List<FlagLayer> getFlagLayers()                   { return Collections.unmodifiableList(flagLayers); }
+    public void setFlagLayers(List<FlagLayer> layers) {
+        flagLayers.clear();
+        for (int i = 0; i < Math.min(4, layers.size()); i++) flagLayers.add(layers.get(i));
+    }
+
     public GovernmentType getGovernmentType()                { return governmentType; }
     public void   setGovernmentType(GovernmentType t)        { this.governmentType = t; }
     public UUID   getFounderEntityId()                       { return founderEntityId; }

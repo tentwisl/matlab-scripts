@@ -1082,5 +1082,20 @@
   "gui.village.rank.monarch":    "Monarch",
   "gui.village.rank.emperor":    "Emperor",
 
-  "key.mca.nations_debug": "Nations Debug Screen"
+  "key.mca.nations_debug": "Nations Debug Screen",
+
+  "dialogue.mca.nation_appoint_cabinet":  "I'd like to appoint you to a position in my cabinet.",
+  "dialogue.mca.nation_appoint_congress": "Would you be willing to serve in my nation's congress?",
+  "dialogue.mca.nation_allegiance":       "Will you pledge allegiance to my nation?",
+  "dialogue.mca.appoint_confirm":         "Yes, I accept.",
+  "dialogue.mca.allegiance_confirm":      "Swear allegiance.",
+  "dialogue.mca.nevermind":               "Never mind.",
+
+  "nation.appoint_cabinet.accept":  "It would be an honor to serve in your cabinet, %s.",
+  "nation.appoint_cabinet.decline": "I appreciate the offer, but I must decline for now.",
+  "nation.appoint_congress.accept": "I will proudly represent the people in your congress!",
+  "nation.appoint_congress.decline":"Congress is not for me, but I thank you for asking.",
+  "nation.allegiance.sworn":        "I swear my allegiance to %s! Long may it stand!",
+  "nation.allegiance.refused":      "I serve no nation but my own conscience.",
+  "nation.nevermind":               "Very well. Let me know if you need anything else."
 }
