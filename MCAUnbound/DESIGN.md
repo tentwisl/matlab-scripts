@@ -316,7 +316,18 @@ or simply to take a back seat), they designate an **Heir** or **Regent**.
 
 - If the player dies (PvE death with `hardcoreHeir` config option enabled): Heir permanently becomes leader; player respawns as a citizen
 - If player is voted out of a foreign nation's presidency while their own Heir is active: player returns to their own nation as Founder; Heir steps back to figurehead role
-- If Heir dies: player must designate a new Heir within 7 in-game days or the nation enters an instability period (all city opinion -10)
+- **Heirs do not die of old age.** MCA's natural aging process is suppressed for any NPC flagged as `isHeir: true`. They can only be removed from the heir role by being killed (combat, player action, assassination event) or being formally dismissed by the player. This is intentional — the heir position represents a protected political station.
+- If Heir is killed: player must designate a new Heir within 7 in-game days or the nation enters an instability period (all city opinion -10)
+
+### Heir Succession Chain
+
+The Heir themselves can designate a preferred successor — their own "second heir" — based on their own AI personality and relationships:
+- A diplomatic Heir will favor NPCs with high social reputation in the capital
+- An aggressive Heir will favor NPCs with high military experience or combat level
+- A family-oriented Heir (MCA personality trait) will favor their own children or spouse if eligible
+- The Heir's preferred successor is stored in `HeirData.preferredSuccessorId`
+- If the Heir is killed before the player designates a new Heir: `preferredSuccessorId` automatically becomes the new Heir (if they exist and are alive), triggering a toast: "[Heir Name] was killed. [Successor Name], their chosen successor, has assumed the role of Regent."
+- This creates a living succession chain that can extend multiple generations without player involvement
 
 ---
 
@@ -891,6 +902,79 @@ if unloaded, the route processes in simulation (resources transferred directly, 
 International trade (between nations) is entirely code-side — no entities rendered.
 The `TradeDepotBlockEntity` simply processes timers and fires `ImportArrivedEvent` when the ETA elapses.
 
+### 7.5 — Nation Debug / World Overview Screen
+
+A developer/debug screen accessible via:
+- A keybind (default: unbound; set in Minecraft controls menu)
+- OR the command `/nation debug` (operator-only by default; configurable)
+- OR a button in the Diplomacy Table when debug mode is enabled in `config.json`
+
+**Purpose:** Lets the player see the full simulation state for all known nations, verify that things are working correctly, and diagnose issues without digging through NBT.
+
+**Screen Layout:**
+
+```
+┌──────────────────────────── Nations Overview ────────────────────────────┐
+│ [Search: ________]          Showing 4 / 4 nations           [Refresh]    │
+│                                                                           │
+│ ┌─────────────────────────────────────────────────────────────────────┐  │
+│ │ ◆ Ironholde Republic         Government: REPUBLIC    Player Nation  │  │
+│ │   Leader: [You]   Capital: Stonehaven   Districts: 3   Cities: 8   │  │
+│ │   Military: 47   Economy: 340/wk   Science: 3   Approval: 62%      │  │
+│ │   Relations: Emberfall [TRADE] | Verdant Empire [NEUTRAL] | ...     │  │
+│ │   [▼ Expand]                                                        │  │
+│ ├─────────────────────────────────────────────────────────────────────┤  │
+│ │ ◆ Emberfall Dominion         Government: MONARCHY    AI (Militarist)│  │
+│ │   Leader: Lord Varek   Capital: Cragfort   Districts: 2   Cities: 5 │  │
+│ │   Military: 89   Economy: 210/wk   Science: 2   Approval: —        │  │
+│ │   Relations: Ironholde [TRADE] | Verdant [HOSTILE] | ...            │  │
+│ │   [▼ Expand]                                                        │  │
+│ ├─────────────────────────────────────────────────────────────────────┤  │
+│ │ ◆ Verdant Empire             Government: TRIBAL      AI (Cultural)  │  │
+│ │   Leader: Elder Mira   Capital: Greenwatch   Districts: 4  Cities:11│  │
+│ │   Military: 31   Economy: 510/wk   Science: 5   Approval: —        │  │
+│ │   Relations: Ironholde [NEUTRAL] | Emberfall [HOSTILE] | ...        │  │
+│ │   [▼ Expand]                                                        │  │
+│ └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                           │
+│ Active World Events: 2   Pending Trades: 3   Active Wars: 1              │
+│ Simulation last ticked: 1 in-game day ago     [Force Tick Now]           │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+**Expanded Nation View** (when [▼ Expand] is clicked):
+```
+│   ▲ Collapse                                                              │
+│   Districts:                                                              │
+│     • Northern March (Gov: Aldric)  Cities: [Stonehaven ★, Millford]    │
+│       Tax: 15%  Focus: ECONOMIC  Stockpile: Food+340 Iron+120            │
+│     • Eastern Highlands (Gov: Sera)  Cities: [Ironpass, Deepholm]        │
+│       Tax: 20%  Focus: MILITARY  Stockpile: Food+80 Iron+310             │
+│   Cabinet:                                                                │
+│     VP: Edith (Loyalty: 87)  SecDef: Gareth [HAWK] (Loyalty: 54)        │
+│     Treasury: Mira (Auto: ON) (Loyalty: 71)  State: (VACANT)            │
+│   Congress: 9 members | Parties: Progressive 4 / Traditionalist 3 / ..  │
+│   Heir: Aldric Stoneson (Active: No | Directives: 3)                     │
+│   Recent Events: [Trade Arrived] [Bandit Raid - Millford] [Election]     │
+│   All Cities: [Stonehaven ★] [Millford] [Ironpass] [Deepholm] ...       │
+│   [Teleport to Capital]  [Force Election]  [Kill Leader (debug)]         │
+```
+
+**Bottom Panel — Active World Events:**
+- Scrollable list of all `WorldEvent` instances currently active
+- Each shows: event type, affected city, days remaining, outcome preview
+
+**Debug-only actions** (only appear when `debugMode: true` in config):
+- Force Tick Now: immediately runs all simulation ticks
+- Force Election: triggers election in selected nation immediately
+- Kill Leader: removes the AI leader NPC (tests succession)
+- Give Political Capital: adds 5 to player's capital
+- Set Relation: override diplomatic status between two nations
+- Spawn Nation: manually trigger a new AI nation
+
+**Xaero Integration Note:**
+This debug screen will also function as a waypoint injector — clicking "Teleport to Capital" sets a Xaero waypoint at that city's coords if Xaero is detected via optional dependency check (`ModList.isLoaded("xaerominimap")`).
+
 ---
 
 ## Part 8 — Resource System
@@ -1186,7 +1270,8 @@ common/src/main/java/net/mca/
         ├── DiplomacyTableScreen.java
         ├── TownHallScreen.java
         ├── TradeDepotScreen.java
-        ├── NationMapOverlayScreen.java
+        ├── NationMapOverlayScreen.java          // custom map; see Xaero note below
+        ├── NationDebugScreen.java               // global nations debug overview
         ├── CabinetManagementScreen.java
         ├── CongressScreen.java              // view congress, vote on bills, see member loyalty
         ├── ElectionCampaignScreen.java      // active campaign UI with polling and actions
@@ -1239,15 +1324,65 @@ resources/data/tasks/*.json            // Update all task thresholds for new ran
 | **N7** | Political Capital resource + No Confidence mechanics | N6 + L |
 | **O** | Great People + Wonders | I + J |
 | **P** | Council of Nations + Edicts tab | G + J |
-| **Q** | Nation map overlay GUI | C + F |
+| **Q** | `NationDebugScreen` (global nations overview, force tick, all debug actions) | C |
+| **Q2** | Nation map overlay GUI — custom `NationMapOverlayScreen` with territory rendering | C + F |
+| **Q3** | Xaero integration (optional dep): nation capital waypoints, border highlight layer on Xaero World Map | Q2 |
 | **R** | World Events system | F + G |
 | **S** | AW2 vehicle + siege system | K + G |
 | **T** | AW2 research tree (full port) | K |
 
 **Parallel tracks:**
 - A and B can start immediately (no dependencies)
-- C is the central blocker for D through Q
+- C is the central blocker for D through R
+- Q (debug screen) only requires C — implement it early so all other systems can be tested as they're built
 - L–N7 (government/cabinet/political career) is a self-contained track that can progress in parallel with H–K (trade/economy) once C and D are done
+- Q3 (Xaero integration) is purely additive and can be done any time after Q2; no code in Q3 affects core systems
 - K, S, T require AW2 source to be available
 
 **Critical path to first playable nation:** A → B → C → D → E → F → L → L2 → N2
+
+**Critical path to debug visibility:** A → B → C → Q (debug screen available immediately after data layer)
+
+---
+
+## Part 14 — Xaero's Minimap Integration
+
+The nation border / territory visualization uses a two-tier approach:
+
+### Tier 1 — Custom NationMapOverlayScreen (always present)
+A standalone screen (hotkey-openable, not dependent on any external mod) that renders a top-down
+schematic map of the known world using cached chunk data from `ResourceWorldCache`. Shows:
+- Color-coded city markers per nation
+- Rough territory polygons (convex hulls around each nation's city set)
+- Trade route lines (player's active courier routes)
+- Active war indicators (flashing red between warring cities)
+
+### Tier 2 — Xaero Integration (optional, requires `xaerominimap` and/or `xaerosworldmap`)
+
+Detected at runtime via:
+```java
+boolean xaeroMinimap = ModList.get().isLoaded("xaerominimap");
+boolean xaeroWorldMap = ModList.get().isLoaded("xaerosworldmap");
+```
+
+If Xaero's Minimap is loaded:
+- Nation capital waypoints are automatically added to the active waypoint set via `WaypointsManager`
+- Waypoints use the nation's flag color and the nation's name as the set label
+- Waypoints are updated whenever a city changes allegiance or a new nation forms
+- Waypoints include city tier as suffix: "[CityName] (Town) — Ironholde Republic"
+
+If Xaero's World Map is loaded:
+- A custom `MapTileRenderer` draws semi-transparent territory fill over the world map tiles
+- Territory borders are drawn as colored lines (1-block outline of the territory bounding box union)
+- Nations with `AT_WAR` status have animated (flashing) border lines in red
+- All rendering is client-side only; no server-side state needed for display
+
+**Mod dependency in build.gradle:**
+```groovy
+// Optional dependencies — compile against but don't require
+compileOnly "maven.modrinth:xaeros-minimap:${xaero_minimap_version}"
+compileOnly "maven.modrinth:xaeros-world-map:${xaero_worldmap_version}"
+```
+
+All Xaero integration code lives in a separate `compat/xaero/` package and is only
+loaded when the mods are present, so the base mod runs cleanly without them.
