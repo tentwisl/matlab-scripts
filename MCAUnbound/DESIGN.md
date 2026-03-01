@@ -47,45 +47,368 @@ Reputation is cumulative across all villages, not just one.
 ## Part 2 — Government Types
 
 Each nation (player and AI) has one of the following government types.
-Government type affects available policies, leader dialogue flavor, and how decisions are made.
+Government type affects available policies, leader dialogue flavor, cabinet structure, and how decisions are made.
+**Player chooses their government type when founding their nation** (one-time; can be changed later via a Reform edict at significant political cost).
 
 ### 2.1 — Government Enum
 
 ```java
 public enum GovernmentType {
-    MONARCHY,       // Single absolute ruler (default for aggressive/militarist AI)
-    REPUBLIC,       // Elected president + congress of citizens
-    OLIGARCHY,      // Council of nobles/merchants; no election
-    THEOCRACY,      // Religious leader appointed by faith score
-    TRIBAL          // Council of chiefs; decisions by majority vote of city governors
+    MONARCHY,       // Single absolute ruler; no elections; player appoints all roles
+    REPUBLIC,       // Elected president + elected congress + appointed cabinet
+    OLIGARCHY,      // Council of nobles/merchants; player chairs council; no popular elections
+    THEOCRACY,      // Religious leader; faith score determines authority; priests hold cabinet roles
+    TRIBAL          // Council of chiefs; each district governor has equal voting weight
 }
 ```
 
-### 2.2 — Democratic / Republic Nations
+**Government type affects:**
+- Whether elections occur and who can run
+- Which cabinet roles exist
+- Which edicts require congressional approval vs. unilateral decision
+- AI leader dialogue tone (a Tribal chief speaks differently from a Monarch)
+- How AI nations with this government react to player actions (Republics care more about citizen opinion; Theocracies care about faith alignment)
+
+---
+
+## Part 2A — Government Selection at Nation Founding
+
+When the player clicks "Found Nation" in the Diplomacy Table, a `FoundNationScreen` opens before the name/flag step:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Choose Your Government                    │
+│                                                             │
+│  ◉ Monarchy        Absolute rule. No elections.             │
+│                    Full control over all decisions.          │
+│                    Loyal subjects expect strong leadership.  │
+│                                                             │
+│  ○ Republic        Elected leadership. Congress votes on     │
+│                    major decisions. Cabinet appointments.    │
+│                    Citizens have political opinions.         │
+│                                                             │
+│  ○ Oligarchy       Council of appointed nobles governs.      │
+│                    Wealth and influence drive decisions.      │
+│                    No popular elections.                     │
+│                                                             │
+│  ○ Theocracy       Faith-based authority. Priests advise.    │
+│                    Cultural and moral edicts are free.       │
+│                    Military and trade edicts cost more.      │
+│                                                             │
+│  ○ Tribal          District governors hold equal power.      │
+│                    Expansion is slow but stable.             │
+│                    Very resilient to conquest.               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Changing government later (via Reform edict):
+- Costs 3 Political Capital (a slow-accumulating resource earned via diplomatic achievements)
+- Triggers a 14-day instability period (all city opinion -20, congress disbanded, cabinet dismissed)
+- Requires congressional approval if already a Republic/Tribal (catch-22 by design)
+
+---
+
+## Part 2B — Cabinet & Appointment System
+
+All government types except pure Tribal have a cabinet. Roles available depend on government type.
+Cabinet members are MCA NPCs appointed by the player from any city under their control.
+Each role has an **autonomy toggle** — the player can let the NPC manage that domain independently
+or keep full manual control. Autonomous cabinet members act on configurable priorities using their
+own MCA personality and political lean.
+
+### Cabinet Roles
+
+#### Vice President / Crown Prince (all government types, different title)
+- **Titles:** Vice President (Republic) / Hand of the King (Monarchy) / Deputy Chair (Oligarchy) / High Priest Adjutant (Theocracy) / Second Chief (Tribal)
+- **Function:**
+  - Takes over all leader decisions if the player is inactive for > 3 in-game days (configurable)
+  - Casts tie-breaking votes in congress/council
+  - Represents the nation at diplomatic meetings the player doesn't personally attend (uses their own personality for dialogue, may not always act as player intends)
+  - Acts as the automatic **Heir** — if the player formally steps down or is voted out, this NPC becomes the new leader
+- **Autonomy:** Cannot be fully autonomous while player is active; becomes acting leader only during inactivity
+
+#### Secretary of Defense / Warlord / High Marshal
+- **Titles:** Secretary of Defense (Republic) / Warlord (Monarchy/Tribal) / High Marshal (Oligarchy) / Knight-Templar (Theocracy)
+- **Function:**
+  - Military advisor: sends periodic "intel memos" (S2C toast notification) with tactical recommendations
+    - "Secretary [Name] recommends fortifying [City] — [Rival Nation] has been massing troops nearby."
+    - "Warlord [Name] sees an opportunity to strike [City] while their garrison is depleted."
+  - Influences congressional war votes: their recommendation carries +2 votes worth of weight in congress
+  - **Autonomous mode:** auto-assigns garrison quotas to cities based on threat assessment, auto-conscripts when military drops below configured threshold, auto-deploys reserves during active conflicts
+  - **Hawk/Dove spectrum:** reflects the NPC's own MCA personality — aggressive NPCs are hawkish (will recommend war more often and push congress toward war votes); diplomatic/passive NPCs are dovish
+  - Can be given authority to negotiate prisoner exchanges and surrender terms for minor skirmishes without player approval
+
+#### Secretary of Treasury / Trade Minister
+- **Titles:** Secretary of Treasury (Republic) / Trade Minister (Monarchy) / Guild Chancellor (Oligarchy)
+- **Function:**
+  - Manages national stockpile distribution and resource routing between cities
+  - Issues weekly "economic report" toast: "National food surplus: +340. Iron deficit: -80. Recommended: import iron from [Nation]."
+  - **Autonomous mode (Trade):** auto-accepts or auto-rejects incoming trade offers from foreign nations based on configured rules:
+    - "Always accept food trades when stockpile < 200"
+    - "Never export iron below 500 reserve"
+    - "Prioritize trade with Allied nations first"
+  - **Autonomous mode (Internal):** auto-creates Courier routes to balance resource deficits between cities
+  - Recommends tax rate adjustments (proposal must be approved by congress in Republics; immediate in Monarchy)
+  - Manages all active import orders from Trade Depots if given authority
+  - Has a configurable budget cap: the player can set how many resources the secretary can commit to trades without explicit approval
+
+#### Secretary of State / Foreign Minister
+- **Titles:** Secretary of State (Republic) / Foreign Minister (Monarchy) / Ambassador-General (Oligarchy/Tribal)
+- **Function:**
+  - Manages diplomatic relationships with foreign nations
+  - Issues "diplomatic briefing" notifications: "Foreign Minister [Name] reports: [Nation] has been strengthening ties with [Other Nation]. A counter-alliance may be warranted."
+  - **Autonomous mode:** auto-sends envoys to maintain existing agreements, auto-renews expiring Non-Aggression Pacts, auto-responds to minor diplomatic requests (border inquiries, travel permits) based on standing policy
+  - Can negotiate trade agreements and non-aggression pacts on the player's behalf (within configured limits — player sets max resource commitment and minimum trust threshold)
+  - Recommends alliance targets based on mutual enemies and geographic proximity
+  - Manages the Council of Nations voting automatically if the player doesn't vote before the deadline (votes according to national interest algorithm)
+
+#### Secretary of the Interior / Minister of Development
+- **Titles:** Secretary of the Interior (Republic) / Minister of Development (Monarchy) / Steward (Oligarchy/Tribal)
+- **Function:**
+  - Manages city development queues across all districts
+  - Issues "infrastructure report": "Minister [Name] recommends building a Granary in [City] — food production is 60% below district average."
+  - **Autonomous mode:** auto-queues AW2 automation buildings when city stockpile allows, prioritized by production deficits
+  - Manages immigration (assigns empty homes in growing cities, redirects surplus population)
+  - Oversees cultural output: assigns Bard NPCs to cities with low opinion, schedules Cultural Festivals
+  - Handles crisis events (Drought, Plague) autonomously by redirecting resources if given authority
+
+#### Attorney General / Lord Chancellor
+- **Titles:** Attorney General (Republic) / Lord Chancellor (Monarchy) / Arbiter (Oligarchy/Theocracy)
+- **Function:**
+  - Manages internal law and order events
+  - Handles "crime events" — bandit leaders who are captured can be formally tried (UI: charge them, select penalty — exile, execution, or prison; each affects opinion differently)
+  - Drafts new edicts and presents them to congress (reduces the Political Capital cost of passing new legislation by 1 if the AG supports it)
+  - Tracks citizens' rights — if the player issues too many oppressive edicts, the AG will formally object (a toast warning); ignoring three consecutive objections causes the AG to resign and all city opinion drops 5
+
+#### Chief of Science / Royal Artificer
+- **Titles:** Chief of Science (Republic) / Royal Artificer (Monarchy) / Head Engineer (Oligarchy)
+- **Function:**
+  - Manages research progression (tied to AW2 research tree)
+  - Issues "research briefing": "Artificer [Name] can complete [Technology] in 4 days with current staffing. Alternatively, redirect 3 Engineers to unlock [Alternative Technology] in 7 days."
+  - **Autonomous mode:** auto-assigns Researcher NPCs to the highest-priority research branch based on configured focus (Military / Economic / Science priority)
+  - Can negotiate research-sharing agreements with foreign nations (requires Secretary of State co-approval)
+  - Unlocking tech through a Great Scientist event triggers a special dialogue with this NPC
+
+### Congress / Council
+
+Congress composition depends on government type:
+
+| Government | Legislature Name | Size | How Selected |
+|---|---|---|---|
+| Republic | Congress | 7–15 (scales with nation size) | 5 elected by citizens; remainder appointed by player |
+| Monarchy | Royal Council | 5–9 | All appointed by player |
+| Oligarchy | Noble Council | 5–7 | One per district (appointed as district governor) |
+| Theocracy | Holy Synod | 5 | 3 senior Priest NPCs + 2 player appointments |
+| Tribal | Chiefs' Circle | One per city-state (3–12) | Each city's highest-reputation NPC auto-seats |
+
+**What Congress Votes On (Republic; other governments have similar but less restrictive requirements):**
+
+| Decision | Vote Required | Override Cost |
+|---|---|---|
+| Tax rate change > 5% | Simple majority | 2 Political Capital |
+| War declaration | Supermajority (2/3) | 3 Political Capital |
+| New edict | Simple majority | 1 Political Capital |
+| Trade agreement > 500 resources | Simple majority | 1 Political Capital |
+| Annexation of independent city | Simple majority | 2 Political Capital |
+| Reform (government type change) | Supermajority | 3 Political Capital + 14-day instability |
+| Budget reallocation between districts | Simple majority | 1 Political Capital |
+| No Confidence vote against player | Supermajority (initiated by congress) | Player campaigns to prevent |
+
+**Political Capital:** earned by:
+- Diplomatic achievements (treaties, alliances): +1 each
+- Winning wars with minimal civilian casualties: +1
+- Completing Council of Nations resolutions in your favor: +2
+- Completing national quests (advisor-issued objectives): +1
+- Anniversary of nation founding (every 365 in-game days): +1
+- Citizen approval above 70%: +1/election cycle
+
+**Congress Member Loyalty:**
+Each congress member has `loyalty` (0–100) toward the player/current leader.
+- Loyalty improves when: their district's needs are met, player gifts them, player wins wars, economy is good
+- Loyalty drops when: district is neglected, player ignores their recommendations, repeated forced votes
+- Low-loyalty members (below 30) will vote against player regardless of their lean
+- Very low-loyalty members (below 10) may form an **Opposition Bloc** — if 3+ members bloc together, they can initiate a No Confidence vote
+
+**Party System (Republic only):**
+Congress members belong to one of 4 parties (procedurally named per world):
+- **Progressive** (Cultural + Economic lean)
+- **Traditionalist** (Militarist + Isolationist lean)
+- **Nationalist** (Expansionist + Militarist lean)
+- **Moderate** (balanced; most flexible in voting)
+
+Party affiliation affects bloc voting — members of the same party rarely split on landmark votes.
+Player builds party relationships through policy alignment, not just individual loyalty.
+
+### 2.2 — Democratic / Republic Nations (Expanded)
 
 When a nation's government type is `REPUBLIC`:
 
 **Elections:**
 - Held every 30 in-game days (configurable)
 - Candidates: MCA villagers with high `Charisma` stat emerge automatically as Politician-profession NPCs
+- Player's appointed Vice President runs as incumbent candidate if the player steps aside
 - MCA villagers have a `PoliticalLean` value: `MILITARIST | ECONOMIC | CULTURAL | ISOLATIONIST | EXPANSIONIST`
 - Each citizen's lean is influenced by:
   - Personal happiness (food, safety, prosperity)
   - Conversations with other MCA NPCs (social propagation — 10% chance per NPC interaction to shift lean 1 point toward the other NPC's lean)
   - Current leader's approval rating (poor performance shifts citizens away from the incumbent's lean)
-- Citizens vote for the candidate closest to their lean
-- Congress: top-5 highest vote-getters beyond the president become Congress members (stored as UUIDs in `DemocraticNationData`)
-- Congress leans affect which policy proposals pass (majority lean of congress must align)
+  - Cabinet performance (a beloved Secretary of Treasury makes economic lean more dominant)
+- Citizens vote for the candidate closest to their lean; running mate (VP pick) matters — a candidate with a VP of opposing lean captures moderate voters
+- Top candidate becomes President; next 5 become Congress members (in addition to any appointed members)
+- Congress leans affect which policy proposals pass
 
 **Player Influence on Elections:**
 - Talk to citizens and nudge their lean (dialogue option: discuss politics)
 - Fund a candidate (spend gold → candidate gets +5% vote weight)
 - Send Bard NPCs to perform propaganda (shifts 20 citizens' lean over 7 days)
 - Bribery (high risk; if discovered, player loses 30 opinion with that entire nation)
+- Build infrastructure in contested districts (improves opinion of citizens there, shifts leans toward economic)
+- Win a war before an election: incumbent gets a "rally around the flag" approval boost (+15%)
+
+**Approval Rating:**
+- Tracked separately from town opinion; this is the player's job performance score
+- Starts at 50%; changes based on: economy, military performance, edicts, how often congress is overridden
+- Below 30%: congress becomes hostile (harder to pass anything)
+- Below 20% for 14 days: No Confidence vote risk
+- Above 70%: bonus Political Capital each election cycle; easier recruitment of Great People
 
 **Congress Decisions:**
-- AI congress can pass or block edicts if their lean opposes it
-- Player can petition congress (spend reputation to push a policy through even with opposing congress)
+- Congress can pass or block edicts based on lean/loyalty
+- Player can force a vote with Political Capital
+- Player can campaign (spend in-game time talking to congress members) to flip individual votes
+
+**Being Voted Out:**
+- If player's approval rating stays below 20% for 14 consecutive in-game days, congress can initiate No Confidence
+- If supermajority votes no confidence: snap election called within 7 days
+- Player can campaign (talk to citizens, complete quests, win a battle) to recover approval before the vote
+- If removed: player becomes a citizen of their own nation again; VP becomes acting president
+- Player can run again in the next regular election (if they rebuilt approval to > 40%)
+
+---
+
+## Part 2C — Heir / Regent System
+
+When the player wants to step away from leading their own nation (to pursue a political career elsewhere,
+or simply to take a back seat), they designate an **Heir** or **Regent**.
+
+### Designating an Heir
+
+- Done from the Diplomacy Table → Nation Overview Tab → "Designate Heir" button
+- Player selects any MCA NPC that meets the requirement: Noble rank equivalent or higher within the player's nation
+- Natural family members (spouse, adult children via MCA's family system) get a +20 trust bonus and are preferred by citizens
+- After designation: the Heir NPC is flagged in NBT as `isHeir: true` and receives a special title
+
+### How the Heir Operates
+
+- While the player is **active leader**: Heir is a figurehead; attends diplomatic events in the player's absence
+- While the player is **inactive or stepped down**: Heir takes full control using an AI nation brain tuned to the Heir's own MCA personality
+  - The Heir's mood, traits, and personality directly drive their decisions (an aggressive Heir may start wars; a diplomatic one will forge alliances)
+  - Player can log back in and override any decision at any time (they remain Founder)
+  - Heir manages the Diplomacy Table autonomously but cannot change the government type, dissolve the cabinet, or declare war without congressional approval
+- Player can issue **Regent Directives** even while away (stored in `HeirData`):
+  - "Do not declare war"
+  - "Focus on economic expansion"
+  - "Maintain all existing trade agreements"
+  - "Do not annex independent cities"
+  - Heir compliance depends on their loyalty to the player (high loyalty = follows directives strictly; low loyalty = may override)
+
+### Succession Events
+
+- If the player dies (PvE death with `hardcoreHeir` config option enabled): Heir permanently becomes leader; player respawns as a citizen
+- If player is voted out of a foreign nation's presidency while their own Heir is active: player returns to their own nation as Founder; Heir steps back to figurehead role
+- If Heir dies: player must designate a new Heir within 7 in-game days or the nation enters an instability period (all city opinion -10)
+
+---
+
+## Part 2D — Player Political Career System
+
+The player's political career is entirely fluid — they can pursue any of the paths below,
+switch between them, or pursue multiple simultaneously (with tradeoffs). All paths coexist
+naturally without special modes or locked states.
+
+### Path A: Found Your Own Nation (Standard Path)
+
+1. Progress through ranks (Wanderer → Duke)
+2. Found nation via Diplomacy Table
+3. Choose government type
+4. If Republic: elections run, you can stay as perpetual president or eventually step aside
+5. If voted out or if you step down: designate Heir, keep founder status
+
+### Path B: Become a Citizen of an AI Nation Early Game
+
+Available from the very beginning of a new world — the player doesn't need to found a nation first.
+
+**Step 1 — Apply for Citizenship**
+- Approach any AI nation's Town Hall or Leader NPC
+- Interaction option: "I wish to settle here" (available before any nation is founded)
+- Approval depends on:
+  - Player's current global reputation
+  - Nation's openness (`DIPLOMATIC`, `MERCANTILE` nations: approve easily; `ISOLATIONIST` nations: require reputation ≥ 200 first)
+  - Player's existing town opinion in the region (high opinion in nearby villages helps)
+- On approval: player receives `CitizenshipData` storing the nation UUID; they are now a citizen
+
+**Step 2 — Build Standing as a Citizen**
+- Pay taxes automatically (small amount per in-game day, withdrawn from player inventory if `citizenTaxEnabled`)
+- Complete quests assigned by town halls and leader NPCs
+- Interact with citizens to build town opinion and reputation
+- Participate in national events (help defend during raids, contribute resources during crises)
+- Earn a **Civic Rank** within that nation (separate from the global Rank system):
+
+| Civic Rank | Requirements |
+|---|---|
+| Newcomer | Just arrived |
+| Resident | 7 days, opinion ≥ 20 in 2+ cities |
+| Contributor | Completed 3 town quests; opinion ≥ 40 |
+| Prominent Citizen | Opinion ≥ 60 in capital; 10 completed quests |
+| Public Figure | Opinion ≥ 70 in capital; known to the leader NPC personally |
+| Candidate-Eligible | Civic Rank ≥ Prominent Citizen; nation is Republic/Democracy |
+
+**Step 3 — Declare Candidacy (Republic nations only)**
+- Available when Civic Rank ≥ Prominent Citizen
+- Player visits the Leader NPC or Town Hall and selects "Declare Candidacy for President"
+- Player selects a running mate (any Candidate-Eligible NPC or another player in multiplayer)
+- Player campaigns for the remaining days of the election cycle:
+  - Talk to citizens: nudge their lean, give speeches (high charisma check → bigger swing)
+  - Complete visible public quests (defending a town from attack during the campaign = massive approval)
+  - Debate rival candidates (dialogue event: choose responses that resonate with the electorate's dominant lean)
+
+**Step 4 — Win the Election**
+- Votes are tallied at end of cycle using the same lean-based algorithm
+- If player wins: they become the new President/Leader of that AI nation
+  - The former AI leader NPC retires (still lives in the capital, can be talked to, may become an opposition figure)
+  - Player gains full access to that nation's Diplomacy Table, cabinet, and policies
+  - Player's own founded nation (if any) must have an active Heir designated (see Part 2C); if no Heir, player is blocked from leading a second nation until one is designated
+- If player loses: they remain a citizen; can run again next cycle
+  - Can request a recount if vote margin < 5% (costs 1 Political Capital; rarely changes outcome but sometimes does)
+
+**Step 5 — Leading a Foreign Nation**
+- Player now has a **dual role**: Founder of Nation A (Heir manages it) + President of Nation B
+- Both nations appear in the player's Diplomacy Table (a tab-switcher at the top)
+- Interesting conflict scenarios:
+  - If Nation A and Nation B go to war (declared by the Heir or by congress of Nation B): player receives a "Constitutional Crisis" notification — must choose which nation to actively lead for the duration of the conflict; the other runs on AI
+  - If the player negotiates a merger of both nations: they become Emperor, ruling a combined state
+  - If the player's Heir in Nation A is doing well: player can formally abdicate Nation A (Heir becomes permanent leader), severing the dual-role
+
+**Being Voted Out of a Foreign Nation:**
+- Same No Confidence mechanics as Part 2B
+- On removal: player's citizenship is retained (they don't get exiled unless they committed war crimes against that nation)
+- Player returns to citizen status; can run again next election
+- If player has own nation with active Heir: Heir continues managing until player returns to that nation's Diplomacy Table and resumes leadership
+
+### Path C: Never Found a Nation (Political Career Only)
+
+The player can choose to never found their own nation and instead play a purely political career across multiple AI nations:
+- Gain citizenship in Nation A → win election → serve as president → lose reelection or step down
+- Apply for citizenship in Nation B → repeat
+- This is a viable and distinct playstyle; the player has no owned nation, no Heir responsibilities, and must rely entirely on the nation they currently lead for military/economic power
+- Achievement system notes this as a distinct "career diplomat" path
+
+### Path D: Monarchy / Appointed-Leader Path
+
+For players who chose Monarchy for their own nation OR for Monarchy-type AI nations:
+- No elections; player appoints a successor directly
+- To lead a foreign Monarchy: requires being formally adopted into the ruling family (MCA marriage into the royal family) OR being appointed as regent after the current ruler dies with no heir
+- The MCA family system is thus politically meaningful: marrying into a royal family can eventually make the player or their children eligible for leadership of foreign nations
 
 ---
 
@@ -112,14 +435,85 @@ UUID nationId
 String name
 String flagColorHex
 GovernmentType governmentType
-UUID leaderEntityId          // player UUID or AI leader NPC UUID
+UUID leaderEntityId              // player UUID or AI leader NPC UUID; changes on election/succession
+UUID founderEntityId             // never changes; the original player or NPC who founded it
 UUID capitalCityId
 List<UUID> districtIds
 NationPolicy policies
 NationStats stats
-NationPersonality personality  // AI only; null for player nation
-boolean isPuppet               // true if controlled by another nation
-UUID puppetMasterId            // the nation UUID that controls this puppet
+NationPersonality personality    // AI only; null for player-founded nation
+boolean isPuppet
+UUID puppetMasterId
+CabinetData cabinet              // all appointed cabinet members and their autonomy settings
+CongressData congress            // members, loyalty, party affiliation, pending votes
+HeirData heir                    // designated heir/regent NPC
+int approvalRating               // 0–100; leader's job performance score
+int approvalBelowThresholdDays   // how many consecutive days approval has been < 20%
+int politicalCapital             // slow accumulating resource for forcing legislation
+```
+
+**`CabinetData`:**
+```java
+Map<CabinetRole, CabinetMember> members
+// CabinetRole enum:
+//   VICE_PRESIDENT, SECRETARY_OF_DEFENSE, SECRETARY_OF_TREASURY,
+//   SECRETARY_OF_STATE, SECRETARY_OF_INTERIOR, ATTORNEY_GENERAL, CHIEF_OF_SCIENCE
+```
+
+**`CabinetMember`:**
+```java
+CabinetRole role
+UUID npcId                       // MCA villager UUID
+String customTitle               // displayed title (e.g., "Warlord" for Monarchy)
+boolean autonomyEnabled          // if true: NPC acts independently in their domain
+Map<String, String> autonomyRules // key/value policy rules for autonomous mode
+int loyalty                      // 0–100 toward current leader
+long lastReportTimestamp         // when they last issued an advisor notification
+```
+
+**`CongressData`:**
+```java
+List<CongressMember> members
+List<PendingVote> pendingVotes
+int nextElectionDay              // in-game day counter for next election cycle
+```
+
+**`CongressMember`:**
+```java
+UUID npcId
+PoliticalLean lean
+String partyName
+int loyalty                      // 0–100 toward current leader
+boolean isElected                // true = citizen-elected; false = player-appointed
+int districtRepresented          // which district this member is from
+```
+
+**`PendingVote`:**
+```java
+VoteType type                    // TAX_CHANGE, WAR_DECLARATION, EDICT, TRADE_AGREEMENT, etc.
+String description
+Map<UUID, VotePosition> votes    // YOEA, NAY, ABSTAIN per member
+int daysUntilDeadline
+boolean requiresSupermajority
+NbtCompound payload              // serialized data about what is being voted on
+```
+
+**`HeirData`:**
+```java
+UUID heirNpcId
+boolean isActive                 // true when player has stepped aside or is inactive
+List<String> regentDirectives    // player-set instructions for autonomous management
+long inactiveSinceTick           // when player last logged in / last touched Diplomacy Table
+```
+
+**`CitizenshipData`** (stored in `PlayerSaveData`):
+```java
+UUID citizenNationId             // the AI nation the player is a citizen of (null if none)
+CivicRank civicRank              // NEWCOMER, RESIDENT, CONTRIBUTOR, PROMINENT, PUBLIC_FIGURE, CANDIDATE_ELIGIBLE
+int completedCivicQuests
+boolean isCandidateDeclared      // currently running in an election
+UUID runningMateId               // chosen VP/running mate for current campaign
+long citizenshipGrantedDay
 ```
 
 **`District`:**
@@ -180,11 +574,29 @@ Map<ResourceType, Integer> weeklyConsumption
 Map<ResourceType, Integer> stockpile          // national reserve
 ```
 
-### 3.2 — Player Restrictions
+### 3.2 — Player Restrictions & PlayerSaveData Changes
 
 - A player may found **exactly one nation** (one-time, irreversible)
 - A player **can** control puppet nations after capitulation/surrender (see Part 5.3)
-- `PlayerSaveData` gains: `Optional<UUID> ownedNationId` and `List<UUID> puppetNationIds`
+- A player **can** simultaneously lead a foreign nation (as president/elected leader) while their own nation runs under an Heir
+
+`PlayerSaveData` gains:
+```java
+Optional<UUID> ownedNationId         // nation the player founded (never changes)
+List<UUID> puppetNationIds           // nations the player controls as puppet master
+Optional<UUID> activeLedNationId     // which nation the player is currently active leader of
+                                     // (may differ from ownedNationId if leading a foreign nation)
+CitizenshipData citizenshipData      // foreign citizenship + civic rank + candidacy state
+boolean isHeir                       // true if this player has been designated heir of an NPC nation
+                                     // (edge case: a player could be someone else's heir)
+int approvalRatingOwnNation          // cached for quick access without loading full Nation
+```
+
+**Dual-Leadership Rules:**
+- `activeLedNationId` determines which Diplomacy Table context the player sees by default
+- Switching active context: button in Diplomacy Table top bar "Switch to [Nation Name]"
+- During an active war between the two nations the player leads: player must choose one to actively command; the other runs on Heir/AI for the duration of the conflict
+- Both nations' advisors can still send notifications regardless of which is "active"
 
 ---
 
@@ -678,6 +1090,31 @@ common/src/main/java/net/mca/
 │   ├── ResourceProfile.java
 │   ├── ResourceType.java               // enum
 │   ├── ResourceWorldCache.java
+│   ├── cabinet/
+│   │   ├── CabinetData.java
+│   │   ├── CabinetMember.java
+│   │   ├── CabinetRole.java            // enum: all 7 cabinet roles
+│   │   ├── CabinetAutonomyRules.java
+│   │   ├── DefenseAdvisor.java         // autonomous military logic for Sec. of Defense
+│   │   ├── TreasuryAdvisor.java        // autonomous trade/resource logic for Sec. of Treasury
+│   │   ├── StateAdvisor.java           // autonomous diplomacy logic for Sec. of State
+│   │   └── InteriorAdvisor.java        // autonomous city development logic
+│   ├── congress/
+│   │   ├── CongressData.java
+│   │   ├── CongressMember.java
+│   │   ├── PendingVote.java
+│   │   ├── VoteType.java               // enum
+│   │   ├── VotePosition.java           // enum: YEA, NAY, ABSTAIN
+│   │   ├── PartyData.java
+│   │   └── CongressVoteManager.java
+│   ├── heir/
+│   │   ├── HeirData.java
+│   │   └── HeirManager.java            // runs heir AI when player is inactive
+│   ├── citizenship/
+│   │   ├── CitizenshipData.java
+│   │   ├── CivicRank.java              // enum: NEWCOMER through CANDIDATE_ELIGIBLE
+│   │   ├── CandidacyData.java
+│   │   └── ElectionManager.java        // handles all election cycles for all nations
 │   ├── trade/
 │   │   ├── TradeOrder.java
 │   │   ├── TradeOrderStatus.java       // enum
@@ -687,10 +1124,6 @@ common/src/main/java/net/mca/
 │   │   ├── WorldEventManager.java
 │   │   ├── WorldEventType.java         // enum
 │   │   └── WorldEvent.java
-│   ├── democracy/
-│   │   ├── DemocraticNationData.java
-│   │   ├── PoliticalLean.java          // enum
-│   │   └── ElectionManager.java
 │   ├── ai/
 │   │   ├── AINationBrain.java
 │   │   └── AIDiplomacyAdvisor.java
@@ -722,7 +1155,18 @@ common/src/main/java/net/mca/
 │   │   ├── SubmitImportOrderPacket.java
 │   │   ├── SetExportListingPacket.java
 │   │   ├── SetResourceDistributionPacket.java
-│   │   └── IssuePuppetDirectivePacket.java
+│   │   ├── IssuePuppetDirectivePacket.java
+│   │   ├── AppointCabinetMemberPacket.java
+│   │   ├── SetCabinetAutonomyPacket.java
+│   │   ├── SetCabinetRulesPacket.java
+│   │   ├── SubmitCongressVotePacket.java
+│   │   ├── ProposeCongressBillPacket.java
+│   │   ├── DesignateHeirPacket.java
+│   │   ├── SetRegentDirectivesPacket.java
+│   │   ├── ApplyForCitizenshipPacket.java
+│   │   ├── DeclareCandidacyPacket.java
+│   │   ├── SwitchActiveLedNationPacket.java
+│   │   └── AbdicateNationPacket.java
 │   └── s2c/
 │       ├── DiplomacyTableDataResponse.java
 │       ├── TownHallDataResponse.java
@@ -730,24 +1174,37 @@ common/src/main/java/net/mca/
 │       ├── NationEventNotification.java
 │       ├── DiplomacyOfferReceived.java
 │       ├── WarDeclarationAlert.java
-│       └── CouncilMeetingAlert.java
+│       ├── CouncilMeetingAlert.java
+│       ├── AdvisorMemoNotification.java     // cabinet member sends a recommendation
+│       ├── CongressVoteCallNotification.java
+│       ├── ElectionResultsNotification.java
+│       ├── NoConfidenceAlertNotification.java
+│       ├── CitizenshipApprovedResponse.java
+│       └── DualLeadershipConflictAlert.java // fired when both led nations go to war
 └── client/
     └── gui/
         ├── DiplomacyTableScreen.java
         ├── TownHallScreen.java
         ├── TradeDepotScreen.java
-        └── NationMapOverlayScreen.java
+        ├── NationMapOverlayScreen.java
+        ├── CabinetManagementScreen.java
+        ├── CongressScreen.java              // view congress, vote on bills, see member loyalty
+        ├── ElectionCampaignScreen.java      // active campaign UI with polling and actions
+        └── FoundNationScreen.java           // government type selection + name/flag
 ```
 
 ### Modified Files
 
 ```
 resources/Rank.java                    // Replace 6 enums with 13
-server/world/data/PlayerSaveData.java  // Add ownedNationId, puppetNationIds
+server/world/data/PlayerSaveData.java  // Add ownedNationId, puppetNationIds, citizenshipData,
+                                       //   activeLedNationId, approvalRatingOwnNation
 server/world/data/Village.java         // Add cityDataId linkage
 block/BlocksMCA.java                   // Register 3 new blocks
 block/BlockEntityTypesMCA.java         // Register 3 new block entities
 entity/EntitiesMCA.java                // Register CourierEntityMCA
+entity/VillagerEntityMCA.java          // Add politicalLean, civicRank, isHeir, isCabinetMember,
+                                       //   cabinetRole fields + related getters/setters
 resources/data/tasks/*.json            // Update all task thresholds for new rank tiers
 ```
 
@@ -760,7 +1217,7 @@ resources/data/tasks/*.json            // Update all task thresholds for new ran
 | **A** | Rank system expansion (13 tiers, updated task JSON) | None |
 | **B** | `CityData` + `TownHallBlock` + Town Hall GUI (overview + market tabs) | Existing `Village` |
 | **C** | `NationManager` data model + NBT serialization | B |
-| **D** | `Diplomacy Table` block + Nation Overview + founding flow | C |
+| **D** | `FoundNationScreen` + government type selection + nation founding flow | C |
 | **E** | AI nation generation (`NationSpawner`) + tick behavior | C |
 | **F** | `NationTickManager` unloaded simulation loop | C + E |
 | **G** | Diplomacy Tab + war/peace system | D + E |
@@ -768,9 +1225,18 @@ resources/data/tasks/*.json            // Update all task thresholds for new ran
 | **I** | Resource system (biome scan, science gating, production flow) | C + F |
 | **J** | District system + district policy GUI | D |
 | **K** | AW2 production → nation economy integration | I + AW2 |
-| **L** | Democratic government type + election system | E + F |
+| **L** | Democratic government type + `ElectionManager` + citizen political lean | E + F |
+| **L2** | Cabinet system: all 7 roles, appointment GUI, autonomy toggles | D + L |
+| **L3** | Cabinet advisor notifications (all 7 roles, toast system) | L2 |
+| **L4** | Cabinet autonomous behavior: DefenseAdvisor, TreasuryAdvisor, StateAdvisor, InteriorAdvisor | L2 + H + G |
 | **M** | Leader NPC full dialogue trees (personality × mood branches) | E + G |
 | **N** | Puppet nation system | G |
+| **N2** | Heir/Regent system: HeirData, HeirManager, designation GUI | D + L2 |
+| **N3** | Player citizenship in foreign nations: CitizenshipData, civic rank, apply flow | E + L |
+| **N4** | Player candidacy + campaign mechanics: CandidacyData, ElectionCampaignScreen | N3 + L |
+| **N5** | Dual-leadership: SwitchActiveLedNation, conflict detection, DualLeadershipConflictAlert | N2 + N4 |
+| **N6** | Congress system: CongressData, CongressScreen, bill proposals, voting, party blocs | L + L2 |
+| **N7** | Political Capital resource + No Confidence mechanics | N6 + L |
 | **O** | Great People + Wonders | I + J |
 | **P** | Council of Nations + Edicts tab | G + J |
 | **Q** | Nation map overlay GUI | C + F |
@@ -778,6 +1244,10 @@ resources/data/tasks/*.json            // Update all task thresholds for new ran
 | **S** | AW2 vehicle + siege system | K + G |
 | **T** | AW2 research tree (full port) | K |
 
-Phases A, B can start immediately.
-C is the central blocker for D–Q.
-K, S, T require AW2 source to be available.
+**Parallel tracks:**
+- A and B can start immediately (no dependencies)
+- C is the central blocker for D through Q
+- L–N7 (government/cabinet/political career) is a self-contained track that can progress in parallel with H–K (trade/economy) once C and D are done
+- K, S, T require AW2 source to be available
+
+**Critical path to first playable nation:** A → B → C → D → E → F → L → L2 → N2
