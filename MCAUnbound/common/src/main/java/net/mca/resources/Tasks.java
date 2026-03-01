@@ -72,6 +72,6 @@ public class Tasks extends JsonDataLoader {
                 return ranks[i];
             }
         }
-        return Rank.OUTLAW;
+        return Rank.WANDERER;
     }
 }

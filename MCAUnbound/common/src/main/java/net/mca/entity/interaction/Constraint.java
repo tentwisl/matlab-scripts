@@ -68,8 +68,8 @@ public enum Constraint implements BiPredicate<VillagerLike<?>, ServerPlayerEntit
     TRADER("trader", (villager, player) -> villager.canTradeWithProfession()),
     NOT_TRADER("!trader", (villager, player) -> !villager.canTradeWithProfession()),
 
-    PEASANT("peasant", (villager, player) -> isRankAtLeast(villager, player, Rank.PEASANT)),
-    NOT_PEASANT("!peasant", (villager, player) -> !isRankAtLeast(villager, player, Rank.PEASANT)),
+    PEASANT("peasant", (villager, player) -> isRankAtLeast(villager, player, Rank.OUTSIDER)),
+    NOT_PEASANT("!peasant", (villager, player) -> !isRankAtLeast(villager, player, Rank.OUTSIDER)),
 
     NOBLE("noble", (villager, player) -> isRankAtLeast(villager, player, Rank.NOBLE)),
     NOT_NOBLE("!noble", (villager, player) -> !isRankAtLeast(villager, player, Rank.NOBLE)),
