@@ -1060,5 +1060,27 @@
   "item.mca.yellow_mangrove_crib": "Yellow Mangrove Crib",
   "item.mca.yellow_oak_crib": "Yellow Oak Crib",
   "item.mca.yellow_spruce_crib": "Yellow Spruce Crib",
-  "item.mca.yellow_warped_crib": "Yellow Warped Crib"
+  "item.mca.yellow_warped_crib": "Yellow Warped Crib",
+
+  "block.mca.diplomacy_table": "Diplomacy Table",
+  "block.mca.town_hall": "Town Hall",
+  "item.mca.diplomacy_table": "Diplomacy Table",
+  "item.mca.town_hall": "Town Hall",
+  "gui.mca.diplomacy_table.title": "Diplomacy Table",
+  "gui.mca.town_hall.title": "Town Hall",
+  "gui.village.rank.wanderer":   "Wanderer",
+  "gui.village.rank.outsider":   "Outsider",
+  "gui.village.rank.settler":    "Settler",
+  "gui.village.rank.freeman":    "Freeman",
+  "gui.village.rank.merchant":   "Merchant",
+  "gui.village.rank.guildmaster": "Guildmaster",
+  "gui.village.rank.magistrate": "Magistrate",
+  "gui.village.rank.mayor":      "Mayor",
+  "gui.village.rank.noble":      "Noble",
+  "gui.village.rank.duke":       "Duke",
+  "gui.village.rank.archduke":   "Archduke",
+  "gui.village.rank.monarch":    "Monarch",
+  "gui.village.rank.emperor":    "Emperor",
+
+  "key.mca.nations_debug": "Nations Debug Screen"
 }

@@ -1,11 +1,11 @@
 [
   {
     "type": "reputation",
-    "reputation": 1200
+    "reputation": 2000
   },
   {
     "type": "population",
-    "population": 20
+    "population": 30
   },
   {
     "type": "building",

@@ -1,11 +1,7 @@
 [
   {
     "type": "reputation",
-    "reputation": 600
-  },
-  {
-    "type": "building",
-    "building": "big_house"
+    "reputation": 900
   },
   {
     "type": "building",

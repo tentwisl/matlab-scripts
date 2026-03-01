@@ -44,4 +44,8 @@ public interface ClientInteractionManager {
     void handleCustomSkinsChangedMessage(CustomSkinsChangedMessage message);
 
     void handleCivilRegistryResponse(CivilRegistryResponse response);
+
+    void handleDiplomacyTableResponse(net.mca.network.s2c.DiplomacyTableDataResponse response);
+    void handleTownHallResponse(net.mca.network.s2c.TownHallDataResponse response);
+    void handleNationsDebugResponse(net.mca.network.s2c.NationsDebugResponse response);
 }

@@ -1,14 +1,14 @@
 [
   {
     "type": "reputation",
-    "reputation": 2800
+    "reputation": 3800
   },
   {
     "type": "population",
-    "population": 40
+    "population": 60
   },
   {
     "type": "building",
-    "building": "barracks"
+    "building": "blacksmith"
   }
 ]

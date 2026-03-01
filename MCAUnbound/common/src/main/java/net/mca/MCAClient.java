@@ -1,6 +1,8 @@
 package net.mca;
 
+import net.mca.client.gui.NationDebugScreen;
 import net.mca.client.gui.SkinLibraryScreen;
+import net.mca.network.c2s.GetNationsDebugRequest;
 import net.mca.client.tts.SpeechManager;
 import net.mca.cobalt.network.NetworkHandler;
 import net.mca.entity.VillagerEntityMCA;
@@ -68,6 +70,10 @@ public class MCAClient {
 
         if (KeyBindings.SKIN_LIBRARY.wasPressed()) {
             MinecraftClient.getInstance().setScreen(new SkinLibraryScreen());
+        }
+
+        if (KeyBindings.NATIONS_DEBUG.wasPressed()) {
+            NetworkHandler.sendToServer(new GetNationsDebugRequest());
         }
 
         SpeechManager.INSTANCE.tick(client);

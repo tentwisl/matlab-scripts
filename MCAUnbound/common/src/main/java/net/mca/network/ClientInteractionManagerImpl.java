@@ -249,4 +249,40 @@ public class ClientInteractionManagerImpl implements ClientInteractionManager {
             civilRegistryBook.receive(response.getIndex(), response.getLines());
         }
     }
+
+    @Override
+    public void handleDiplomacyTableResponse(net.mca.network.s2c.DiplomacyTableDataResponse response) {
+        Screen screen = client.currentScreen;
+        if (screen instanceof net.mca.client.gui.DiplomacyTableScreen gui) {
+            gui.loadData(response);
+        } else {
+            net.mca.client.gui.DiplomacyTableScreen newScreen = new net.mca.client.gui.DiplomacyTableScreen();
+            client.setScreen(newScreen);
+            client.execute(() -> newScreen.loadData(response));
+        }
+    }
+
+    @Override
+    public void handleTownHallResponse(net.mca.network.s2c.TownHallDataResponse response) {
+        Screen screen = client.currentScreen;
+        if (screen instanceof net.mca.client.gui.TownHallScreen gui) {
+            gui.loadData(response);
+        } else {
+            net.mca.client.gui.TownHallScreen newScreen = new net.mca.client.gui.TownHallScreen();
+            client.setScreen(newScreen);
+            client.execute(() -> newScreen.loadData(response));
+        }
+    }
+
+    @Override
+    public void handleNationsDebugResponse(net.mca.network.s2c.NationsDebugResponse response) {
+        Screen screen = client.currentScreen;
+        if (screen instanceof net.mca.client.gui.NationDebugScreen gui) {
+            gui.loadData(response);
+        } else {
+            net.mca.client.gui.NationDebugScreen newScreen = new net.mca.client.gui.NationDebugScreen();
+            client.setScreen(newScreen);
+            client.execute(() -> newScreen.loadData(response));
+        }
+    }
 }

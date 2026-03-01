@@ -10,7 +10,9 @@ import java.util.List;
 public class KeyBindings {
     public static final List<KeyBinding> list = new LinkedList<>();
 
-    public static final KeyBinding SKIN_LIBRARY = newKey("skin_library", GLFW.GLFW_KEY_U);
+    public static final KeyBinding SKIN_LIBRARY    = newKey("skin_library",    GLFW.GLFW_KEY_U);
+    /** Opens the Nations Debug Screen (shows all known nations and their stats). */
+    public static final KeyBinding NATIONS_DEBUG   = newKey("nations_debug",   GLFW.GLFW_KEY_N);
 
     private static KeyBinding newKey(String name, int code) {
         KeyBinding key = new KeyBinding(

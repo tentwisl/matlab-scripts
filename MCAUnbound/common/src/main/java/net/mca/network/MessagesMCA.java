@@ -54,5 +54,13 @@ public interface MessagesMCA {
         NetworkHandler.registerMessage(SetTargetMessage.class);
         NetworkHandler.registerMessage(CivilRegistryPageRequest.class);
         NetworkHandler.registerMessage(CivilRegistryResponse.class);
+        // Nation system packets
+        NetworkHandler.registerMessage(OpenDiplomacyTableRequest.class);
+        NetworkHandler.registerMessage(OpenTownHallRequest.class);
+        NetworkHandler.registerMessage(GetNationsDebugRequest.class);
+        NetworkHandler.registerMessage(FoundNationPacket.class);
+        NetworkHandler.registerMessage(DiplomacyTableDataResponse.class);
+        NetworkHandler.registerMessage(TownHallDataResponse.class);
+        NetworkHandler.registerMessage(NationsDebugResponse.class);
     }
 }

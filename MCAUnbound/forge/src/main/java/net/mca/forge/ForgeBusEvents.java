@@ -2,6 +2,8 @@ package net.mca.forge;
 
 import net.mca.MCA;
 import net.mca.MCAClient;
+import net.mca.nation.NationManager;
+import net.mca.nation.NationSpawner;
 import net.mca.server.ServerInteractionManager;
 import net.mca.server.command.AdminCommand;
 import net.mca.server.command.Command;
@@ -36,7 +38,14 @@ public class ForgeBusEvents {
     @SubscribeEvent
     public static void onWorldTick(TickEvent.LevelTickEvent event) {
         if (!event.level.isClient && event.side == LogicalSide.SERVER && event.phase == TickEvent.Phase.END) {
-            VillageManager.get((ServerWorld)event.level).tick();
+            ServerWorld serverWorld = (ServerWorld) event.level;
+            VillageManager.get(serverWorld).tick();
+            NationManager nationManager = NationManager.get(serverWorld);
+            nationManager.tick();
+            // Seed AI nations once villages exist
+            if (!nationManager.isAiNationsSeeded()) {
+                NationSpawner.seedAiNations(serverWorld, nationManager);
+            }
         }
     }
 
