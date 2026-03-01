@@ -2,7 +2,7 @@ package net.mca.nation;
 
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtIntArray;
+import net.minecraft.nbt.NbtInt;
 import net.minecraft.nbt.NbtList;
 
 import java.io.Serial;
@@ -52,7 +52,7 @@ public class District implements Serializable {
         nbt.putInt("taxRateOverride", taxRateOverride);
         if (focusOverride != null) nbt.putString("focusOverride", focusOverride.name());
         NbtList list = new NbtList();
-        cityVillageIds.forEach(id -> list.add(NbtIntArray.of(new int[]{id})));
+        cityVillageIds.forEach(id -> list.add(NbtInt.of(id)));
         nbt.put("cities", list);
         return nbt;
     }
