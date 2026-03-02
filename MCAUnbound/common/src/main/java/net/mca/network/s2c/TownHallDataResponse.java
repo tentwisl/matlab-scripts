@@ -1,49 +1,72 @@
 package net.mca.network.s2c;
 
 import net.mca.ClientProxy;
-import net.mca.nation.CityData;
-import net.mca.nation.NationManager;
+import net.mca.block.TownHallBlockEntity;
 import net.mca.network.NbtDataMessage;
 import net.mca.server.world.data.Village;
 import net.minecraft.nbt.NbtCompound;
 
 import java.io.Serial;
+import java.util.Map;
 import java.util.UUID;
 
 /**
  * S2C: data for the Town Hall screen.
- * Contains village info, city metadata, and owning nation summary.
+ * Contains village info, per-villager hearts for the requesting player,
+ * and leadership state.
  */
 public class TownHallDataResponse extends NbtDataMessage {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    public TownHallDataResponse(Village village, CityData city, NationManager nm, UUID playerId) {
-        super(buildNbt(village, city, nm, playerId));
+    public TownHallDataResponse(Village village, TownHallBlockEntity townHall,
+                                 Map<UUID, Integer> villagerHearts,
+                                 Map<UUID, String> villagerNames,
+                                 UUID playerId) {
+        super(buildNbt(village, townHall, villagerHearts, villagerNames, playerId));
     }
 
-    private static NbtCompound buildNbt(Village village, CityData city, NationManager nm, UUID playerId) {
+    private static NbtCompound buildNbt(Village village, TownHallBlockEntity townHall,
+                                         Map<UUID, Integer> villagerHearts,
+                                         Map<UUID, String> villagerNames,
+                                         UUID playerId) {
         NbtCompound root = new NbtCompound();
 
         if (village != null) {
-            root.put("village", village.save());
             root.putString("villageName", village.getName());
+            root.putInt("villageId", village.getId());
+            root.putInt("population", village.getPopulation());
+            root.putInt("maxPopulation", village.getMaxPopulation());
         }
 
-        root.put("city", city.save());
+        // Per-villager hearts for the requesting player
+        NbtCompound heartsNbt = new NbtCompound();
+        for (Map.Entry<UUID, Integer> entry : villagerHearts.entrySet()) {
+            heartsNbt.putInt(entry.getKey().toString(), entry.getValue());
+        }
+        root.put("villagerHearts", heartsNbt);
 
-        // Owning nation summary
-        city.getOwningNationId().flatMap(nm::getNation).ifPresent(nation -> {
-            NbtCompound ns = new NbtCompound();
-            ns.putString("name",      nation.getName());
-            ns.putString("flagColor", nation.getFlagColorHex());
-            ns.putString("gov",       nation.getGovernmentType().name());
-            ns.putInt("science",      nation.getStats().getScienceLevel());
-            root.put("owningNation",  ns);
-        });
+        // Villager names
+        NbtCompound namesNbt = new NbtCompound();
+        for (Map.Entry<UUID, String> entry : villagerNames.entrySet()) {
+            namesNbt.putString(entry.getKey().toString(), entry.getValue());
+        }
+        root.put("villagerNames", namesNbt);
 
-        // Player's reputation in this city
-        root.putInt("playerReputation", city.getPlayerOpinion(playerId));
+        // Leadership data
+        root.putBoolean("hasLeader", townHall.hasLeader());
+        if (townHall.hasLeader()) {
+            root.putUuid("leaderUUID", townHall.getLeaderUUID());
+            root.putString("leaderName", townHall.getLeaderName());
+        }
+        root.putInt("electionState", townHall.getElectionState().ordinal());
+
+        // Is the requesting player the leader?
+        root.putBoolean("isPlayerLeader", townHall.hasLeader()
+                && townHall.getLeaderUUID().equals(playerId));
+
+        // Block position so the screen can send AttemptLeadershipRequest back
+        root.putLong("blockPos", townHall.getPos().asLong());
 
         return root;
     }

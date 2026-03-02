@@ -95,6 +95,26 @@ public enum Constraint implements BiPredicate<VillagerLike<?>, ServerPlayerEntit
     HAS_VILLAGE("has_village", (villager, player) -> villager instanceof VillagerEntityMCA mcaVillager && mcaVillager.getResidency().getHomeVillage().isPresent()),
     NOT_HAS_VILLAGE("!has_village", (villager, player) -> villager instanceof VillagerEntityMCA mcaVillager && mcaVillager.getResidency().getHomeVillage().isEmpty()),
 
+    // MCAUnbound: Village residency — player has >= residentHeartThreshold hearts with this villager
+    RESIDENT("resident", (villager, player) -> {
+        if (villager instanceof VillagerEntityMCA v && player != null) {
+            int hearts = v.getVillagerBrain().getMemoriesForPlayer(player).getHearts();
+            return hearts >= net.mca.nation.MCAUnboundConfig.get().residentHeartThreshold;
+        }
+        return false;
+    }),
+    NOT_RESIDENT("!resident", (villager, player) -> !RESIDENT.test(villager, player)),
+
+    // MCAUnbound: Village leader — player has >= leaderHeartThreshold hearts with this villager
+    VILLAGE_LEADER("village_leader", (villager, player) -> {
+        if (villager instanceof VillagerEntityMCA v && player != null) {
+            int hearts = v.getVillagerBrain().getMemoriesForPlayer(player).getHearts();
+            return hearts >= net.mca.nation.MCAUnboundConfig.get().leaderHeartThreshold;
+        }
+        return false;
+    }),
+    NOT_VILLAGE_LEADER("!village_leader", (villager, player) -> !VILLAGE_LEADER.test(villager, player)),
+
     HIT_BY("hit_by", (villager, player) -> {
         if (villager instanceof VillagerEntityMCA v) {
             return v.isHitBy(player);

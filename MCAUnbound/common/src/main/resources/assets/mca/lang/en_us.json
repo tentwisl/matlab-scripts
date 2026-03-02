@@ -614,6 +614,15 @@
   "interaction.greet": "Good to see you, traveller!",
   "interaction.story": "Ah, let me tell you something interesting...",
 
+  "gui.mca.town_hall.title": "Town Hall",
+  "townhall.election.already_has_leader": "This village already has a leader.",
+  "townhall.election.already_in_progress": "An election is already in progress.",
+  "townhall.election.no_village": "This Town Hall is not associated with any village.",
+  "townhall.election.no_residents": "There are no residents in this village.",
+  "townhall.election.low_hearts": "%d villagers still don't trust you enough. You need %d hearts with all residents.",
+  "townhall.election.started_success": "The villagers have chosen! Check your mail.",
+  "townhall.election.started_failure": "The election results are in. Check your mail.",
+
   "gui.title.namebaby.male": "It's a boy!",
   "gui.title.namebaby.female": "It's a girl!",
   "gui.title.namebaby": "Name your baby:",
