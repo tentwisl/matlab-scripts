@@ -10,44 +10,5 @@
     "notifyServer": false,
     "targetServer": false,
     "constraints": ""
-  },
-  {
-    "identifier": "gui.button.bribe",
-    "align": "center",
-    "x": -42,
-    "y": -55,
-    "row": 0,
-    "width": 84,
-    "height": 20,
-    "notifyServer": true,
-    "targetServer": false,
-    "constraints": "adult",
-    "isInteraction": true
-  },
-  {
-    "identifier": "gui.button.discuss_leader",
-    "align": "center",
-    "x": -42,
-    "y": -55,
-    "row": 1,
-    "width": 84,
-    "height": 20,
-    "notifyServer": true,
-    "targetServer": false,
-    "constraints": "adult",
-    "isInteraction": true
-  },
-  {
-    "identifier": "gui.button.campaign",
-    "align": "center",
-    "x": -42,
-    "y": -55,
-    "row": 2,
-    "width": 84,
-    "height": 20,
-    "notifyServer": true,
-    "targetServer": false,
-    "constraints": "adult",
-    "isInteraction": true
   }
 ]

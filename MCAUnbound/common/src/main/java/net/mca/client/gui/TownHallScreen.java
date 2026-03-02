@@ -8,6 +8,7 @@ import net.mca.network.s2c.TownHallDataResponse;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 
@@ -17,18 +18,19 @@ import java.util.*;
  * Town Hall block GUI.
  *
  * <ul>
- *   <li>Village name, population, and current leader (NPC or player)</li>
+ *   <li>Village name, resident count, and current leader (NPC or player)</li>
  *   <li>Scrollable resident list with per-villager hearts, colour-coded by threshold</li>
+ *   <li>Coloured avatar placeholder (UUID-hash colour) next to each name</li>
  *   <li>Click a villager row to highlight them in-world (Glowing for 30 s)</li>
+ *   <li>Pending village supply requests section</li>
  *   <li>"Attempt Leadership" button when the player is eligible</li>
  * </ul>
  */
 public class TownHallScreen extends ExtendedScreen {
 
     // ── Village data ──────────────────────────────────────────────────────────
-    private String villageName  = "Unknown";
-    private int population      = 0;
-    private int maxPopulation   = 0;
+    private String villageName = "Unknown";
+    private int maxPopulation  = 0;
 
     // ── Per-villager data: UUID string → hearts / name ────────────────────────
     private final Map<String, Integer> villagerHearts = new LinkedHashMap<>();
@@ -37,16 +39,16 @@ public class TownHallScreen extends ExtendedScreen {
     // ── Leadership ────────────────────────────────────────────────────────────
     private boolean hasLeader      = false;
     private String  leaderName     = "";
-    private boolean leaderIsPlayer = false;  // false = NPC villager leader
-    private boolean isPlayerLeader = false;  // true = THIS player is the leader
-    private int     electionState  = 0;      // 0=NONE, 1=PENDING
+    private boolean leaderIsPlayer = false;
+    private boolean isPlayerLeader = false;
+    private int     electionState  = 0;
 
     // ── Block pos (for sending action packets) ────────────────────────────────
     private BlockPos blockPos = BlockPos.ORIGIN;
 
     // ── List scroll state ────────────────────────────────────────────────────
     private int scrollOffset = 0;
-    private static final int VISIBLE_ROWS = 10;
+    private static final int VISIBLE_ROWS = 9;
     private static final int ROW_HEIGHT   = 14;
     /** Y-start of the first rendered row (set in render(), used in mouseClicked) */
     private int listStartY = 80;
@@ -57,6 +59,10 @@ public class TownHallScreen extends ExtendedScreen {
 
     // ── Ordered UUID list (built from villagerNames keyset each render) ────────
     private List<String> orderedUuids = new ArrayList<>();
+
+    // ── Pending requests ──────────────────────────────────────────────────────
+    /** [itemName, remaining, total] display strings */
+    private final List<String[]> pendingRequests = new ArrayList<>();
 
     public TownHallScreen() {
         super(Text.translatable("gui.mca.town_hall.title"));
@@ -78,10 +84,7 @@ public class TownHallScreen extends ExtendedScreen {
         addDrawableChild(ButtonWidget.builder(Text.literal("Close"), b -> close())
                 .dimensions(cx - 40, bottomY, 80, 20).build());
 
-        // Attempt Leadership — visible when:
-        //   • No player leader exists yet (NPC leader or no leader at all)
-        //   • No election in progress
-        //   • Player meets heart threshold with all loaded villagers
+        // Attempt Leadership
         boolean canAttempt = !villagerHearts.isEmpty()
                 && meetsLeaderThreshold
                 && electionState == 0
@@ -122,8 +125,9 @@ public class TownHallScreen extends ExtendedScreen {
         ctx.drawCenteredTextWithShadow(textRenderer, "§6§lTown Hall — " + villageName, cx, y, 0xFFFFFF);
         y += 16;
 
-        // Population + leader on the same row
-        ctx.drawTextWithShadow(textRenderer, "Population: " + population + "/" + maxPopulation, cx - 120, y, 0xCCCCCC);
+        // Population (use actual resident count) + leader
+        int residentCount = villagerNames.size();
+        ctx.drawTextWithShadow(textRenderer, "Residents: " + residentCount + "/" + maxPopulation, cx - 120, y, 0xCCCCCC);
 
         if (hasLeader) {
             String prefix = leaderIsPlayer ? "§a[Player] " : "§b[NPC] ";
@@ -150,13 +154,15 @@ public class TownHallScreen extends ExtendedScreen {
         }
         y += 18;
 
-        // List header
+        // ── Resident list ─────────────────────────────────────────────────────
         int listX = cx - 120;
         listStartY = y;
+
+        // Header row
         ctx.fill(listX - 4, y - 2, listX + 248, y + 12, 0x99000000);
-        ctx.drawTextWithShadow(textRenderer, "§fVillager", listX, y, 0xFFFFFF);
+        ctx.drawTextWithShadow(textRenderer, "§fVillager", listX + 14, y, 0xFFFFFF);
         ctx.drawTextWithShadow(textRenderer, "§fHearts", listX + 185, y, 0xFFFFFF);
-        ctx.drawTextWithShadow(textRenderer, "§7[click to highlight]", listX + 4, y + 1, 0x888888);
+        ctx.drawTextWithShadow(textRenderer, "§7[click to highlight]", listX + 60, y + 1, 0x888888);
         y += ROW_HEIGHT;
 
         orderedUuids = new ArrayList<>(villagerNames.keySet());
@@ -168,21 +174,24 @@ public class TownHallScreen extends ExtendedScreen {
             String name    = villagerNames.getOrDefault(uuid, "???");
             int hearts     = villagerHearts.getOrDefault(uuid, 0);
 
-            // Row highlight on hover
             boolean hovered = mouseX >= listX - 4 && mouseX < listX + 244
                     && mouseY >= y - 1 && mouseY < y + ROW_HEIGHT - 2;
 
             int rowBg = hovered ? 0x66FFFFFF : (i % 2 == 0 ? 0x44000000 : 0x22000000);
             ctx.fill(listX - 4, y - 1, listX + 244, y + ROW_HEIGHT - 2, rowBg);
 
-            String display = name.length() > 26 ? name.substring(0, 24) + ".." : name;
-            ctx.drawTextWithShadow(textRenderer, display, listX, y, hovered ? 0xFFFFFF : 0xCCCCCC);
+            // Coloured avatar placeholder (3×9 rect, colour derived from UUID hash)
+            int avatarColor = uuidToColor(uuid);
+            ctx.fill(listX, y, listX + 9, y + ROW_HEIGHT - 3, avatarColor);
+
+            String display = name.length() > 24 ? name.substring(0, 22) + ".." : name;
+            ctx.drawTextWithShadow(textRenderer, display, listX + 12, y, hovered ? 0xFFFFFF : 0xCCCCCC);
 
             int heartColor;
-            if      (hearts >= cfg.leaderHeartThreshold)   heartColor = 0x55FF55; // green = leader-eligible
-            else if (hearts >= cfg.residentHeartThreshold)  heartColor = 0x55FFFF; // cyan  = resident
-            else if (hearts > 0)                            heartColor = 0xFFFF55; // yellow = positive
-            else                                            heartColor = 0xFF5555; // red   = none/neg
+            if      (hearts >= cfg.leaderHeartThreshold)   heartColor = 0x55FF55;
+            else if (hearts >= cfg.residentHeartThreshold)  heartColor = 0x55FFFF;
+            else if (hearts > 0)                            heartColor = 0xFFFF55;
+            else                                            heartColor = 0xFF5555;
 
             ctx.drawTextWithShadow(textRenderer, hearts + " ♥", listX + 185, y, heartColor);
             y += ROW_HEIGHT;
@@ -190,10 +199,39 @@ public class TownHallScreen extends ExtendedScreen {
 
         if (total == 0) {
             ctx.drawCenteredTextWithShadow(textRenderer, "§7No residents loaded", cx, y + 8, 0xFFFFFF);
+            y += ROW_HEIGHT;
         } else if (total > VISIBLE_ROWS) {
             ctx.drawCenteredTextWithShadow(textRenderer,
                     "§7" + (scrollOffset + 1) + "–" + end + " of " + total, cx, y + 2, 0xFFFFFF);
+            y += ROW_HEIGHT;
         }
+
+        y += 6;
+
+        // ── Pending supply requests ───────────────────────────────────────────
+        if (!pendingRequests.isEmpty()) {
+            ctx.fill(listX - 4, y - 2, listX + 248, y + 12, 0x99220000);
+            ctx.drawTextWithShadow(textRenderer, "§c§lPending Requests", listX, y, 0xFFFFFF);
+            y += ROW_HEIGHT;
+
+            for (int i = 0; i < pendingRequests.size(); i++) {
+                String[] r = pendingRequests.get(i);
+                int bg = i % 2 == 0 ? 0x44110000 : 0x22110000;
+                ctx.fill(listX - 4, y - 1, listX + 244, y + ROW_HEIGHT - 2, bg);
+                ctx.drawTextWithShadow(textRenderer, "§f" + r[0], listX, y, 0xFFFFFF);
+                ctx.drawTextWithShadow(textRenderer, "§e" + r[1] + "§7/" + r[2], listX + 170, y, 0xFFFFFF);
+                y += ROW_HEIGHT;
+            }
+        }
+    }
+
+    /** Derive a pastel-ish colour from the UUID string for the avatar placeholder. */
+    private static int uuidToColor(String uuid) {
+        int h = uuid.hashCode();
+        int r = 100 + (h & 0x7F);
+        int g = 100 + ((h >> 8) & 0x7F);
+        int b = 100 + ((h >> 16) & 0x7F);
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
 
     // ── Mouse interaction ─────────────────────────────────────────────────────
@@ -203,7 +241,6 @@ public class TownHallScreen extends ExtendedScreen {
         int cx = width / 2;
         int listX = cx - 120;
 
-        // Check if click is within the villager list area
         if (mouseX >= listX - 4 && mouseX < listX + 244) {
             int rowY = listStartY + ROW_HEIGHT; // +ROW_HEIGHT to skip the header
             int total = orderedUuids.size();
@@ -231,7 +268,7 @@ public class TownHallScreen extends ExtendedScreen {
         if (total > VISIBLE_ROWS) {
             scrollOffset -= (int) amount;
             scrollOffset = Math.max(0, Math.min(scrollOffset, total - VISIBLE_ROWS));
-            rebuildButtons(); // refresh scroll button positions
+            rebuildButtons();
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, amount);
@@ -244,8 +281,8 @@ public class TownHallScreen extends ExtendedScreen {
 
         villageName   = root.getString("villageName");
         if (villageName.isEmpty()) villageName = "Unknown";
-        population    = root.getInt("population");
         maxPopulation = root.getInt("maxPopulation");
+        // Note: we display villagerNames.size() as the resident count (accurate)
 
         villagerHearts.clear();
         villagerNames.clear();
@@ -269,9 +306,22 @@ public class TownHallScreen extends ExtendedScreen {
             blockPos = BlockPos.fromLong(root.getLong("blockPos"));
         }
 
+        // Pending supply requests
+        pendingRequests.clear();
+        if (root.contains("pendingRequests")) {
+            NbtList pl = root.getList("pendingRequests", 10);
+            for (int i = 0; i < pl.size(); i++) {
+                NbtCompound e = pl.getCompound(i);
+                String itemName = e.getString("itemName");
+                int fulfilled   = e.getInt("fulfilled");
+                int total       = e.getInt("total");
+                pendingRequests.add(new String[]{itemName, String.valueOf(fulfilled), String.valueOf(total)});
+            }
+        }
+
         // Recalculate eligibility
         MCAUnboundConfig cfg = MCAUnboundConfig.get();
-        isResident          = true;
+        isResident           = true;
         meetsLeaderThreshold = true;
 
         if (villagerHearts.isEmpty()) {

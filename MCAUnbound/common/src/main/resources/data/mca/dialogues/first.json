@@ -5,6 +5,19 @@
     {
       "results": [
         {
+          "baseChance": -100,
+          "conditions": [
+            {
+              "chance": 200,
+              "constraints": "npc_village_leader"
+            }
+          ],
+          "actions": {
+            "next": "main",
+            "say": "leader_first.greeting"
+          }
+        },
+        {
           "baseChance": 1,
           "actions": {
             "next": "main",

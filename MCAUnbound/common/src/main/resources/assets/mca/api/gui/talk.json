@@ -12,7 +12,7 @@
     "constraints": ""
   },
   {
-    "identifier": "gui.button.joke",
+    "identifier": "gui.button.greet",
     "align": "center",
     "x": -42,
     "y": -55,
@@ -25,7 +25,7 @@
     "isInteraction": true
   },
   {
-    "identifier": "gui.button.greet",
+    "identifier": "gui.button.joke",
     "align": "center",
     "x": -42,
     "y": -55,
@@ -38,7 +38,7 @@
     "isInteraction": true
   },
   {
-    "identifier": "gui.button.flirt",
+    "identifier": "gui.button.story",
     "align": "center",
     "x": -42,
     "y": -55,
@@ -47,11 +47,11 @@
     "height": 20,
     "notifyServer": true,
     "targetServer": false,
-    "constraints": "adult",
+    "constraints": "",
     "isInteraction": true
   },
   {
-    "identifier": "gui.button.story",
+    "identifier": "gui.button.flirt",
     "align": "center",
     "x": -42,
     "y": -55,
@@ -60,33 +60,56 @@
     "height": 20,
     "notifyServer": true,
     "targetServer": false,
-    "constraints": "",
+    "constraints": "adult",
     "isInteraction": true
   },
   {
-    "identifier": "gui.button.ask",
+    "identifier": "gui.button.chat",
     "align": "center",
     "x": -42,
     "y": -55,
     "row": 4,
     "width": 84,
     "height": 20,
-    "notifyServer": true,
+    "notifyServer": false,
     "targetServer": false,
-    "constraints": "",
-    "isInteraction": true
+    "constraints": ""
   },
   {
-    "identifier": "gui.button.kiss",
+    "identifier": "gui.button.rumors",
     "align": "center",
     "x": -42,
     "y": -55,
     "row": 5,
     "width": 84,
     "height": 20,
+    "notifyServer": false,
+    "targetServer": false,
+    "constraints": ""
+  },
+  {
+    "identifier": "gui.button.ask",
+    "align": "center",
+    "x": -42,
+    "y": -55,
+    "row": 6,
+    "width": 84,
+    "height": 20,
+    "notifyServer": false,
+    "targetServer": false,
+    "constraints": ""
+  },
+  {
+    "identifier": "gui.button.kiss",
+    "align": "center",
+    "x": -42,
+    "y": -55,
+    "row": 7,
+    "width": 84,
+    "height": 20,
     "notifyServer": true,
     "targetServer": false,
-    "constraints": "spouse|engaged",
+    "constraints": "hearts_100",
     "hideOnFail": true,
     "isInteraction": true
   }

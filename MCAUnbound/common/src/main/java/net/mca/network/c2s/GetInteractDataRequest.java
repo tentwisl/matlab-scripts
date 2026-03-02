@@ -1,5 +1,6 @@
 package net.mca.network.c2s;
 
+import net.mca.entity.VillagerEntityMCA;
 import net.mca.entity.interaction.Constraint;
 import net.mca.cobalt.network.Message;
 import net.mca.cobalt.network.NetworkHandler;
@@ -7,12 +8,15 @@ import net.mca.entity.VillagerLike;
 import net.mca.entity.ai.relationship.CompassionateEntity;
 import net.mca.entity.ai.relationship.EntityRelationship;
 import net.mca.entity.ai.relationship.RelationshipState;
-import net.mca.server.world.data.FamilyTreeNode;
 import net.mca.network.s2c.GetInteractDataResponse;
+import net.mca.server.world.data.FamilyTreeNode;
+import net.mca.server.world.data.Village;
 import net.minecraft.entity.Entity;
+import net.minecraft.registry.Registries;
 import net.minecraft.server.network.ServerPlayerEntity;
 
 import java.io.Serial;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -31,10 +35,9 @@ public class GetInteractDataRequest implements Message {
         Entity entity = player.getServerWorld().getEntity(uuid);
 
         if (entity instanceof VillagerLike<?> villager) {
-            //get constraints
             Set<Constraint> constraints = Constraint.allMatching(villager, player);
 
-            EntityRelationship relationship = ((CompassionateEntity<?>)villager).getRelationships();
+            EntityRelationship relationship = ((CompassionateEntity<?>) villager).getRelationships();
             FamilyTreeNode family = relationship.getFamilyEntry();
 
             String fatherName = relationship.getFamilyTree().getOrEmpty(family.father()).map(FamilyTreeNode::getName).orElse(null);
@@ -42,7 +45,36 @@ public class GetInteractDataRequest implements Message {
             String spouseName = relationship.getFamilyTree().getOrEmpty(family.partner()).map(FamilyTreeNode::getName).orElse(null);
             RelationshipState marriageState = relationship.getRelationshipState();
 
-            NetworkHandler.sendToPlayer(new GetInteractDataResponse(constraints, fatherName, motherName, spouseName, marriageState), player);
+            // Profession + village + leader status
+            String professionStr = "Jobless";
+            String villageName = "";
+            boolean isNpcLeader = false;
+
+            if (entity instanceof VillagerEntityMCA mca) {
+                Optional<Village> homeVillage = mca.getResidency().getHomeVillage();
+
+                if (homeVillage.isPresent()) {
+                    villageName = homeVillage.get().getName();
+                    isNpcLeader = entity.getUuid().equals(homeVillage.get().getNpcLeaderUUID());
+                }
+
+                if (isNpcLeader) {
+                    professionStr = "Village Leader";
+                } else {
+                    var prof = mca.getProfession();
+                    var profId = Registries.VILLAGER_PROFESSION.getId(prof);
+                    if (profId != null) {
+                        String path = profId.getPath();
+                        if (!path.equals("none") && !path.isEmpty()) {
+                            professionStr = Character.toUpperCase(path.charAt(0)) + path.substring(1).replace('_', ' ');
+                        }
+                    }
+                }
+            }
+
+            NetworkHandler.sendToPlayer(new GetInteractDataResponse(
+                    constraints, fatherName, motherName, spouseName, marriageState,
+                    professionStr, villageName, isNpcLeader), player);
         }
     }
 }

@@ -61,6 +61,8 @@ public class Village implements Iterable<Building> {
     private boolean autoScan = Config.getInstance().enableAutoScanByDefault;
     /** Whether a Town Hall block has been placed for this village. */
     private boolean townHallPlaced = false;
+    /** UUID of the NPC villager selected as the default village leader. */
+    private UUID npcLeaderUUID = null;
 
     private BlockBoxExtended box = new BlockBoxExtended(0, 0, 0, 0, 0, 0);
 
@@ -103,6 +105,7 @@ public class Village implements Iterable<Building> {
             autoScan = true;
         }
         townHallPlaced = v.getBoolean("townHallPlaced");
+        if (v.containsUuid("npcLeaderUUID")) npcLeaderUUID = v.getUuid("npcLeaderUUID");
 
         NbtList b = v.getList("buildings", NbtElement.COMPOUND_TYPE);
         for (int i = 0; i < b.size(); i++) {
@@ -364,11 +367,15 @@ public class Village implements Iterable<Building> {
             List<UUID> residents = new ArrayList<>(residentNames.keySet());
             UUID chosen = residents.get(world.random.nextInt(residents.size()));
             townHall.setNpcLeader(chosen, residentNames.getOrDefault(chosen, "Villager"));
+            npcLeaderUUID = chosen;
         }
 
         townHallPlaced = true;
         markDirty();
     }
+
+    public UUID getNpcLeaderUUID()                  { return npcLeaderUUID; }
+    public void setNpcLeaderUUID(UUID uuid)         { this.npcLeaderUUID = uuid; markDirty(); }
 
     public void markDirty() {
         VillageManager.get(world).markDirty();
@@ -474,6 +481,7 @@ public class Village implements Iterable<Building> {
         v.put("buildings", NbtHelper.fromList(buildings.values(), Building::save));
         v.putBoolean("autoScan", autoScan);
         v.putBoolean("townHallPlaced", townHallPlaced);
+        if (npcLeaderUUID != null) v.putUuid("npcLeaderUUID", npcLeaderUUID);
         return v;
     }
 

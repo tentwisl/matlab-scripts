@@ -4,7 +4,11 @@ import net.mca.ClientProxy;
 import net.mca.block.TownHallBlockEntity;
 import net.mca.network.NbtDataMessage;
 import net.mca.server.world.data.Village;
+import net.mca.server.world.data.VillageRequest;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
 
 import java.io.Serial;
 import java.util.Map;
@@ -69,6 +73,16 @@ public class TownHallDataResponse extends NbtDataMessage {
 
         // Block position so the screen can send AttemptLeadershipRequest back
         root.putLong("blockPos", townHall.getPos().asLong());
+
+        // Pending requests for display in the Town Hall screen
+        NbtList pendingList = new NbtList();
+        for (VillageRequest r : townHall.getPendingRequests()) {
+            NbtCompound entry = r.save();
+            var item = Registries.ITEM.get(new Identifier(r.getItemId()));
+            entry.putString("itemName", item.getName().getString());
+            pendingList.add(entry);
+        }
+        root.put("pendingRequests", pendingList);
 
         return root;
     }

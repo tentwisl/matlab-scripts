@@ -71,5 +71,10 @@ public interface MessagesMCA {
         NetworkHandler.registerMessage(AppointCongressPacket.class);
         NetworkHandler.registerMessage(DismissCabinetPacket.class);
         NetworkHandler.registerMessage(RemoveCongressPacket.class);
+        // Help Village request system packets
+        NetworkHandler.registerMessage(OpenHelpVillageRequest.class);
+        NetworkHandler.registerMessage(AcceptVillageRequestPacket.class);
+        NetworkHandler.registerMessage(FulfillVillageRequestPacket.class);
+        NetworkHandler.registerMessage(HelpVillageDataResponse.class);
     }
 }

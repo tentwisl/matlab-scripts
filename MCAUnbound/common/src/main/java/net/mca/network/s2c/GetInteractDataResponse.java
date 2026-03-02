@@ -17,13 +17,24 @@ public class GetInteractDataResponse implements Message {
     public final String mother;
     public final String spouse;
     public final RelationshipState marriageState;
+    /** Formatted profession string, or "Village Leader" if NPC leader, or "Jobless" for none. */
+    public final String profession;
+    /** Name of the villager's home village, or empty string. */
+    public final String villageName;
+    /** True if this villager is the NPC leader of their village. */
+    public final boolean isNpcLeader;
 
-    public GetInteractDataResponse(Set<Constraint> constraints, String father, String mother, String spouse, RelationshipState marriageState) {
+    public GetInteractDataResponse(Set<Constraint> constraints, String father, String mother,
+                                   String spouse, RelationshipState marriageState,
+                                   String profession, String villageName, boolean isNpcLeader) {
         this.constraints = constraints;
         this.father = father;
         this.mother = mother;
         this.spouse = spouse;
         this.marriageState = marriageState;
+        this.profession = profession;
+        this.villageName = villageName;
+        this.isNpcLeader = isNpcLeader;
     }
 
     @Override

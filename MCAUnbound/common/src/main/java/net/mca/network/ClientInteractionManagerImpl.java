@@ -115,6 +115,7 @@ public class ClientInteractionManagerImpl implements ClientInteractionManager {
             gui.setConstraints(message.constraints);
             gui.setParents(message.father, message.mother);
             gui.setSpouse(message.marriageState, message.spouse);
+            gui.setProfessionAndVillage(message.profession, message.villageName, message.isNpcLeader);
         }
     }
 
@@ -291,6 +292,18 @@ public class ClientInteractionManagerImpl implements ClientInteractionManager {
         Screen screen = client.currentScreen;
         if (screen instanceof net.mca.client.gui.DiplomacyTableScreen gui) {
             gui.loadNearbyVillagers(response);
+        }
+    }
+
+    @Override
+    public void handleHelpVillageResponse(net.mca.network.s2c.HelpVillageDataResponse response) {
+        Screen screen = client.currentScreen;
+        if (screen instanceof net.mca.client.gui.HelpVillageScreen gui) {
+            gui.loadData(response);
+        } else {
+            net.mca.client.gui.HelpVillageScreen newScreen = new net.mca.client.gui.HelpVillageScreen();
+            client.setScreen(newScreen);
+            client.execute(() -> newScreen.loadData(response));
         }
     }
 }

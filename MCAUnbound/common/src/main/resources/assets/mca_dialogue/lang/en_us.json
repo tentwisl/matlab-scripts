@@ -1584,5 +1584,9 @@
   "dialogue.rock_paper_scissor.loose.scissor/1": "Rock crushes scissors, I win!",
   "dialogue.rock_paper_scissor.win.rock/1": "Ahh, rock crushes scissor, I lost.",
   "dialogue.rock_paper_scissor.win.paper/1": "I can never seem to win with rock.",
-  "dialogue.rock_paper_scissor.win.scissor/1": "Scissors cut paper, you got me this time."
+  "dialogue.rock_paper_scissor.win.scissor/1": "Scissors cut paper, you got me this time.",
+
+  "dialogue.leader_first.greeting/1": "Welcome to our humble village, traveler! I am this village's leader. If you wish to help us prosper, speak with me again.",
+  "dialogue.leader_first.greeting/2": "Ah, a new face! Welcome. I serve as the leader of this village — feel free to ask me for ways to help our community.",
+  "dialogue.leader_first.greeting/3": "Greetings, stranger. I lead the people of this village. We're always glad to have allies. Do speak with me if you wish to lend a hand."
 }

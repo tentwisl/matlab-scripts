@@ -600,6 +600,10 @@
   "gui.button.greet": "Greet",
   "gui.button.flirt": "Flirt",
   "gui.button.story": "Story",
+  "gui.button.chat": "Chat",
+  "gui.button.rumors": "Rumors",
+  "gui.button.help_village": "Help Village",
+  "gui.mca.help_village.title": "Help Village",
 
   "interaction.bribe.success": "Very well... I suppose I can overlook that.",
   "interaction.bribe.fail.noemerald": "I don't take bribes from the penniless.",
@@ -1103,7 +1107,6 @@
   "item.mca.diplomacy_table": "Diplomacy Table",
   "item.mca.town_hall": "Town Hall",
   "gui.mca.diplomacy_table.title": "Diplomacy Table",
-  "gui.mca.town_hall.title": "Town Hall",
   "gui.village.rank.wanderer":   "Wanderer",
   "gui.village.rank.outsider":   "Outsider",
   "gui.village.rank.settler":    "Settler",

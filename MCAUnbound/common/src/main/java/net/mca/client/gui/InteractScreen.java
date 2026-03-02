@@ -60,6 +60,11 @@ public class InteractScreen extends AbstractDynamicScreen {
     private RelationshipState marriageState;
     private Text spouse;
 
+    // Extra villager info from server
+    private String profession  = "";
+    private String villageName = "";
+    private boolean isNpcLeader = false;
+
     private List<String> dialogAnswers;
     private String dialogAnswerHover;
     private List<OrderedText> dialogQuestionText;
@@ -80,6 +85,12 @@ public class InteractScreen extends AbstractDynamicScreen {
     public void setSpouse(RelationshipState marriageState, String spouse) {
         this.marriageState = marriageState;
         this.spouse = spouse == null ? Text.translatable("gui.interact.label.parentUnknown") : Text.literal(spouse);
+    }
+
+    public void setProfessionAndVillage(String profession, String villageName, boolean isNpcLeader) {
+        this.profession   = profession;
+        this.villageName  = villageName;
+        this.isNpcLeader  = isNpcLeader;
     }
 
     @Override
@@ -115,7 +126,7 @@ public class InteractScreen extends AbstractDynamicScreen {
     }
 
     /**
-     * Top-left info panel: name, mood, trait, hearts, nation affiliation.
+     * Top-left info panel: name, mood, trait, profession, hearts, village, nation.
      */
     private void drawInfoPanel(DrawContext context) {
         VillagerBrain<?> brain = villager.getVillagerBrain();
@@ -126,8 +137,8 @@ public class InteractScreen extends AbstractDynamicScreen {
         int py = 6;
         int lh = 12;
 
-        // Semi-transparent panel background
-        context.fill(px - 2, py - 2, px + 175, py + lh * 5 + 4, 0x88000000);
+        // Semi-transparent panel background (7 rows now)
+        context.fill(px - 2, py - 2, px + 175, py + lh * 7 + 4, 0x88000000);
 
         // Row 1 — Name
         String displayName = villager.asEntity().getName().getString();
@@ -155,19 +166,33 @@ public class InteractScreen extends AbstractDynamicScreen {
         }
         context.drawTextWithShadow(textRenderer, traits, px, py + lh * 2, 0xFFFFFF);
 
-        // Row 4 — Hearts
+        // Row 4 — Profession / job
+        String profDisplay = profession.isEmpty() ? "Jobless" : profession;
+        Formatting profColor = isNpcLeader ? Formatting.GOLD : Formatting.WHITE;
+        context.drawTextWithShadow(textRenderer,
+                Text.literal("Job: ").formatted(Formatting.GRAY)
+                        .append(Text.literal(profDisplay).formatted(profColor)),
+                px, py + lh * 3, 0xFFFFFF);
+
+        // Row 5 — Hearts
         int hc = hearts < 0 ? 0xFF5555 : hearts >= 100 ? 0xFFD700 : 0xFF6666;
         context.drawTextWithShadow(textRenderer,
                 Text.literal("Hearts: ").formatted(Formatting.GRAY)
                         .append(Text.literal(String.valueOf(hearts)).styled(s -> s.withColor(hc))),
-                px, py + lh * 3, 0xFFFFFF);
+                px, py + lh * 4, 0xFFFFFF);
 
-        // Row 5 — Nation affiliation (placeholder until village→nation linkage is wired)
-        String nationLabel = "Independent";
+        // Row 6 — Village
+        String villageDisplay = villageName.isEmpty() ? "None" : villageName;
+        context.drawTextWithShadow(textRenderer,
+                Text.literal("Village: ").formatted(Formatting.GRAY)
+                        .append(Text.literal(villageDisplay).formatted(Formatting.GREEN)),
+                px, py + lh * 5, 0xFFFFFF);
+
+        // Row 7 — Nation affiliation (placeholder)
         context.drawTextWithShadow(textRenderer,
                 Text.literal("Nation: ").formatted(Formatting.GRAY)
-                        .append(Text.literal(nationLabel).formatted(Formatting.YELLOW)),
-                px, py + lh * 4, 0xFFFFFF);
+                        .append(Text.literal("Independent").formatted(Formatting.YELLOW)),
+                px, py + lh * 6, 0xFFFFFF);
     }
 
     // ── Icon bar ──────────────────────────────────────────────────────────────
@@ -300,13 +325,17 @@ public class InteractScreen extends AbstractDynamicScreen {
         switch (id) {
             // ── Sub-menu navigation ───────────────────────────────────────
             case "gui.button.talk" -> {
-                clearChildren();
-                NetworkHandler.sendToServer(new InteractionDialogueInitMessage(villager.asEntity().getUuid()));
+                // Do NOT send InteractionDialogueInitMessage here — that causes
+                // the dialogue greeting overlay to appear on top of talk buttons.
                 setLayout("talk");
                 return;
             }
             case "gui.button.politics" -> { setLayout("politics"); return; }
             case "gui.button.family"   -> { setLayout("family");   return; }
+            case "gui.button.help_village" -> {
+                NetworkHandler.sendToServer(new OpenHelpVillageRequest(villager.asEntity().getUuid()));
+                return;
+            }
             case "gui.button.work_orders" -> {
                 setLayout("work");
                 disableButton("gui.button." + villager.getVillagerBrain().getCurrentJob().name().toLowerCase(Locale.ENGLISH));
@@ -337,13 +366,10 @@ public class InteractScreen extends AbstractDynamicScreen {
             case "gui.button.gift" -> { inGiftMode = true; disableAllButtons(); return; }
         }
 
-        // ── Dialogue-driven talk buttons ──────────────────────────────────
-        // These initiate the MCA dialogue engine for the specific interaction type
-        if (id.equals("gui.button.joke") || id.equals("gui.button.greet") ||
-                id.equals("gui.button.flirt") || id.equals("gui.button.story") ||
-                id.equals("gui.button.ask") || id.equals("gui.button.kiss")) {
-            clearChildren();
-            NetworkHandler.sendToServer(new InteractionDialogueInitMessage(villager.asEntity().getUuid()));
+        // ── Placeholder talk buttons ───────────────────────────────────────
+        if (id.equals("gui.button.ask") || id.equals("gui.button.chat") ||
+                id.equals("gui.button.rumors")) {
+            // Placeholder — no action yet
             return;
         }
 

@@ -37,7 +37,7 @@
     "hideOnFail": true
   },
   {
-    "identifier": "gui.button.work_orders",
+    "identifier": "gui.button.politics",
     "align": "center",
     "x": -42,
     "y": -55,
@@ -50,7 +50,7 @@
     "hideOnFail": true
   },
   {
-    "identifier": "gui.button.politics",
+    "identifier": "gui.button.work_orders",
     "align": "center",
     "x": -42,
     "y": -55,
@@ -59,11 +59,11 @@
     "height": 20,
     "notifyServer": false,
     "targetServer": false,
-    "constraints": "adult",
+    "constraints": "village_leader",
     "hideOnFail": true
   },
   {
-    "identifier": "gui.button.family",
+    "identifier": "gui.button.help_village",
     "align": "center",
     "x": -42,
     "y": -55,
@@ -72,7 +72,7 @@
     "height": 20,
     "notifyServer": false,
     "targetServer": false,
-    "constraints": "adult",
+    "constraints": "npc_village_leader",
     "hideOnFail": true
   },
   {
