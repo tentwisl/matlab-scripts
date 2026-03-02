@@ -236,7 +236,7 @@ public class NationCommand {
         String message = StringArgumentType.getString(ctx, "message");
         // Use MCA's built-in mail system
         net.mca.server.world.data.PlayerSaveData data = net.mca.server.world.data.PlayerSaveData.get(player);
-        data.sendMail(Text.literal(message));
+        data.sendLetter(java.util.List.of(Text.Serializer.toJson(Text.literal(message))));
         msg(ctx, "Mail sent: " + message, Formatting.GREEN);
         return 1;
     }
