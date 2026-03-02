@@ -1,0 +1,56 @@
+[
+  {
+    "identifier": "gui.button.backarrow",
+    "align": "center",
+    "x": -68,
+    "y": -55,
+    "row": 0,
+    "width": 20,
+    "height": 20,
+    "notifyServer": false,
+    "targetServer": false,
+    "constraints": ""
+  },
+  {
+    "identifier": "gui.button.marry",
+    "align": "center",
+    "x": -42,
+    "y": -55,
+    "row": 0,
+    "width": 84,
+    "height": 20,
+    "notifyServer": true,
+    "targetServer": false,
+    "constraints": "adult,!spouse",
+    "hideOnFail": false,
+    "isInteraction": true
+  },
+  {
+    "identifier": "gui.button.procreate",
+    "align": "center",
+    "x": -42,
+    "y": -55,
+    "row": 1,
+    "width": 84,
+    "height": 20,
+    "notifyServer": true,
+    "targetServer": false,
+    "constraints": "spouse,adult",
+    "hideOnFail": true,
+    "isInteraction": true
+  },
+  {
+    "identifier": "gui.button.assign_heir",
+    "align": "center",
+    "x": -42,
+    "y": -55,
+    "row": 2,
+    "width": 84,
+    "height": 20,
+    "notifyServer": true,
+    "targetServer": false,
+    "constraints": "monarch",
+    "hideOnFail": true,
+    "isInteraction": true
+  }
+]
