@@ -53,9 +53,7 @@ public final class MCAQuilt implements ModInitializer {
 
         ServerWorldTickEvents.END.register((s, w) -> {
             VillageManager.get(w).tick();
-            NationManager nm = NationManager.get(w);
-            nm.tick();
-            if (!nm.isAiNationsSeeded()) NationSpawner.seedAiNations(w, nm);
+            NationManager.get(w).tick();
         });
         ServerTickEvents.END.register(s -> ServerInteractionManager.getInstance().tick());
 
@@ -66,6 +64,7 @@ public final class MCAQuilt implements ModInitializer {
         CommandRegistrationCallback.EVENT.register((dispatcher, integrated, dedicated) -> {
             AdminCommand.register(dispatcher);
             Command.register(dispatcher);
+            net.mca.server.command.NationCommand.register(dispatcher);
         });
 
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(MCA::setServer);

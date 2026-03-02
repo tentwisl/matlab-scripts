@@ -33,6 +33,7 @@ public class ForgeBusEvents {
     public static void onCommandRegister(RegisterCommandsEvent event) {
         AdminCommand.register(event.getDispatcher());
         Command.register(event.getDispatcher());
+        net.mca.server.command.NationCommand.register(event.getDispatcher());
     }
 
     @SubscribeEvent
@@ -42,10 +43,6 @@ public class ForgeBusEvents {
             VillageManager.get(serverWorld).tick();
             NationManager nationManager = NationManager.get(serverWorld);
             nationManager.tick();
-            // Seed AI nations once villages exist
-            if (!nationManager.isAiNationsSeeded()) {
-                NationSpawner.seedAiNations(serverWorld, nationManager);
-            }
         }
     }
 

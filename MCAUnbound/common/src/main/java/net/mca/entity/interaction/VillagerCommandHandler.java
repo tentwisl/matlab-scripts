@@ -257,6 +257,65 @@ public class VillagerCommandHandler extends EntityCommandHandler<VillagerEntityM
                 }
             }
             case "slap" -> player.damage(player.getWorld().getDamageSources().cramming(), 1.0f);
+
+            // MCAUnbound: Politics interactions
+            case "bribe" -> {
+                int hearts = memory.getHearts();
+                if (!player.getInventory().contains(new ItemStack(Items.EMERALD))) {
+                    entity.sendChatMessage(player, "interaction.bribe.fail.noemerald");
+                } else if (hearts >= 50) {
+                    entity.sendChatMessage(player, "interaction.bribe.fail.maxhearts");
+                } else {
+                    payEmeralds(player, 3);
+                    memory.modHearts(5);
+                    entity.getVillagerBrain().modifyMoodValue(2);
+                    entity.sendChatMessage(player, "interaction.bribe.success");
+                }
+                return true;
+            }
+            case "discuss_leader" -> {
+                // Provides info about the village's current leader
+                entity.sendChatMessage(player, "interaction.discuss_leader");
+                return true;
+            }
+            case "campaign" -> {
+                int hearts = memory.getHearts();
+                if (hearts < 30) {
+                    entity.sendChatMessage(player, "interaction.campaign.fail.lowhearts");
+                } else {
+                    memory.modHearts(2);
+                    entity.getVillagerBrain().modifyMoodValue(1);
+                    entity.sendChatMessage(player, "interaction.campaign.success");
+                }
+                return true;
+            }
+
+            // MCAUnbound: Family interactions
+            case "assign_heir" -> {
+                entity.sendChatMessage(player, "interaction.assign_heir.success");
+                return true;
+            }
+
+            // MCAUnbound: Talk interactions
+            case "ask" -> {
+                entity.sendChatMessage(player, "interaction.ask");
+                return true;
+            }
+            case "joke" -> {
+                entity.getVillagerBrain().modifyMoodValue(1);
+                entity.sendChatMessage(player, "interaction.joke");
+                return true;
+            }
+            case "greet" -> {
+                entity.getVillagerBrain().modifyMoodValue(1);
+                entity.sendChatMessage(player, "interaction.greet");
+                return true;
+            }
+            case "story" -> {
+                entity.getVillagerBrain().modifyMoodValue(1);
+                entity.sendChatMessage(player, "interaction.story");
+                return true;
+            }
         }
 
         return super.handle(player, command);

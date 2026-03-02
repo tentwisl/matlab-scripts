@@ -57,9 +57,7 @@ public final class MCAFabric implements ModInitializer {
 
         ServerTickEvents.END_WORLD_TICK.register(w -> {
             VillageManager.get(w).tick();
-            NationManager nm = NationManager.get(w);
-            nm.tick();
-            if (!nm.isAiNationsSeeded()) NationSpawner.seedAiNations(w, nm);
+            NationManager.get(w).tick();
         });
         ServerTickEvents.END_SERVER_TICK.register(s -> ServerInteractionManager.getInstance().tick());
 
@@ -70,6 +68,7 @@ public final class MCAFabric implements ModInitializer {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             AdminCommand.register(dispatcher);
             Command.register(dispatcher);
+            net.mca.server.command.NationCommand.register(dispatcher);
         });
 
         ServerTickEvents.END_SERVER_TICK.register(MCA::setServer);
