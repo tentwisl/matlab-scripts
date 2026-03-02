@@ -58,6 +58,7 @@ public interface MessagesMCA {
         NetworkHandler.registerMessage(OpenDiplomacyTableRequest.class);
         NetworkHandler.registerMessage(OpenTownHallRequest.class);
         NetworkHandler.registerMessage(AttemptLeadershipRequest.class);
+        NetworkHandler.registerMessage(HighlightVillagerRequest.class);
         NetworkHandler.registerMessage(GetNationsDebugRequest.class);
         NetworkHandler.registerMessage(FoundNationPacket.class);
         NetworkHandler.registerMessage(DiplomacyTableDataResponse.class);

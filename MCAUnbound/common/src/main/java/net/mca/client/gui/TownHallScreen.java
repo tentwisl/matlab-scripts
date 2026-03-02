@@ -3,6 +3,7 @@ package net.mca.client.gui;
 import net.mca.cobalt.network.NetworkHandler;
 import net.mca.nation.MCAUnboundConfig;
 import net.mca.network.c2s.AttemptLeadershipRequest;
+import net.mca.network.c2s.HighlightVillagerRequest;
 import net.mca.network.s2c.TownHallDataResponse;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -14,37 +15,48 @@ import java.util.*;
 
 /**
  * Town Hall block GUI.
- * Shows: village name, population, resident list with per-villager hearts,
- * current leader, and "Attempt Leadership" button when eligible.
+ *
+ * <ul>
+ *   <li>Village name, population, and current leader (NPC or player)</li>
+ *   <li>Scrollable resident list with per-villager hearts, colour-coded by threshold</li>
+ *   <li>Click a villager row to highlight them in-world (Glowing for 30 s)</li>
+ *   <li>"Attempt Leadership" button when the player is eligible</li>
+ * </ul>
  */
 public class TownHallScreen extends ExtendedScreen {
 
-    private String villageName = "Unknown";
-    private int population = 0;
-    private int maxPopulation = 0;
+    // ── Village data ──────────────────────────────────────────────────────────
+    private String villageName  = "Unknown";
+    private int population      = 0;
+    private int maxPopulation   = 0;
 
-    // Per-villager data: UUID string -> hearts, names
+    // ── Per-villager data: UUID string → hearts / name ────────────────────────
     private final Map<String, Integer> villagerHearts = new LinkedHashMap<>();
-    private final Map<String, String> villagerNames = new LinkedHashMap<>();
+    private final Map<String, String>  villagerNames  = new LinkedHashMap<>();
 
-    // Leadership
-    private boolean hasLeader = false;
-    private String leaderName = "";
-    private boolean isPlayerLeader = false;
-    private int electionState = 0; // 0=NONE, 1=PENDING, 2=ACTIVE
+    // ── Leadership ────────────────────────────────────────────────────────────
+    private boolean hasLeader      = false;
+    private String  leaderName     = "";
+    private boolean leaderIsPlayer = false;  // false = NPC villager leader
+    private boolean isPlayerLeader = false;  // true = THIS player is the leader
+    private int     electionState  = 0;      // 0=NONE, 1=PENDING
 
-    // Block pos for sending leadership request
+    // ── Block pos (for sending action packets) ────────────────────────────────
     private BlockPos blockPos = BlockPos.ORIGIN;
 
-    // Scroll offset for resident list
+    // ── List scroll state ────────────────────────────────────────────────────
     private int scrollOffset = 0;
     private static final int VISIBLE_ROWS = 10;
-    private static final int ROW_HEIGHT = 14;
+    private static final int ROW_HEIGHT   = 14;
+    /** Y-start of the first rendered row (set in render(), used in mouseClicked) */
+    private int listStartY = 80;
 
-    // Whether the player meets resident threshold (30 hearts with all)
-    private boolean isResident = false;
-    // Whether the player meets leader threshold (50 hearts with all)
+    // ── Derived eligibility flags ─────────────────────────────────────────────
+    private boolean isResident          = false;
     private boolean meetsLeaderThreshold = false;
+
+    // ── Ordered UUID list (built from villagerNames keyset each render) ────────
+    private List<String> orderedUuids = new ArrayList<>();
 
     public TownHallScreen() {
         super(Text.translatable("gui.mca.town_hall.title"));
@@ -60,202 +72,220 @@ public class TownHallScreen extends ExtendedScreen {
         clearChildren();
 
         int cx = width / 2;
-        int bottomY = height - 30;
+        int bottomY = height - 28;
 
-        // Close button
+        // Close
         addDrawableChild(ButtonWidget.builder(Text.literal("Close"), b -> close())
-                .dimensions(cx - 42, bottomY, 84, 20).build());
+                .dimensions(cx - 40, bottomY, 80, 20).build());
 
-        // Attempt Leadership button — only show if:
-        // 1. No leader exists, 2. No election in progress, 3. Player meets threshold
-        if (!hasLeader && electionState == 0 && meetsLeaderThreshold && !villagerHearts.isEmpty()) {
+        // Attempt Leadership — visible when:
+        //   • No player leader exists yet (NPC leader or no leader at all)
+        //   • No election in progress
+        //   • Player meets heart threshold with all loaded villagers
+        boolean canAttempt = !villagerHearts.isEmpty()
+                && meetsLeaderThreshold
+                && electionState == 0
+                && !(hasLeader && leaderIsPlayer);
+
+        if (canAttempt) {
             addDrawableChild(ButtonWidget.builder(Text.literal("Attempt Leadership"), b -> {
                 NetworkHandler.sendToServer(new AttemptLeadershipRequest(blockPos));
                 close();
-            }).dimensions(cx - 70, bottomY - 24, 140, 20).build());
+            }).dimensions(cx - 68, bottomY - 22, 136, 20).build());
         }
 
-        // Scroll buttons if needed
-        int totalResidents = villagerNames.size();
-        if (totalResidents > VISIBLE_ROWS) {
-            int listX = cx - 120;
-            int listTopY = 80;
-            addDrawableChild(ButtonWidget.builder(Text.literal("^"), b -> {
-                scrollOffset = Math.max(0, scrollOffset - 1);
-            }).dimensions(listX + 245, listTopY, 20, 20).build());
+        // Scroll buttons
+        if (orderedUuids.size() > VISIBLE_ROWS) {
+            int listX = width / 2 - 120;
+            addDrawableChild(ButtonWidget.builder(Text.literal("▲"), b ->
+                    scrollOffset = Math.max(0, scrollOffset - 1)
+            ).dimensions(listX + 246, listStartY, 18, 18).build());
 
-            addDrawableChild(ButtonWidget.builder(Text.literal("v"), b -> {
-                scrollOffset = Math.min(totalResidents - VISIBLE_ROWS, scrollOffset + 1);
-            }).dimensions(listX + 245, listTopY + VISIBLE_ROWS * ROW_HEIGHT - 20, 20, 20).build());
+            addDrawableChild(ButtonWidget.builder(Text.literal("▼"), b ->
+                    scrollOffset = Math.min(orderedUuids.size() - VISIBLE_ROWS, scrollOffset + 1)
+            ).dimensions(listX + 246, listStartY + VISIBLE_ROWS * ROW_HEIGHT - 18, 18, 18).build());
         }
     }
+
+    // ── Rendering ─────────────────────────────────────────────────────────────
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         renderBackground(ctx);
         super.render(ctx, mouseX, mouseY, delta);
 
+        MCAUnboundConfig cfg = MCAUnboundConfig.get();
         int cx = width / 2;
-        int y = 12;
+        int y  = 12;
 
-        // ── Title ──
-        ctx.drawCenteredTextWithShadow(textRenderer, "Town Hall — " + villageName, cx, y, 0xFFFFAA);
+        // Title
+        ctx.drawCenteredTextWithShadow(textRenderer, "§6§lTown Hall — " + villageName, cx, y, 0xFFFFFF);
         y += 16;
 
-        // ── Village Info Row ──
-        String popStr = "Population: " + population + "/" + maxPopulation;
-        ctx.drawTextWithShadow(textRenderer, popStr, cx - 120, y, 0xCCCCCC);
+        // Population + leader on the same row
+        ctx.drawTextWithShadow(textRenderer, "Population: " + population + "/" + maxPopulation, cx - 120, y, 0xCCCCCC);
 
         if (hasLeader) {
-            ctx.drawTextWithShadow(textRenderer, "Leader: " + leaderName,
-                    cx + 20, y, 0xAAFFAA);
+            String prefix = leaderIsPlayer ? "§a[Player] " : "§b[NPC] ";
+            ctx.drawTextWithShadow(textRenderer, "Leader: " + prefix + "§f" + leaderName, cx + 10, y, 0xFFFFFF);
         } else if (electionState > 0) {
-            ctx.drawTextWithShadow(textRenderer, "Election in progress...",
-                    cx + 20, y, 0xFFFF55);
+            ctx.drawTextWithShadow(textRenderer, "§eElection in progress…", cx + 10, y, 0xFFFFFF);
         } else {
-            ctx.drawTextWithShadow(textRenderer, "Leader: None",
-                    cx + 20, y, 0xFF8888);
+            ctx.drawTextWithShadow(textRenderer, "§cLeader: None", cx + 10, y, 0xFFFFFF);
         }
         y += 16;
 
-        // ── Status line ──
-        MCAUnboundConfig config = MCAUnboundConfig.get();
-        if (isResident && meetsLeaderThreshold) {
-            ctx.drawCenteredTextWithShadow(textRenderer, "Status: Eligible for Leadership", cx, y, 0x55FF55);
+        // Status line
+        if (meetsLeaderThreshold) {
+            ctx.drawCenteredTextWithShadow(textRenderer,
+                    "§aStatus: §fEligible for Leadership", cx, y, 0xFFFFFF);
         } else if (isResident) {
             ctx.drawCenteredTextWithShadow(textRenderer,
-                    "Status: Resident (need " + config.leaderHeartThreshold + " hearts with all for leadership)",
-                    cx, y, 0x55FFFF);
+                    "§bStatus: §fResident  (need §e" + cfg.leaderHeartThreshold + "§f ♥ with all for leadership)",
+                    cx, y, 0xFFFFFF);
         } else {
             ctx.drawCenteredTextWithShadow(textRenderer,
-                    "Status: Outsider (need " + config.residentHeartThreshold + " hearts with all to become resident)",
-                    cx, y, 0xFFAA55);
+                    "§6Status: §fOutsider  (need §e" + cfg.residentHeartThreshold + "§f ♥ with all to become resident)",
+                    cx, y, 0xFFFFFF);
         }
         y += 18;
 
-        // ── Resident List Header ──
+        // List header
         int listX = cx - 120;
-        ctx.fill(listX - 4, y - 2, listX + 248, y + 12, 0x88000000);
-        ctx.drawTextWithShadow(textRenderer, "Villager", listX, y, 0xFFFFFF);
-        ctx.drawTextWithShadow(textRenderer, "Hearts", listX + 180, y, 0xFFFFFF);
+        listStartY = y;
+        ctx.fill(listX - 4, y - 2, listX + 248, y + 12, 0x99000000);
+        ctx.drawTextWithShadow(textRenderer, "§fVillager", listX, y, 0xFFFFFF);
+        ctx.drawTextWithShadow(textRenderer, "§fHearts", listX + 185, y, 0xFFFFFF);
+        ctx.drawTextWithShadow(textRenderer, "§7[click to highlight]", listX + 4, y + 1, 0x888888);
         y += ROW_HEIGHT;
 
-        // ── Resident List ──
-        List<String> uuids = new ArrayList<>(villagerNames.keySet());
-        int totalResidents = uuids.size();
-        int end = Math.min(scrollOffset + VISIBLE_ROWS, totalResidents);
+        orderedUuids = new ArrayList<>(villagerNames.keySet());
+        int total = orderedUuids.size();
+        int end   = Math.min(scrollOffset + VISIBLE_ROWS, total);
 
         for (int i = scrollOffset; i < end; i++) {
-            String uuid = uuids.get(i);
-            String name = villagerNames.getOrDefault(uuid, "???");
-            int hearts = villagerHearts.getOrDefault(uuid, 0);
+            String uuid    = orderedUuids.get(i);
+            String name    = villagerNames.getOrDefault(uuid, "???");
+            int hearts     = villagerHearts.getOrDefault(uuid, 0);
 
-            // Row background (alternating)
-            int rowColor = (i % 2 == 0) ? 0x44000000 : 0x22000000;
-            ctx.fill(listX - 4, y - 1, listX + 248, y + ROW_HEIGHT - 2, rowColor);
+            // Row highlight on hover
+            boolean hovered = mouseX >= listX - 4 && mouseX < listX + 244
+                    && mouseY >= y - 1 && mouseY < y + ROW_HEIGHT - 2;
 
-            // Name
-            String displayName = name.length() > 24 ? name.substring(0, 22) + ".." : name;
-            ctx.drawTextWithShadow(textRenderer, displayName, listX, y, 0xCCCCCC);
+            int rowBg = hovered ? 0x66FFFFFF : (i % 2 == 0 ? 0x44000000 : 0x22000000);
+            ctx.fill(listX - 4, y - 1, listX + 244, y + ROW_HEIGHT - 2, rowBg);
 
-            // Hearts with color coding
+            String display = name.length() > 26 ? name.substring(0, 24) + ".." : name;
+            ctx.drawTextWithShadow(textRenderer, display, listX, y, hovered ? 0xFFFFFF : 0xCCCCCC);
+
             int heartColor;
-            if (hearts >= config.leaderHeartThreshold) {
-                heartColor = 0x55FF55; // Green - meets leader threshold
-            } else if (hearts >= config.residentHeartThreshold) {
-                heartColor = 0x55FFFF; // Cyan - meets resident threshold
-            } else if (hearts > 0) {
-                heartColor = 0xFFFF55; // Yellow - positive but below threshold
-            } else {
-                heartColor = 0xFF5555; // Red - zero or negative
-            }
-            ctx.drawTextWithShadow(textRenderer, hearts + " \u2764", listX + 180, y, heartColor);
+            if      (hearts >= cfg.leaderHeartThreshold)   heartColor = 0x55FF55; // green = leader-eligible
+            else if (hearts >= cfg.residentHeartThreshold)  heartColor = 0x55FFFF; // cyan  = resident
+            else if (hearts > 0)                            heartColor = 0xFFFF55; // yellow = positive
+            else                                            heartColor = 0xFF5555; // red   = none/neg
 
+            ctx.drawTextWithShadow(textRenderer, hearts + " ♥", listX + 185, y, heartColor);
             y += ROW_HEIGHT;
         }
 
-        // Scroll indicator
-        if (totalResidents > VISIBLE_ROWS) {
-            String scrollInfo = (scrollOffset + 1) + "-" + end + " of " + totalResidents;
-            ctx.drawCenteredTextWithShadow(textRenderer, scrollInfo, cx, y + 4, 0x888888);
-        }
-
-        // Empty state
-        if (totalResidents == 0) {
-            ctx.drawCenteredTextWithShadow(textRenderer, "No residents found", cx, y + 10, 0x888888);
+        if (total == 0) {
+            ctx.drawCenteredTextWithShadow(textRenderer, "§7No residents loaded", cx, y + 8, 0xFFFFFF);
+        } else if (total > VISIBLE_ROWS) {
+            ctx.drawCenteredTextWithShadow(textRenderer,
+                    "§7" + (scrollOffset + 1) + "–" + end + " of " + total, cx, y + 2, 0xFFFFFF);
         }
     }
 
-    public void loadData(TownHallDataResponse response) {
-        NbtCompound root = response.getData();
-        villageName = root.getString("villageName");
-        if (villageName.isEmpty()) villageName = "Unknown";
-        population = root.getInt("population");
-        maxPopulation = root.getInt("maxPopulation");
+    // ── Mouse interaction ─────────────────────────────────────────────────────
 
-        // Per-villager hearts
-        villagerHearts.clear();
-        villagerNames.clear();
-        if (root.contains("villagerHearts")) {
-            NbtCompound heartsNbt = root.getCompound("villagerHearts");
-            for (String key : heartsNbt.getKeys()) {
-                villagerHearts.put(key, heartsNbt.getInt(key));
-            }
-        }
-        if (root.contains("villagerNames")) {
-            NbtCompound namesNbt = root.getCompound("villagerNames");
-            for (String key : namesNbt.getKeys()) {
-                villagerNames.put(key, namesNbt.getString(key));
-            }
-        }
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        int cx = width / 2;
+        int listX = cx - 120;
 
-        // Leadership
-        hasLeader = root.getBoolean("hasLeader");
-        if (hasLeader) {
-            leaderName = root.getString("leaderName");
-        }
-        isPlayerLeader = root.getBoolean("isPlayerLeader");
-        electionState = root.getInt("electionState");
+        // Check if click is within the villager list area
+        if (mouseX >= listX - 4 && mouseX < listX + 244) {
+            int rowY = listStartY + ROW_HEIGHT; // +ROW_HEIGHT to skip the header
+            int total = orderedUuids.size();
+            int end   = Math.min(scrollOffset + VISIBLE_ROWS, total);
 
-        // Block position
-        if (root.contains("blockPos")) {
-            blockPos = BlockPos.fromLong(root.getLong("blockPos"));
-        }
-
-        // Calculate resident/leader status from hearts
-        MCAUnboundConfig config = MCAUnboundConfig.get();
-        isResident = true;
-        meetsLeaderThreshold = true;
-
-        if (villagerHearts.isEmpty()) {
-            isResident = false;
-            meetsLeaderThreshold = false;
-        } else {
-            for (int hearts : villagerHearts.values()) {
-                if (hearts < config.residentHeartThreshold) {
-                    isResident = false;
+            for (int i = scrollOffset; i < end; i++) {
+                if (mouseY >= rowY - 1 && mouseY < rowY + ROW_HEIGHT - 2) {
+                    String uuidStr = orderedUuids.get(i);
+                    try {
+                        UUID uuid = UUID.fromString(uuidStr);
+                        NetworkHandler.sendToServer(new HighlightVillagerRequest(uuid));
+                    } catch (IllegalArgumentException ignored) { }
+                    return true;
                 }
-                if (hearts < config.leaderHeartThreshold) {
-                    meetsLeaderThreshold = false;
-                }
+                rowY += ROW_HEIGHT;
             }
         }
 
-        // Rebuild buttons now that we have data
-        if (client != null) {
-            rebuildButtons();
-        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
-        int totalResidents = villagerNames.size();
-        if (totalResidents > VISIBLE_ROWS) {
+        int total = orderedUuids.size();
+        if (total > VISIBLE_ROWS) {
             scrollOffset -= (int) amount;
-            scrollOffset = Math.max(0, Math.min(scrollOffset, totalResidents - VISIBLE_ROWS));
+            scrollOffset = Math.max(0, Math.min(scrollOffset, total - VISIBLE_ROWS));
+            rebuildButtons(); // refresh scroll button positions
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, amount);
+    }
+
+    // ── Data loading ──────────────────────────────────────────────────────────
+
+    public void loadData(TownHallDataResponse response) {
+        NbtCompound root = response.getData();
+
+        villageName   = root.getString("villageName");
+        if (villageName.isEmpty()) villageName = "Unknown";
+        population    = root.getInt("population");
+        maxPopulation = root.getInt("maxPopulation");
+
+        villagerHearts.clear();
+        villagerNames.clear();
+
+        if (root.contains("villagerHearts")) {
+            NbtCompound hn = root.getCompound("villagerHearts");
+            for (String k : hn.getKeys()) villagerHearts.put(k, hn.getInt(k));
+        }
+        if (root.contains("villagerNames")) {
+            NbtCompound nn = root.getCompound("villagerNames");
+            for (String k : nn.getKeys()) villagerNames.put(k, nn.getString(k));
+        }
+
+        hasLeader      = root.getBoolean("hasLeader");
+        leaderIsPlayer = root.getBoolean("leaderIsPlayer");
+        leaderName     = hasLeader ? root.getString("leaderName") : "";
+        isPlayerLeader = root.getBoolean("isPlayerLeader");
+        electionState  = root.getInt("electionState");
+
+        if (root.contains("blockPos")) {
+            blockPos = BlockPos.fromLong(root.getLong("blockPos"));
+        }
+
+        // Recalculate eligibility
+        MCAUnboundConfig cfg = MCAUnboundConfig.get();
+        isResident          = true;
+        meetsLeaderThreshold = true;
+
+        if (villagerHearts.isEmpty()) {
+            isResident = meetsLeaderThreshold = false;
+        } else {
+            for (int h : villagerHearts.values()) {
+                if (h < cfg.residentHeartThreshold)  isResident          = false;
+                if (h < cfg.leaderHeartThreshold)     meetsLeaderThreshold = false;
+            }
+        }
+
+        orderedUuids = new ArrayList<>(villagerNames.keySet());
+
+        if (client != null) rebuildButtons();
     }
 
     @Override

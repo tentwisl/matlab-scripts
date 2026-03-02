@@ -1,6 +1,8 @@
 package net.mca.server.world.data;
 
 import net.mca.Config;
+import net.mca.block.BlocksMCA;
+import net.mca.block.TownHallBlockEntity;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.resources.API;
 import net.mca.resources.BuildingTypes;
@@ -13,6 +15,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.*;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.world.Heightmap;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.GlobalPos;
@@ -56,6 +59,8 @@ public class Village implements Iterable<Building> {
     private float marriageThreshold = 0.5f;
 
     private boolean autoScan = Config.getInstance().enableAutoScanByDefault;
+    /** Whether a Town Hall block has been placed for this village. */
+    private boolean townHallPlaced = false;
 
     private BlockBoxExtended box = new BlockBoxExtended(0, 0, 0, 0, 0, 0);
 
@@ -97,6 +102,7 @@ public class Village implements Iterable<Building> {
         } else {
             autoScan = true;
         }
+        townHallPlaced = v.getBoolean("townHallPlaced");
 
         NbtList b = v.getList("buildings", NbtElement.COMPOUND_TYPE);
         for (int i = 0; i < b.size(); i++) {
@@ -311,6 +317,10 @@ public class Village implements Iterable<Building> {
             villageInnManager.updateInn(world);
             villageMarriageManager.marry(world);
             villageProcreationManager.procreate(world);
+            // Auto-spawn Town Hall with NPC leader if not yet placed
+            if (!townHallPlaced && !residentNames.isEmpty()) {
+                placeTownHall(world);
+            }
         }
     }
 
@@ -328,6 +338,36 @@ public class Village implements Iterable<Building> {
     public void broadCastMessage(ServerWorld world, String event, String targetName) {
         world.getPlayers().stream().filter(p -> PlayerSaveData.get(p).getLastSeenVillageId().orElse(-2) == getId())
                 .forEach(player -> player.sendMessage(Text.translatable(event, targetName), !Config.getInstance().showNotificationsAsChat));
+    }
+
+
+    /**
+     * Places a Town Hall block at the village center (top surface) and assigns
+     * a random resident as the NPC village leader.
+     * Called once when a new village gains its first residents.
+     */
+    private void placeTownHall(ServerWorld world) {
+        Vec3i center = getCenter();
+        BlockPos surface = world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES,
+                new BlockPos(center.getX(), 0, center.getZ()));
+
+        // Do not overwrite existing non-air blocks
+        if (!world.getBlockState(surface).isAir()) {
+            surface = surface.up();
+        }
+
+        world.setBlockState(surface, net.mca.block.BlocksMCA.TOWN_HALL.get().getDefaultState());
+
+        if (world.getBlockEntity(surface) instanceof TownHallBlockEntity townHall) {
+            townHall.setVillageId(id);
+            // Pick a random resident as the NPC leader
+            List<UUID> residents = new ArrayList<>(residentNames.keySet());
+            UUID chosen = residents.get(world.random.nextInt(residents.size()));
+            townHall.setNpcLeader(chosen, residentNames.getOrDefault(chosen, "Villager"));
+        }
+
+        townHallPlaced = true;
+        markDirty();
     }
 
     public void markDirty() {
@@ -433,6 +473,7 @@ public class Village implements Iterable<Building> {
         v.putFloat("marriageThresholdFloat", marriageThreshold);
         v.put("buildings", NbtHelper.fromList(buildings.values(), Building::save));
         v.putBoolean("autoScan", autoScan);
+        v.putBoolean("townHallPlaced", townHallPlaced);
         return v;
     }
 

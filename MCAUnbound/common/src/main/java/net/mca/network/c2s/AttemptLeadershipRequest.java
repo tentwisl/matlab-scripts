@@ -41,8 +41,8 @@ public class AttemptLeadershipRequest implements Message {
 
         MCAUnboundConfig config = MCAUnboundConfig.get();
 
-        // Already has a leader
-        if (townHall.hasLeader()) {
+        // Already has a player leader — cannot override
+        if (townHall.hasLeader() && townHall.isLeaderPlayer()) {
             player.sendMessage(Text.translatable("townhall.election.already_has_leader"), false);
             return;
         }
@@ -97,7 +97,7 @@ public class AttemptLeadershipRequest implements Message {
         PlayerSaveData psd = PlayerSaveData.get(player);
 
         if (success) {
-            townHall.setLeader(player.getUuid(), player.getName().getString());
+            townHall.setPlayerLeader(player.getUuid(), player.getName().getString());
             psd.sendLetter(List.of("Congratulations! The villagers of " + village.getName()
                     + " have chosen you as their leader. Visit the Town Hall to see your new role."));
             player.sendMessage(Text.translatable("townhall.election.started_success"), false);

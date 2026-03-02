@@ -58,11 +58,13 @@ public class TownHallDataResponse extends NbtDataMessage {
         if (townHall.hasLeader()) {
             root.putUuid("leaderUUID", townHall.getLeaderUUID());
             root.putString("leaderName", townHall.getLeaderName());
+            root.putBoolean("leaderIsPlayer", townHall.isLeaderPlayer());
         }
         root.putInt("electionState", townHall.getElectionState().ordinal());
 
-        // Is the requesting player the leader?
+        // Is the requesting player currently the player-leader?
         root.putBoolean("isPlayerLeader", townHall.hasLeader()
+                && townHall.isLeaderPlayer()
                 && townHall.getLeaderUUID().equals(playerId));
 
         // Block position so the screen can send AttemptLeadershipRequest back
