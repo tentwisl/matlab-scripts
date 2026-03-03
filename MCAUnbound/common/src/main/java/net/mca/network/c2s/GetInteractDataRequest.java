@@ -8,12 +8,16 @@ import net.mca.entity.VillagerLike;
 import net.mca.entity.ai.relationship.CompassionateEntity;
 import net.mca.entity.ai.relationship.EntityRelationship;
 import net.mca.entity.ai.relationship.RelationshipState;
+import net.mca.block.TownHallBlockEntity;
 import net.mca.network.s2c.GetInteractDataResponse;
 import net.mca.server.world.data.FamilyTreeNode;
 import net.mca.server.world.data.Village;
+import net.mca.server.world.data.VillageManager;
+import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.registry.Registries;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 
 import java.io.Serial;
 import java.util.Optional;
@@ -32,7 +36,8 @@ public class GetInteractDataRequest implements Message {
 
     @Override
     public void receive(ServerPlayerEntity player) {
-        Entity entity = player.getServerWorld().getEntity(uuid);
+        ServerWorld world = player.getServerWorld();
+        Entity entity = world.getEntity(uuid);
 
         if (entity instanceof VillagerLike<?> villager) {
             Set<Constraint> constraints = Constraint.allMatching(villager, player);
@@ -49,13 +54,18 @@ public class GetInteractDataRequest implements Message {
             String professionStr = "Jobless";
             String villageName = "";
             boolean isNpcLeader = false;
+            boolean leaderConvinced = false;
 
             if (entity instanceof VillagerEntityMCA mca) {
                 Optional<Village> homeVillage = mca.getResidency().getHomeVillage();
 
                 if (homeVillage.isPresent()) {
-                    villageName = homeVillage.get().getName();
-                    isNpcLeader = entity.getUuid().equals(homeVillage.get().getNpcLeaderUUID());
+                    Village hv = homeVillage.get();
+                    villageName = hv.getName();
+                    isNpcLeader = entity.getUuid().equals(hv.getNpcLeaderUUID());
+                    if (isNpcLeader) {
+                        leaderConvinced = player.getUuid().equals(hv.getConvincedByPlayerUUID());
+                    }
                 }
 
                 if (isNpcLeader) {
@@ -72,9 +82,20 @@ public class GetInteractDataRequest implements Message {
                 }
             }
 
+            // Check if the requesting player is the player-leader of any village
+            VillageManager vm = VillageManager.get(world);
+            boolean playerIsOwnVillageLeader = vm.findVillages(v -> {
+                BlockPos thPos = v.getTownHallPos();
+                if (thPos == null) return false;
+                BlockEntity be = world.getBlockEntity(thPos);
+                return be instanceof TownHallBlockEntity th
+                        && th.hasLeader() && th.isLeaderPlayer()
+                        && player.getUuid().equals(th.getLeaderUUID());
+            }).findAny().isPresent();
+
             NetworkHandler.sendToPlayer(new GetInteractDataResponse(
                     constraints, fatherName, motherName, spouseName, marriageState,
-                    professionStr, villageName, isNpcLeader), player);
+                    professionStr, villageName, isNpcLeader, leaderConvinced, playerIsOwnVillageLeader), player);
         }
     }
 }

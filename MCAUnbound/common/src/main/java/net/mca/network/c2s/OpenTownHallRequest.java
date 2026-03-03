@@ -70,12 +70,18 @@ public class OpenTownHallRequest implements Message {
             }
         }
 
+        // Count how many other village leaders this player has convinced
+        int convincedLeaderCount = (int) vm.findVillages(
+                v -> player.getUuid().equals(v.getConvincedByPlayerUUID())
+        ).count();
+
         NetworkHandler.sendToPlayer(new TownHallDataResponse(
                 village.orElse(null),
                 townHall,
                 villagerHearts,
                 villagerNames,
-                player.getUuid()
+                player.getUuid(),
+                convincedLeaderCount
         ), player);
     }
 }

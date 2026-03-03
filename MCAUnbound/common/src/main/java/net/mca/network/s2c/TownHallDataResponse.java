@@ -26,14 +26,14 @@ public class TownHallDataResponse extends NbtDataMessage {
     public TownHallDataResponse(Village village, TownHallBlockEntity townHall,
                                  Map<UUID, Integer> villagerHearts,
                                  Map<UUID, String> villagerNames,
-                                 UUID playerId) {
-        super(buildNbt(village, townHall, villagerHearts, villagerNames, playerId));
+                                 UUID playerId, int convincedLeaderCount) {
+        super(buildNbt(village, townHall, villagerHearts, villagerNames, playerId, convincedLeaderCount));
     }
 
     private static NbtCompound buildNbt(Village village, TownHallBlockEntity townHall,
                                          Map<UUID, Integer> villagerHearts,
                                          Map<UUID, String> villagerNames,
-                                         UUID playerId) {
+                                         UUID playerId, int convincedLeaderCount) {
         NbtCompound root = new NbtCompound();
 
         if (village != null) {
@@ -71,8 +71,11 @@ public class TownHallDataResponse extends NbtDataMessage {
                 && townHall.isLeaderPlayer()
                 && townHall.getLeaderUUID().equals(playerId));
 
-        // Block position so the screen can send AttemptLeadershipRequest back
+        // Block position so the screen can send AttemptLeadershipRequest / FormNationPacket back
         root.putLong("blockPos", townHall.getPos().asLong());
+
+        // Nation formation: how many other village leaders the player has convinced
+        root.putInt("convincedLeaderCount", convincedLeaderCount);
 
         // Pending requests for display in the Town Hall screen
         NbtList pendingList = new NbtList();

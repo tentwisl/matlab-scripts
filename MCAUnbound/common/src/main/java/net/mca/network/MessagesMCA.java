@@ -54,27 +54,18 @@ public interface MessagesMCA {
         NetworkHandler.registerMessage(SetTargetMessage.class);
         NetworkHandler.registerMessage(CivilRegistryPageRequest.class);
         NetworkHandler.registerMessage(CivilRegistryResponse.class);
-        // Nation system packets
-        NetworkHandler.registerMessage(OpenDiplomacyTableRequest.class);
+        // Town Hall packets
         NetworkHandler.registerMessage(OpenTownHallRequest.class);
         NetworkHandler.registerMessage(AttemptLeadershipRequest.class);
         NetworkHandler.registerMessage(HighlightVillagerRequest.class);
-        NetworkHandler.registerMessage(GetNationsDebugRequest.class);
-        NetworkHandler.registerMessage(FoundNationPacket.class);
-        NetworkHandler.registerMessage(DiplomacyTableDataResponse.class);
         NetworkHandler.registerMessage(TownHallDataResponse.class);
-        NetworkHandler.registerMessage(NationsDebugResponse.class);
-        // Nation appointment packets
-        NetworkHandler.registerMessage(GetNearbyVillagersRequest.class);
-        NetworkHandler.registerMessage(NearbyVillagersResponse.class);
-        NetworkHandler.registerMessage(AppointCabinetPacket.class);
-        NetworkHandler.registerMessage(AppointCongressPacket.class);
-        NetworkHandler.registerMessage(DismissCabinetPacket.class);
-        NetworkHandler.registerMessage(RemoveCongressPacket.class);
         // Help Village request system packets
         NetworkHandler.registerMessage(OpenHelpVillageRequest.class);
         NetworkHandler.registerMessage(AcceptVillageRequestPacket.class);
         NetworkHandler.registerMessage(FulfillVillageRequestPacket.class);
         NetworkHandler.registerMessage(HelpVillageDataResponse.class);
+        // Nation formation packets
+        NetworkHandler.registerMessage(ConvinceLeaderPacket.class);
+        NetworkHandler.registerMessage(FormNationPacket.class);
     }
 }

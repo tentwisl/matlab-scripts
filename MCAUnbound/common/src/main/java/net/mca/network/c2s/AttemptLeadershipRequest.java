@@ -4,7 +4,7 @@ import net.mca.block.TownHallBlockEntity;
 import net.mca.cobalt.network.Message;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.entity.ai.Memories;
-import net.mca.nation.MCAUnboundConfig;
+import net.mca.MCAUnboundConfig;
 import net.mca.server.world.data.PlayerSaveData;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;

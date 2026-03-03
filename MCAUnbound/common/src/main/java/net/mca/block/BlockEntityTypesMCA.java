@@ -19,9 +19,6 @@ import java.util.function.BiFunction;
 public interface BlockEntityTypesMCA {
     DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES = DeferredRegister.create(MCA.MOD_ID, RegistryKeys.BLOCK_ENTITY_TYPE);
 
-    RegistrySupplier<BlockEntityType<DiplomacyTableBlockEntity>> DIPLOMACY_TABLE =
-            register("diplomacy_table", DiplomacyTableBlockEntity::new, List.of(BlocksMCA.DIPLOMACY_TABLE));
-
     RegistrySupplier<BlockEntityType<TownHallBlockEntity>> TOWN_HALL =
             register("town_hall", TownHallBlockEntity::new, List.of(BlocksMCA.TOWN_HALL));
 

@@ -115,7 +115,8 @@ public class ClientInteractionManagerImpl implements ClientInteractionManager {
             gui.setConstraints(message.constraints);
             gui.setParents(message.father, message.mother);
             gui.setSpouse(message.marriageState, message.spouse);
-            gui.setProfessionAndVillage(message.profession, message.villageName, message.isNpcLeader);
+            gui.setProfessionAndVillage(message.profession, message.villageName, message.isNpcLeader,
+                    message.leaderConvinced, message.playerIsOwnVillageLeader);
         }
     }
 
@@ -252,18 +253,6 @@ public class ClientInteractionManagerImpl implements ClientInteractionManager {
     }
 
     @Override
-    public void handleDiplomacyTableResponse(net.mca.network.s2c.DiplomacyTableDataResponse response) {
-        Screen screen = client.currentScreen;
-        if (screen instanceof net.mca.client.gui.DiplomacyTableScreen gui) {
-            gui.loadData(response);
-        } else {
-            net.mca.client.gui.DiplomacyTableScreen newScreen = new net.mca.client.gui.DiplomacyTableScreen();
-            client.setScreen(newScreen);
-            client.execute(() -> newScreen.loadData(response));
-        }
-    }
-
-    @Override
     public void handleTownHallResponse(net.mca.network.s2c.TownHallDataResponse response) {
         Screen screen = client.currentScreen;
         if (screen instanceof net.mca.client.gui.TownHallScreen gui) {
@@ -272,26 +261,6 @@ public class ClientInteractionManagerImpl implements ClientInteractionManager {
             net.mca.client.gui.TownHallScreen newScreen = new net.mca.client.gui.TownHallScreen();
             client.setScreen(newScreen);
             client.execute(() -> newScreen.loadData(response));
-        }
-    }
-
-    @Override
-    public void handleNationsDebugResponse(net.mca.network.s2c.NationsDebugResponse response) {
-        Screen screen = client.currentScreen;
-        if (screen instanceof net.mca.client.gui.NationDebugScreen gui) {
-            gui.loadData(response);
-        } else {
-            net.mca.client.gui.NationDebugScreen newScreen = new net.mca.client.gui.NationDebugScreen();
-            client.setScreen(newScreen);
-            client.execute(() -> newScreen.loadData(response));
-        }
-    }
-
-    @Override
-    public void handleNearbyVillagersResponse(net.mca.network.s2c.NearbyVillagersResponse response) {
-        Screen screen = client.currentScreen;
-        if (screen instanceof net.mca.client.gui.DiplomacyTableScreen gui) {
-            gui.loadNearbyVillagers(response);
         }
     }
 

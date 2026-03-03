@@ -121,7 +121,7 @@ public enum Constraint implements BiPredicate<VillagerLike<?>, ServerPlayerEntit
     RESIDENT("resident", (villager, player) -> {
         if (villager instanceof VillagerEntityMCA v && player != null) {
             int hearts = v.getVillagerBrain().getMemoriesForPlayer(player).getHearts();
-            return hearts >= net.mca.nation.MCAUnboundConfig.get().residentHeartThreshold;
+            return hearts >= net.mca.MCAUnboundConfig.get().residentHeartThreshold;
         }
         return false;
     }),
@@ -131,7 +131,7 @@ public enum Constraint implements BiPredicate<VillagerLike<?>, ServerPlayerEntit
     VILLAGE_LEADER("village_leader", (villager, player) -> {
         if (villager instanceof VillagerEntityMCA v && player != null) {
             int hearts = v.getVillagerBrain().getMemoriesForPlayer(player).getHearts();
-            return hearts >= net.mca.nation.MCAUnboundConfig.get().leaderHeartThreshold;
+            return hearts >= net.mca.MCAUnboundConfig.get().leaderHeartThreshold;
         }
         return false;
     }),

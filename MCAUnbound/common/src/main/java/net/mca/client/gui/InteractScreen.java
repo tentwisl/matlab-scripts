@@ -70,9 +70,11 @@ public class InteractScreen extends AbstractDynamicScreen {
     private RelationshipState marriageState;
     private String         spouseLabel;
 
-    private String  profession   = "";
-    private String  villageName  = "";
-    private boolean isNpcLeader  = false;
+    private String  profession              = "";
+    private String  villageName             = "";
+    private boolean isNpcLeader             = false;
+    private boolean leaderConvinced         = false;
+    private boolean playerIsOwnVillageLeader = false;
 
     // ── Dialogue overlay ──────────────────────────────────────────────────────
     private List<String>       dialogAnswers    = null;
@@ -178,8 +180,24 @@ public class InteractScreen extends AbstractDynamicScreen {
 
         pane.add(PaneEntries.divider());
 
-        pane.add(PaneEntries.buttonRow("Politics", "Placeholder — coming soon",
-                () -> {}, true));
+        // Nation alliance proposal — shown only when the NPC is a village leader,
+        // the player has 100 ♥ with them, and the player is already a village leader.
+        if (isNpcLeader && playerIsOwnVillageLeader) {
+            if (leaderConvinced) {
+                pane.add(PaneEntries.buttonRow("Alliance Proposed ✓",
+                        "This leader has agreed to join your nation",
+                        () -> {}, true));
+            } else if (c.contains(Constraint.HEARTS_100)) {
+                pane.add(PaneEntries.buttonRow("Propose Nation Alliance",
+                        "Ask this leader to join your nation (requires 100 ♥)",
+                        () -> NetworkHandler.sendToServer(
+                                new ConvinceLeaderPacket(villager.asEntity().getUuid()))));
+            } else {
+                pane.add(PaneEntries.buttonRow("Propose Nation Alliance",
+                        "Requires 100 ♥ with this leader",
+                        () -> {}, true));
+            }
+        }
 
         pane.add(PaneEntries.buttonRow("Family Tree", "View family tree",
                 () -> MinecraftClient.getInstance().setScreen(
@@ -217,7 +235,6 @@ public class InteractScreen extends AbstractDynamicScreen {
 
         String village = villageName.isEmpty() ? "None" : villageName;
         pane.add(PaneEntries.infoRow("Village", village, 0x55FF55));
-        pane.add(PaneEntries.infoRow("Nation",  "Independent", 0xFFAA00));
 
         if (father != null || mother != null) {
             pane.add(PaneEntries.divider());
@@ -421,10 +438,13 @@ public class InteractScreen extends AbstractDynamicScreen {
         this.spouseLabel    = spouse;
     }
 
-    public void setProfessionAndVillage(String profession, String villageName, boolean isNpcLeader) {
-        this.profession  = profession;
-        this.villageName = villageName;
-        this.isNpcLeader = isNpcLeader;
+    public void setProfessionAndVillage(String profession, String villageName, boolean isNpcLeader,
+                                        boolean leaderConvinced, boolean playerIsOwnVillageLeader) {
+        this.profession               = profession;
+        this.villageName              = villageName;
+        this.isNpcLeader              = isNpcLeader;
+        this.leaderConvinced          = leaderConvinced;
+        this.playerIsOwnVillageLeader = playerIsOwnVillageLeader;
         buildTabPanel();
     }
 

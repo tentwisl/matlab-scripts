@@ -1,8 +1,9 @@
 package net.mca.client.gui;
 
+import net.mca.MCAUnboundConfig;
 import net.mca.cobalt.network.NetworkHandler;
-import net.mca.nation.MCAUnboundConfig;
 import net.mca.network.c2s.AttemptLeadershipRequest;
+import net.mca.network.c2s.FormNationPacket;
 import net.mca.network.c2s.HighlightVillagerRequest;
 import net.mca.network.s2c.TownHallDataResponse;
 import net.minecraft.client.gui.DrawContext;
@@ -37,11 +38,13 @@ public class TownHallScreen extends ExtendedScreen {
     private final Map<String, String>  villagerNames  = new LinkedHashMap<>();
 
     // ── Leadership ────────────────────────────────────────────────────────────
-    private boolean hasLeader      = false;
-    private String  leaderName     = "";
-    private boolean leaderIsPlayer = false;
-    private boolean isPlayerLeader = false;
-    private int     electionState  = 0;
+    private boolean hasLeader           = false;
+    private String  leaderName          = "";
+    private boolean leaderIsPlayer      = false;
+    private boolean isPlayerLeader      = false;
+    private int     electionState       = 0;
+    /** How many other village leaders the player has convinced to join their nation. */
+    private int     convincedLeaderCount = 0;
 
     // ── Block pos (for sending action packets) ────────────────────────────────
     private BlockPos blockPos = BlockPos.ORIGIN;
@@ -95,6 +98,17 @@ public class TownHallScreen extends ExtendedScreen {
                 NetworkHandler.sendToServer(new AttemptLeadershipRequest(blockPos));
                 close();
             }).dimensions(cx - 68, bottomY - 22, 136, 20).build());
+        }
+
+        // Form Nation — shown only if the player is already the leader and has
+        // convinced at least 2 other village leaders.
+        if (isPlayerLeader && convincedLeaderCount >= 2) {
+            addDrawableChild(ButtonWidget.builder(
+                    Text.literal("Form Nation (" + convincedLeaderCount + " allied)"),
+                    b -> {
+                        NetworkHandler.sendToServer(new FormNationPacket(blockPos));
+                        close();
+                    }).dimensions(cx - 80, bottomY - 44, 160, 20).build());
         }
 
         // Scroll buttons
@@ -287,11 +301,12 @@ public class TownHallScreen extends ExtendedScreen {
             for (String k : nn.getKeys()) villagerNames.put(k, nn.getString(k));
         }
 
-        hasLeader      = root.getBoolean("hasLeader");
-        leaderIsPlayer = root.getBoolean("leaderIsPlayer");
-        leaderName     = hasLeader ? root.getString("leaderName") : "";
-        isPlayerLeader = root.getBoolean("isPlayerLeader");
-        electionState  = root.getInt("electionState");
+        hasLeader            = root.getBoolean("hasLeader");
+        leaderIsPlayer       = root.getBoolean("leaderIsPlayer");
+        leaderName           = hasLeader ? root.getString("leaderName") : "";
+        isPlayerLeader       = root.getBoolean("isPlayerLeader");
+        electionState        = root.getInt("electionState");
+        convincedLeaderCount = root.getInt("convincedLeaderCount");
 
         if (root.contains("blockPos")) {
             blockPos = BlockPos.fromLong(root.getLong("blockPos"));
