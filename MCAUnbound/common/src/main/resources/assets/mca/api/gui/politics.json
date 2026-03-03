@@ -1,0 +1,14 @@
+[
+  {
+    "identifier": "gui.button.backarrow",
+    "align": "center",
+    "x": -68,
+    "y": -55,
+    "row": 0,
+    "width": 20,
+    "height": 20,
+    "notifyServer": false,
+    "targetServer": false,
+    "constraints": ""
+  }
+]

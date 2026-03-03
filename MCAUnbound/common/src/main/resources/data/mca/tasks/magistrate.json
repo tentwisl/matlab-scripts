@@ -1,0 +1,14 @@
+[
+  {
+    "type": "reputation",
+    "reputation": 1400
+  },
+  {
+    "type": "population",
+    "population": 15
+  },
+  {
+    "type": "building",
+    "building": "barracks"
+  }
+]

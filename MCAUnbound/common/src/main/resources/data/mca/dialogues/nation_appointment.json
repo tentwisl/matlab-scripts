@@ -1,0 +1,138 @@
+{
+  "questions": {
+    "nation_appoint_cabinet": {
+      "silent": false,
+      "answers": [
+        {
+          "name": "appoint_confirm",
+          "results": [
+            {
+              "baseChance": 80,
+              "conditions": [
+                {
+                  "chance": 100,
+                  "hearts": {
+                    "add": 0.0,
+                    "min": 50.0
+                  }
+                }
+              ],
+              "actions": {
+                "next": "main",
+                "say": "nation.appoint_cabinet.accept",
+                "command": "open_diplomacy_table_cabinet"
+              }
+            },
+            {
+              "baseChance": 20,
+              "actions": {
+                "next": "main",
+                "say": "nation.appoint_cabinet.decline"
+              }
+            }
+          ]
+        },
+        {
+          "name": "nevermind",
+          "results": [
+            {
+              "actions": {
+                "next": "main",
+                "say": "nation.nevermind"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "nation_appoint_congress": {
+      "silent": false,
+      "answers": [
+        {
+          "name": "appoint_confirm",
+          "results": [
+            {
+              "baseChance": 75,
+              "conditions": [
+                {
+                  "chance": 100,
+                  "hearts": {
+                    "add": 0.0,
+                    "min": 30.0
+                  }
+                }
+              ],
+              "actions": {
+                "next": "main",
+                "say": "nation.appoint_congress.accept",
+                "command": "open_diplomacy_table_congress"
+              }
+            },
+            {
+              "baseChance": 25,
+              "actions": {
+                "next": "main",
+                "say": "nation.appoint_congress.decline"
+              }
+            }
+          ]
+        },
+        {
+          "name": "nevermind",
+          "results": [
+            {
+              "actions": {
+                "next": "main",
+                "say": "nation.nevermind"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "nation_allegiance": {
+      "silent": false,
+      "answers": [
+        {
+          "name": "allegiance_confirm",
+          "results": [
+            {
+              "baseChance": 60,
+              "conditions": [
+                {
+                  "chance": 100,
+                  "hearts": {
+                    "add": 0.0,
+                    "min": 40.0
+                  }
+                }
+              ],
+              "actions": {
+                "next": "main",
+                "say": "nation.allegiance.sworn"
+              }
+            },
+            {
+              "baseChance": 40,
+              "actions": {
+                "next": "main",
+                "say": "nation.allegiance.refused"
+              }
+            }
+          ]
+        },
+        {
+          "name": "nevermind",
+          "results": [
+            {
+              "actions": {
+                "next": "main",
+                "say": "nation.nevermind"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

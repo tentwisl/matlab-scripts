@@ -1,0 +1,10 @@
+[
+  {
+    "type": "reputation",
+    "reputation": 100
+  },
+  {
+    "type": "building",
+    "building": "house"
+  }
+]

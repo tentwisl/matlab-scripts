@@ -1,0 +1,40 @@
+architectury {
+  common rootProject.enabled_platforms.split(',')
+}
+
+repositories {
+  maven { url "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/" }
+  maven { url "https://dl.cloudsmith.io/public/tslat/sbl/maven/" }
+  maven { url "https://maven.saps.dev/minecraft" }
+}
+
+dependencies {
+  // We depend on Fabric Loader here to use the Fabric @Environment annotations,
+  // which get remapped to the correct annotations on each platform.
+  // Do NOT use other classes from Fabric Loader.
+  modImplementation "net.fabricmc:fabric-loader:$rootProject.loader_version"
+
+  // Architectury API. This is optional, and you can comment it out if you don't need it.
+  modImplementation "dev.architectury:architectury:$rootProject.architectury_version"
+
+  // GeckoLib — compile-only so common code can reference GeckoLib types
+  modCompileOnly "software.bernie.geckolib:geckolib-forge-1.20.1:${rootProject.geckolib_version}"
+
+  // SmartBrainLib — compile-only in common for AI brain references
+  modCompileOnly "net.tslat.smartbrainlib:SmartBrainLib-forge-1.20.1:${rootProject.smartbrainlib_version}"
+
+  // FTB Library — compile-only so common GUI code can reference its widget API
+  modCompileOnly "dev.ftb.mods:ftb-library-forge:${rootProject.ftb_library_version}"
+}
+
+
+publishing {
+  publications {
+    mavenCommon(MavenPublication) {
+      artifactId = rootProject.artifactId
+      groupId = rootProject.groupId
+      version = version + "+common"
+      from components.java
+    }
+  }
+}

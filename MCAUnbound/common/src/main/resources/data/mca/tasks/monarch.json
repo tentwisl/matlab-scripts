@@ -1,0 +1,22 @@
+[
+  {
+    "type": "reputation",
+    "reputation": 6500
+  },
+  {
+    "type": "population",
+    "population": 100
+  },
+  {
+    "type": "building",
+    "building": "prison"
+  },
+  {
+    "type": "building",
+    "building": "blacksmith"
+  },
+  {
+    "type": "advancement",
+    "id": "mca:adventure/kill_grim_reaper"
+  }
+]
