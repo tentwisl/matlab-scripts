@@ -27,6 +27,7 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
@@ -49,6 +50,8 @@ import java.util.stream.Collectors;
  * buttons directly without triggering the MCA dialogue overlay.
  */
 public class InteractScreen extends AbstractDynamicScreen {
+    public static final Identifier ICON_TEXTURES = MCA.locate("textures/gui.png");
+
 
     // ── Constants ─────────────────────────────────────────────────────────────
     private static final int PORTRAIT_SIZE = 80;
@@ -193,7 +196,7 @@ public class InteractScreen extends AbstractDynamicScreen {
 
         pane.add(PaneEntries.infoRow("Name",  villager.asEntity().getName().getString(), 0xFFFFFF));
         pane.add(PaneEntries.infoRow("Mood",  brain.getMood().getText().getString(),
-                brain.getMood().getColor().getColorValue().orElse(0xAAAAAA)));
+                brain.getMood().getColor().getColorValue()));
 
         // Trait
         String traitStr = brain.getPersonality().getName().getString();
@@ -261,12 +264,12 @@ public class InteractScreen extends AbstractDynamicScreen {
         // Villager portrait
         int portraitX = leftX + 4;
         try {
-            InventoryScreen.drawEntity(context, portraitX, 8,
-                    portraitX + PORTRAIT_SIZE, 8 + PORTRAIT_SIZE,
+            InventoryScreen.drawEntity(context,
+                    portraitX + PORTRAIT_SIZE / 2,
+                    8 + PORTRAIT_SIZE,
                     PORTRAIT_SIZE / 2,
-                    0f,
-                    mouseX - (portraitX + PORTRAIT_SIZE / 2f),
-                    mouseY - (8 + PORTRAIT_SIZE / 3f),
+                    (float) (portraitX + PORTRAIT_SIZE / 2) - mouseX,
+                    (float) (8 + PORTRAIT_SIZE / 3) - mouseY,
                     villager.asEntity());
         } catch (Exception ignored) { /* graceful fallback */ }
 
@@ -443,7 +446,7 @@ public class InteractScreen extends AbstractDynamicScreen {
 
     // ── Legacy compatibility — unused but kept for interface conformance ───────
 
-    private boolean hoveringOver(int x, int y, int w, int h) {
+    protected boolean hoveringOver(int x, int y, int w, int h) {
         double mx = MinecraftClient.getInstance().mouse.getX()
                 * this.width / MinecraftClient.getInstance().getWindow().getWidth();
         double my = MinecraftClient.getInstance().mouse.getY()
