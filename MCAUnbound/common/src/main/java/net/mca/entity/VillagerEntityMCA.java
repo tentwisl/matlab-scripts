@@ -469,7 +469,7 @@ public class VillagerEntityMCA extends VillagerEntity implements VillagerLike<Vi
                                                 + ", my name is " + getName().getString()
                                                 + ", I am the village's leader."),
                                         serverPlayer);
-                                serverPlayer.addScoreboardTag(key);
+                                serverPlayer.addCommandTag(key);
                                 PlayerSaveData.get(serverPlayer).markDirty();
                             }
                         }

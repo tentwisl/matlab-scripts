@@ -44,7 +44,7 @@ public class AppointCabinetPacket implements Message {
         if (opt.isEmpty()) return;
 
         // Basic validation: entity must exist in the world
-        Entity entity = world.getEntityByUuid(villagerEntityId);
+        Entity entity = world.getEntity(villagerEntityId);
         if (entity == null) return;
 
         opt.get().getCabinet().appoint(villagerEntityId, role);
