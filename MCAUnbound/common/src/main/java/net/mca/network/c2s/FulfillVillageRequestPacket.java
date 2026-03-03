@@ -3,9 +3,12 @@ package net.mca.network.c2s;
 import net.mca.block.TownHallBlockEntity;
 import net.mca.cobalt.network.Message;
 import net.mca.cobalt.network.NetworkHandler;
+import net.mca.entity.VillagerEntityMCA;
 import net.mca.network.s2c.HelpVillageDataResponse;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
+
+import java.util.List;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -38,9 +41,21 @@ public class FulfillVillageRequestPacket implements Message {
         boolean complete = townHall.tryFulfill(requestId, player);
 
         if (complete) {
-            // Grant +10 hearts to all village residents
             Optional<Village> village = VillageManager.get(world).getOrEmpty(townHall.getVillageId());
-            village.ifPresent(v -> v.pushHearts(player, 10));
+            village.ifPresent(v -> {
+                // Apply +10 hearts immediately to every currently-loaded resident so the
+                // player sees the change right away when they open the interact screen.
+                List<VillagerEntityMCA> loaded = v.getResidents(world);
+                for (VillagerEntityMCA res : loaded) {
+                    res.getVillagerBrain().getMemoriesForPlayer(player).modHearts(10);
+                }
+                // Push to the slow-drain buffer for any unloaded residents so they also
+                // receive hearts when they next tick.
+                int unloaded = v.getPopulation() - loaded.size();
+                if (unloaded > 0) {
+                    v.pushHearts(player, 10 * unloaded);
+                }
+            });
 
             // Leader thanks the player
             String playerName = player.getName().getString();

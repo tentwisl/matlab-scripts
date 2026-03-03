@@ -86,6 +86,7 @@ public class InteractScreen extends AbstractDynamicScreen {
 
     // ── Tab panel (rebuilt every init) ───────────────────────────────────────
     private TabPanel tabPanel;
+    private int      activeTabIndex     = 0;
     private int      timeSinceLastClick;
 
     // ── Gift mode ─────────────────────────────────────────────────────────────
@@ -116,8 +117,13 @@ public class InteractScreen extends AbstractDynamicScreen {
                 .addTab("Talk",    0x44FFDD00, pane -> buildTalkTab(pane, c))
                 .addTab("Actions", 0x4488CCFF, pane -> buildActionsTab(pane, c))
                 .addTab("Profile", 0x4488FF88, pane -> buildProfileTab(pane, c));
+        tabPanel.setActiveTab(activeTabIndex);
 
-        tabPanel.init(this::addDrawableChild);
+        tabPanel.init(this::addDrawableChild, () -> {
+            // Capture selected tab BEFORE the rebuild wipes the panel reference.
+            activeTabIndex = tabPanel.getActiveTab();
+            buildTabPanel();
+        });
     }
 
     // ── Tab content builders ──────────────────────────────────────────────────

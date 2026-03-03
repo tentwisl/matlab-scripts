@@ -39,6 +39,8 @@ public class HelpVillageScreen extends ExtendedScreen {
     private static final int BTN_W   = 54;
     private static final int BTN_H   = 14;
     private static final int PANEL_W = 290;
+    /** Right-side margin so the panel sits on the right like InteractScreen. */
+    private static final int MARGIN  = 8;
     private static final int START_Y = 10;
     private static final int TITLE_H = 28; // height used by title block in render()
 
@@ -109,7 +111,8 @@ public class HelpVillageScreen extends ExtendedScreen {
         if (width == 0) return;
 
         int[] rowY = computeSectionRowY();
-        int btnX = width / 2 + PANEL_W / 2 - BTN_W - 4;
+        int leftX = width - MARGIN - PANEL_W;
+        int btnX  = leftX + PANEL_W - BTN_W - 4;
 
         for (int i = 0; i < openRequests.size(); i++) {
             final int reqId = openRequests.get(i).id();
@@ -128,21 +131,27 @@ public class HelpVillageScreen extends ExtendedScreen {
         }
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Close"), b -> close())
-                .dimensions(width / 2 - 40, height - 26, 80, 20).build());
+                .dimensions(leftX + PANEL_W / 2 - 40, height - 26, 80, 20).build());
     }
 
     // ── Rendering ─────────────────────────────────────────────────────────────
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        renderBackground(ctx);
+        // No renderBackground() — we don't want the dim overlay.
         super.render(ctx, mouseX, mouseY, delta);
 
-        int cx    = width / 2;
-        int leftX = cx - PANEL_W / 2;
-        int rightX = cx + PANEL_W / 2;
+        int leftX  = width - MARGIN - PANEL_W;
+        int rightX = leftX + PANEL_W;
+        int cx     = leftX + PANEL_W / 2;
 
-        ctx.fill(leftX - 4, START_Y - 4, rightX + 4, height - 30, 0x88000000);
+        // Solid, opaque panel background
+        ctx.fill(leftX - 4, START_Y - 4, rightX + 4, height - 28, 0xFF1A1A1A);
+        // Thin border
+        ctx.fill(leftX - 5, START_Y - 5, rightX + 5, START_Y - 4, 0xFF555555);
+        ctx.fill(leftX - 5, height - 28, rightX + 5, height - 27, 0xFF555555);
+        ctx.fill(leftX - 5, START_Y - 5, leftX - 4, height - 27, 0xFF555555);
+        ctx.fill(rightX + 4, START_Y - 5, rightX + 5, height - 27, 0xFF555555);
 
         int y = START_Y;
 
