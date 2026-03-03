@@ -367,9 +367,19 @@ public class InteractScreen extends AbstractDynamicScreen {
         }
 
         // ── Placeholder talk buttons ───────────────────────────────────────
-        if (id.equals("gui.button.ask") || id.equals("gui.button.chat") ||
-                id.equals("gui.button.rumors")) {
+        if (id.equals("gui.button.ask")) {
             // Placeholder — no action yet
+            return;
+        }
+
+        // MCAUnbound: route talk actions through dialogue tree so Joke/Story/Flirt
+        // keep their sub-selections instead of falling back to one-liners.
+        if (id.equals("gui.button.joke") || id.equals("gui.button.story")
+                || id.equals("gui.button.flirt") || id.equals("gui.button.chat")
+                || id.equals("gui.button.rumors")) {
+            String answer = id.replace("gui.button.", "");
+            NetworkHandler.sendToServer(new InteractionDialogueMessage(
+                    villager.asEntity().getUuid(), "main", answer));
             return;
         }
 
