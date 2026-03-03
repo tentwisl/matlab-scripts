@@ -106,7 +106,7 @@ public class InteractScreen extends AbstractDynamicScreen {
         clearChildren();
 
         Set<Constraint> c = getConstraints();
-        int panelX = width  / 2 - PANEL_W / 2;
+        int panelX = width - PANEL_W - 8;
         int panelY = HEADER_H + 4;
         int panelH = height - panelY - 4;
 
@@ -251,12 +251,10 @@ public class InteractScreen extends AbstractDynamicScreen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float tickDelta) {
-        renderBackground(context);
         super.render(context, mouseX, mouseY, tickDelta);
 
-        int cx     = width / 2;
-        int leftX  = cx - PANEL_W / 2;
-        int rightX = cx + PANEL_W / 2;
+        int leftX  = width - PANEL_W - 8;
+        int rightX = leftX + PANEL_W;
 
         // ── Header panel ──────────────────────────────────────────────────────
         context.fill(leftX - 4, 2, rightX + 4, HEADER_H, 0x99000000);
