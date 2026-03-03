@@ -25,7 +25,7 @@ repositories {
     // GeckoLib
     maven { url "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/" }
     // SmartBrainLib
-    maven { url "https://dl.cloudsmith.io/public/tslat/tslat-common/maven/" }
+    maven { url "https://dl.cloudsmith.io/public/tslat/sbl/maven/" }
     // FTB Library
     maven { url "https://maven.saps.dev/minecraft" }
     // Xaero's Minimap / World Map

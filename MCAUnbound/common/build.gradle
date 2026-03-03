@@ -4,7 +4,7 @@ architectury {
 
 repositories {
   maven { url "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/" }
-  maven { url "https://dl.cloudsmith.io/public/tslat/tslat-common/maven/" }
+  maven { url "https://dl.cloudsmith.io/public/tslat/sbl/maven/" }
   maven { url "https://maven.saps.dev/minecraft" }
 }
 
