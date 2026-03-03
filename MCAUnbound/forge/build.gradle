@@ -38,9 +38,10 @@ dependencies {
 
     // GeckoLib — model loading + animation framework
     modImplementation "software.bernie.geckolib:geckolib-forge-1.20.1:${rootProject.geckolib_version}"
-    // Keep MCLib on the mod classpath so GeckoLib's JsonUtil static init can resolve IValue at runtime
-    modImplementation "com.eliotlash.mclib:mclib:20"
-    modRuntimeOnly "com.eliotlash.mclib:mclib:20"
+    // MCLib is a plain library (not a Forge mod); ensure it is present on both compile and Forge runtime library classpaths
+    implementation "com.eliotlash.mclib:mclib:20"
+    runtimeOnly "com.eliotlash.mclib:mclib:20"
+    forgeRuntimeLibrary "com.eliotlash.mclib:mclib:20"
 
     // SmartBrainLib — declarative AI brain system for entities
     modImplementation "net.tslat.smartbrainlib:SmartBrainLib-forge-1.20.1:${rootProject.smartbrainlib_version}"
