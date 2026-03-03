@@ -18,6 +18,7 @@ import net.mca.resources.Rank;
 import net.mca.resources.Tasks;
 import net.mca.server.world.data.FamilyTree;
 import net.mca.server.world.data.FamilyTreeNode;
+import net.mca.server.world.data.PlayerSaveData;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillagerTrackerManager;
 import net.mca.util.InventoryUtils;
@@ -456,6 +457,25 @@ public class VillagerEntityMCA extends VillagerEntity implements VillagerLike<Vi
                 }
             } else {
                 playWelcomeSound();
+
+                // MCAUnbound: first-time village leader greeting.
+                if (!getWorld().isClient && player instanceof ServerPlayerEntity serverPlayer) {
+                    getResidency().getHomeVillage().ifPresent(village -> {
+                        if (getUuid().equals(village.getNpcLeaderUUID())) {
+                            String key = "mcaunbound_leader_greeted_" + village.getId() + "_" + getUuid();
+                            if (!serverPlayer.getCommandTags().contains(key)) {
+                                sendChatMessage(
+                                        Text.literal("Welcome to our humble village of " + village.getName()
+                                                + ", my name is " + getName().getString()
+                                                + ", I am the village's leader."),
+                                        serverPlayer);
+                                serverPlayer.addScoreboardTag(key);
+                                PlayerSaveData.get(serverPlayer).markDirty();
+                            }
+                        }
+                    });
+                }
+
                 interactedWith = true;
                 return interactions.interactAt(player, pos, hand);
             }

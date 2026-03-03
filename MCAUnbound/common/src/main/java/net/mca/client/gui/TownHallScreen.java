@@ -20,7 +20,7 @@ import java.util.*;
  * <ul>
  *   <li>Village name, resident count, and current leader (NPC or player)</li>
  *   <li>Scrollable resident list with per-villager hearts, colour-coded by threshold</li>
- *   <li>Coloured avatar placeholder (UUID-hash colour) next to each name</li>
+ *   <li>Simple face glyph avatar next to each villager name</li>
  *   <li>Click a villager row to highlight them in-world (Glowing for 30 s)</li>
  *   <li>Pending village supply requests section</li>
  *   <li>"Attempt Leadership" button when the player is eligible</li>
@@ -180,9 +180,9 @@ public class TownHallScreen extends ExtendedScreen {
             int rowBg = hovered ? 0x66FFFFFF : (i % 2 == 0 ? 0x44000000 : 0x22000000);
             ctx.fill(listX - 4, y - 1, listX + 244, y + ROW_HEIGHT - 2, rowBg);
 
-            // Coloured avatar placeholder (3×9 rect, colour derived from UUID hash)
-            int avatarColor = uuidToColor(uuid);
-            ctx.fill(listX, y, listX + 9, y + ROW_HEIGHT - 3, avatarColor);
+            // Face marker (prevents flat color-block avatars).
+            int faceColor = hovered ? 0xFFE8D6B5 : 0xFFD9C4A2;
+            ctx.drawTextWithShadow(textRenderer, "☺", listX, y, faceColor);
 
             String display = name.length() > 24 ? name.substring(0, 22) + ".." : name;
             ctx.drawTextWithShadow(textRenderer, display, listX + 12, y, hovered ? 0xFFFFFF : 0xCCCCCC);
@@ -223,15 +223,6 @@ public class TownHallScreen extends ExtendedScreen {
                 y += ROW_HEIGHT;
             }
         }
-    }
-
-    /** Derive a pastel-ish colour from the UUID string for the avatar placeholder. */
-    private static int uuidToColor(String uuid) {
-        int h = uuid.hashCode();
-        int r = 100 + (h & 0x7F);
-        int g = 100 + ((h >> 8) & 0x7F);
-        int b = 100 + ((h >> 16) & 0x7F);
-        return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
 
     // ── Mouse interaction ─────────────────────────────────────────────────────
