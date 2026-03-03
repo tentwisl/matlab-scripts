@@ -15,76 +15,88 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Help Village screen — shown when the player clicks "Help Village" on the NPC leader.
+ * Help Village screen — opened when clicking "Help Village" on the NPC leader.
  *
- * <ul>
- *   <li>Open requests: each shows item name, amount needed, and an [Accept] button</li>
- *   <li>Pending requests accepted by this player: show remaining/total and [Fulfill] button</li>
- *   <li>Pending requests accepted by others: show "Pending" label (no action)</li>
- * </ul>
+ * Layout is computed once in computeSectionRowY() and reused by both
+ * render() and rebuildButtons(), so button positions always match drawn rows.
  */
 public class HelpVillageScreen extends ExtendedScreen {
 
-    // ── Data ────────────────────────────────────────────────────────────────────
+    // ── Request data ─────────────────────────────────────────────────────────
+    private record RequestEntry(int id, String itemName, int fulfilled, int total, boolean mine) {}
+
     private BlockPos townHallPos = BlockPos.ORIGIN;
-    private String leaderName   = "";
+    private String   leaderName  = "";
 
-    /** [id, itemName, totalAmount, fulfilledAmount, category] */
-    private final List<int[]>    openIds        = new ArrayList<>();
-    private final List<String[]> openEntries    = new ArrayList<>(); // [itemName, amountStr]
-    private final List<int[]>    pendingMyIds   = new ArrayList<>();
-    private final List<String[]> pendingMyEntries = new ArrayList<>(); // [itemName, remainStr]
-    private final List<String[]> pendingOtherEntries = new ArrayList<>();
+    private final List<RequestEntry> openRequests    = new ArrayList<>();
+    private final List<RequestEntry> pendingRequests = new ArrayList<>();
+    private final List<RequestEntry> othersRequests  = new ArrayList<>();
 
-    // ── Layout ──────────────────────────────────────────────────────────────────
-    private static final int ROW_H = 22;
+    // ── Layout constants ─────────────────────────────────────────────────────
+    private static final int ROW_H   = 22;
+    private static final int HDR_H   = 14;
+    private static final int GAP     = 8;
+    private static final int BTN_W   = 54;
+    private static final int BTN_H   = 14;
+    private static final int PANEL_W = 290;
+    private static final int START_Y = 10;
+    private static final int TITLE_H = 28; // height used by title block in render()
 
     public HelpVillageScreen() {
         super(Text.translatable("gui.mca.help_village.title"));
     }
+
+    // ── Data loading ──────────────────────────────────────────────────────────
 
     public void loadData(HelpVillageDataResponse response) {
         NbtCompound root = response.getData();
         townHallPos = BlockPos.fromLong(root.getLong("blockPos"));
         leaderName  = root.getString("leaderName");
 
-        openIds.clear();
-        openEntries.clear();
-        pendingMyIds.clear();
-        pendingMyEntries.clear();
-        pendingOtherEntries.clear();
+        openRequests.clear();
+        pendingRequests.clear();
+        othersRequests.clear();
 
         NbtList openList = root.getList("openRequests", 10);
         for (int i = 0; i < openList.size(); i++) {
             NbtCompound e = openList.getCompound(i);
-            int id     = e.getInt("id");
-            String name = e.getString("itemName");
-            int total  = e.getInt("total");
-            openIds.add(new int[]{id});
-            openEntries.add(new String[]{name, "Need: " + total});
+            openRequests.add(new RequestEntry(
+                    e.getInt("id"), e.getString("itemName"),
+                    e.getInt("fulfilled"), e.getInt("total"), false));
         }
 
-        NbtList pendingList = root.getList("pendingRequests", 10);
-        for (int i = 0; i < pendingList.size(); i++) {
-            NbtCompound e    = pendingList.getCompound(i);
-            int id           = e.getInt("id");
-            String name      = e.getString("itemName");
-            int total        = e.getInt("total");
-            int fulfilled    = e.getInt("fulfilled");
-            int remaining    = Math.max(0, total - fulfilled);
-            boolean mine     = e.getBoolean("mine");
-            if (mine) {
-                pendingMyIds.add(new int[]{id});
-                pendingMyEntries.add(new String[]{name, remaining + "/" + total + " remaining"});
-            } else {
-                pendingOtherEntries.add(new String[]{name, "Pending"});
-            }
+        NbtList pendList = root.getList("pendingRequests", 10);
+        for (int i = 0; i < pendList.size(); i++) {
+            NbtCompound e = pendList.getCompound(i);
+            boolean mine = e.getBoolean("mine");
+            var entry = new RequestEntry(
+                    e.getInt("id"), e.getString("itemName"),
+                    e.getInt("fulfilled"), e.getInt("total"), mine);
+            if (mine) pendingRequests.add(entry);
+            else      othersRequests.add(entry);
         }
 
         rebuildButtons();
     }
 
-    // ── Buttons ──────────────────────────────────────────────────────────────────
+    // ── Shared layout calculation ─────────────────────────────────────────────
+    // Returns: [openFirstRowY, pendingFirstRowY, othersFirstRowY]
+
+    private int[] computeSectionRowY() {
+        int y = START_Y + TITLE_H;
+
+        int openFirstRow = y + HDR_H;
+        y = openFirstRow + Math.max(1, openRequests.size()) * ROW_H + GAP;
+
+        int pendFirstRow = y + HDR_H;
+        y = pendFirstRow + Math.max(1, pendingRequests.size()) * ROW_H + GAP;
+
+        int othersFirstRow = y + HDR_H;
+
+        return new int[]{openFirstRow, pendFirstRow, othersFirstRow};
+    }
+
+    // ── Buttons ───────────────────────────────────────────────────────────────
 
     @Override
     protected void init() {
@@ -94,36 +106,32 @@ public class HelpVillageScreen extends ExtendedScreen {
 
     private void rebuildButtons() {
         clearChildren();
+        if (width == 0) return;
 
-        int cx    = width / 2;
-        int baseY = 60;
-        int leftX = cx - 130;
+        int[] rowY = computeSectionRowY();
+        int btnX = width / 2 + PANEL_W / 2 - BTN_W - 4;
 
-        // ── Open requests ──────────────────────────────────────────────────────
-        int y = baseY + 20; // skip header row
-        for (int i = 0; i < openEntries.size(); i++) {
-            final int reqId = openIds.get(i)[0];
-            addDrawableChild(ButtonWidget.builder(Text.literal("Accept"), b -> {
-                NetworkHandler.sendToServer(new AcceptVillageRequestPacket(townHallPos, reqId));
-            }).dimensions(leftX + 220, y + i * ROW_H, 50, 16).build());
+        for (int i = 0; i < openRequests.size(); i++) {
+            final int reqId = openRequests.get(i).id();
+            int btnY = rowY[0] + i * ROW_H + (ROW_H - BTN_H) / 2;
+            addDrawableChild(ButtonWidget.builder(Text.literal("Accept"), b ->
+                    NetworkHandler.sendToServer(new AcceptVillageRequestPacket(townHallPos, reqId))
+            ).dimensions(btnX, btnY, BTN_W, BTN_H).build());
         }
 
-        // ── Pending (mine) requests ────────────────────────────────────────────
-        int pendingBase = baseY + 20 + openEntries.size() * ROW_H + 30;
-        for (int i = 0; i < pendingMyEntries.size(); i++) {
-            final int reqId = pendingMyIds.get(i)[0];
-            addDrawableChild(ButtonWidget.builder(Text.literal("Fulfill"), b -> {
-                NetworkHandler.sendToServer(new FulfillVillageRequestPacket(townHallPos, reqId));
-            }).dimensions(leftX + 220, pendingBase + i * ROW_H, 50, 16).build());
+        for (int i = 0; i < pendingRequests.size(); i++) {
+            final int reqId = pendingRequests.get(i).id();
+            int btnY = rowY[1] + i * ROW_H + (ROW_H - BTN_H) / 2;
+            addDrawableChild(ButtonWidget.builder(Text.literal("Fulfill"), b ->
+                    NetworkHandler.sendToServer(new FulfillVillageRequestPacket(townHallPos, reqId))
+            ).dimensions(btnX, btnY, BTN_W, BTN_H).build());
         }
 
-        // ── Close ─────────────────────────────────────────────────────────────
-        int bottomY = height - 28;
         addDrawableChild(ButtonWidget.builder(Text.literal("Close"), b -> close())
-                .dimensions(cx - 40, bottomY, 80, 20).build());
+                .dimensions(width / 2 - 40, height - 26, 80, 20).build());
     }
 
-    // ── Rendering ────────────────────────────────────────────────────────────────
+    // ── Rendering ─────────────────────────────────────────────────────────────
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
@@ -131,74 +139,88 @@ public class HelpVillageScreen extends ExtendedScreen {
         super.render(ctx, mouseX, mouseY, delta);
 
         int cx    = width / 2;
-        int leftX = cx - 130;
-        int y     = 12;
+        int leftX = cx - PANEL_W / 2;
+        int rightX = cx + PANEL_W / 2;
 
-        // Title
-        ctx.drawCenteredTextWithShadow(textRenderer, "§6§lHelp Village — §r§6" + leaderName, cx, y, 0xFFFFFF);
-        y += 18;
+        ctx.fill(leftX - 4, START_Y - 4, rightX + 4, height - 30, 0x88000000);
 
-        ctx.drawCenteredTextWithShadow(textRenderer, "§7Support the village by fulfilling supply requests.", cx, y, 0xFFFFFF);
-        y += 16;
+        int y = START_Y;
+
+        // Title (TITLE_H = 28 px consumed)
+        ctx.drawCenteredTextWithShadow(textRenderer, "§6§lHelp Village", cx, y, 0xFFFFFF);
+        y += 12;
+        String sub = leaderName.isEmpty() ? "Village Supply Requests"
+                : "Requests  |  Leader: §e" + leaderName;
+        ctx.drawCenteredTextWithShadow(textRenderer, "§7" + sub, cx, y, 0xFFFFFF);
+        y += 16; // total TITLE_H used = 12 + 16 = 28 ✓
 
         // ── Open requests ─────────────────────────────────────────────────────
-        drawSectionHeader(ctx, leftX, y, "§e§lAvailable Requests");
-        y += 14;
-
-        if (openEntries.isEmpty()) {
-            ctx.drawTextWithShadow(textRenderer, "§7No open requests right now.", leftX + 4, y + 2, 0xFFFFFF);
+        drawHeader(ctx, leftX, rightX, y, "§e§l Available Requests");
+        y += HDR_H;
+        if (openRequests.isEmpty()) {
+            ctx.drawTextWithShadow(textRenderer, "§7No open requests at this time.", leftX + 6, y + 4, 0xFFFFFF);
             y += ROW_H;
         } else {
-            for (int i = 0; i < openEntries.size(); i++) {
-                String[] e = openEntries.get(i);
-                int bg = i % 2 == 0 ? 0x44000000 : 0x22000000;
-                ctx.fill(leftX - 2, y - 1, leftX + 278, y + ROW_H - 3, bg);
-                ctx.drawTextWithShadow(textRenderer, "§f" + e[0], leftX + 2, y + 2, 0xFFFFFF);
-                ctx.drawTextWithShadow(textRenderer, "§7" + e[1], leftX + 130, y + 2, 0xFFFFFF);
+            for (int i = 0; i < openRequests.size(); i++) {
+                drawRow(ctx, leftX, rightX, y, i, openRequests.get(i), false);
                 y += ROW_H;
             }
         }
+        y += GAP;
 
-        y += 10;
-
-        // ── Pending: mine ─────────────────────────────────────────────────────
-        drawSectionHeader(ctx, leftX, y, "§b§lYour Active Requests");
-        y += 14;
-
-        if (pendingMyEntries.isEmpty()) {
-            ctx.drawTextWithShadow(textRenderer, "§7You have no accepted requests.", leftX + 4, y + 2, 0xFFFFFF);
+        // ── Pending (mine) ────────────────────────────────────────────────────
+        drawHeader(ctx, leftX, rightX, y, "§b§l Your Active Requests");
+        y += HDR_H;
+        if (pendingRequests.isEmpty()) {
+            ctx.drawTextWithShadow(textRenderer, "§7No accepted requests.", leftX + 6, y + 4, 0xFFFFFF);
             y += ROW_H;
         } else {
-            for (int i = 0; i < pendingMyEntries.size(); i++) {
-                String[] e = pendingMyEntries.get(i);
-                int bg = i % 2 == 0 ? 0x44001133 : 0x22001133;
-                ctx.fill(leftX - 2, y - 1, leftX + 278, y + ROW_H - 3, bg);
-                ctx.drawTextWithShadow(textRenderer, "§f" + e[0], leftX + 2, y + 2, 0xFFFFFF);
-                ctx.drawTextWithShadow(textRenderer, "§a" + e[1], leftX + 130, y + 2, 0xFFFFFF);
+            for (int i = 0; i < pendingRequests.size(); i++) {
+                drawRow(ctx, leftX, rightX, y, i, pendingRequests.get(i), true);
                 y += ROW_H;
             }
         }
+        y += GAP;
 
-        y += 10;
-
-        // ── Pending: others ───────────────────────────────────────────────────
-        if (!pendingOtherEntries.isEmpty()) {
-            drawSectionHeader(ctx, leftX, y, "§7§lOther Pending");
-            y += 14;
-            for (int i = 0; i < pendingOtherEntries.size(); i++) {
-                String[] e = pendingOtherEntries.get(i);
-                int bg = i % 2 == 0 ? 0x33000000 : 0x11000000;
-                ctx.fill(leftX - 2, y - 1, leftX + 278, y + ROW_H - 3, bg);
-                ctx.drawTextWithShadow(textRenderer, "§7" + e[0], leftX + 2, y + 2, 0xFFFFFF);
-                ctx.drawTextWithShadow(textRenderer, "§7Pending", leftX + 130, y + 2, 0xFFFFFF);
+        // ── Others' pending ───────────────────────────────────────────────────
+        if (!othersRequests.isEmpty()) {
+            drawHeader(ctx, leftX, rightX, y, "§8§l In Progress (others)");
+            y += HDR_H;
+            for (int i = 0; i < othersRequests.size(); i++) {
+                RequestEntry r = othersRequests.get(i);
+                int bg = i % 2 == 0 ? 0x33333333 : 0x11333333;
+                ctx.fill(leftX, y, rightX, y + ROW_H - 2, bg);
+                ctx.drawTextWithShadow(textRenderer, "§7" + r.itemName(), leftX + 6, y + 4, 0xFFFFFF);
+                ctx.drawTextWithShadow(textRenderer, "§8Pending", leftX + 130, y + 4, 0xFFFFFF);
                 y += ROW_H;
             }
         }
     }
 
-    private void drawSectionHeader(DrawContext ctx, int x, int y, String label) {
-        ctx.fill(x - 2, y - 1, x + 278, y + 11, 0x99000000);
-        ctx.drawTextWithShadow(textRenderer, label, x + 2, y + 1, 0xFFFFFF);
+    private void drawHeader(DrawContext ctx, int x1, int x2, int y, String label) {
+        ctx.fill(x1, y, x2, y + HDR_H - 1, 0xCC111111);
+        ctx.drawTextWithShadow(textRenderer, label, x1 + 4, y + 2, 0xFFFFFF);
+    }
+
+    private void drawRow(DrawContext ctx, int leftX, int rightX, int y,
+                         int idx, RequestEntry r, boolean showProgress) {
+        int bg = idx % 2 == 0 ? 0x44FFAA00 : 0x22FFAA00;
+        if (showProgress) bg = idx % 2 == 0 ? 0x440055AA : 0x220055AA;
+        ctx.fill(leftX, y, rightX, y + ROW_H - 2, bg);
+        ctx.drawTextWithShadow(textRenderer, "§f" + r.itemName(), leftX + 6, y + 4, 0xFFFFFF);
+
+        if (showProgress) {
+            // Progress bar
+            int barW = 78;
+            float pct = r.total() > 0 ? (float) r.fulfilled() / r.total() : 0f;
+            ctx.fill(leftX + 128, y + 6, leftX + 128 + barW, y + 14, 0x55FFFFFF);
+            ctx.fill(leftX + 128, y + 6, leftX + 128 + (int)(barW * pct), y + 14, 0xFF55FF55);
+            ctx.drawTextWithShadow(textRenderer,
+                    "§a" + r.fulfilled() + "§7/" + r.total(),
+                    leftX + 212, y + 4, 0xFFFFFF);
+        } else {
+            ctx.drawTextWithShadow(textRenderer, "§7Need: §e" + r.total(), leftX + 130, y + 4, 0xFFFFFF);
+        }
     }
 
     @Override

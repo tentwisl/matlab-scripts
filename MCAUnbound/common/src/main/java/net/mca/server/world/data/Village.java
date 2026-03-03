@@ -63,6 +63,8 @@ public class Village implements Iterable<Building> {
     private boolean townHallPlaced = false;
     /** UUID of the NPC villager selected as the default village leader. */
     private UUID npcLeaderUUID = null;
+    /** Block position of the Town Hall, so packets can look it up directly. */
+    private BlockPos townHallPos = null;
 
     private BlockBoxExtended box = new BlockBoxExtended(0, 0, 0, 0, 0, 0);
 
@@ -106,6 +108,7 @@ public class Village implements Iterable<Building> {
         }
         townHallPlaced = v.getBoolean("townHallPlaced");
         if (v.containsUuid("npcLeaderUUID")) npcLeaderUUID = v.getUuid("npcLeaderUUID");
+        if (v.contains("townHallPos")) townHallPos = BlockPos.fromLong(v.getLong("townHallPos"));
 
         NbtList b = v.getList("buildings", NbtElement.COMPOUND_TYPE);
         for (int i = 0; i < b.size(); i++) {
@@ -370,12 +373,15 @@ public class Village implements Iterable<Building> {
             npcLeaderUUID = chosen;
         }
 
+        townHallPos    = surface;
         townHallPlaced = true;
         markDirty();
     }
 
     public UUID getNpcLeaderUUID()                  { return npcLeaderUUID; }
     public void setNpcLeaderUUID(UUID uuid)         { this.npcLeaderUUID = uuid; markDirty(); }
+    public BlockPos getTownHallPos()                { return townHallPos; }
+    public void setTownHallPos(BlockPos pos)        { this.townHallPos = pos; markDirty(); }
 
     public void markDirty() {
         VillageManager.get(world).markDirty();
@@ -482,6 +488,7 @@ public class Village implements Iterable<Building> {
         v.putBoolean("autoScan", autoScan);
         v.putBoolean("townHallPlaced", townHallPlaced);
         if (npcLeaderUUID != null) v.putUuid("npcLeaderUUID", npcLeaderUUID);
+        if (townHallPos != null)   v.putLong("townHallPos", townHallPos.asLong());
         return v;
     }
 

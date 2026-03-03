@@ -21,9 +21,29 @@ configurations {
     developmentForge.extendsFrom common
 }
 
+repositories {
+    // GeckoLib
+    maven { url "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/" }
+    // SmartBrainLib
+    maven { url "https://maven.theillusivec4.top/" }
+    maven { url "https://dl.cloudsmith.io/public/tslat/tslat-common/maven/" }
+    // Xaero's Minimap / World Map
+    maven { url "https://maven.xaero.me" }
+}
+
 dependencies {
     forge "net.minecraftforge:forge:$rootProject.forge_version"
     modApi "dev.architectury:architectury-forge:$rootProject.architectury_version"
+
+    // GeckoLib — model loading + animation framework
+    modImplementation "software.bernie.geckolib:geckolib-forge-1.20.1:${rootProject.geckolib_version}"
+
+    // SmartBrainLib — declarative AI brain system for entities
+    modImplementation "net.tslat.smartbrainlib:SmartBrainLib-forge-1.20.1:${rootProject.smartbrainlib_version}"
+
+    // Xaero's Minimap — runtime only, for in-game testing/navigation
+    modRuntimeOnly "maven.xaero.me:XaerosWorldMap:${rootProject.xaerosworldmap_version}:forge"
+    modRuntimeOnly "maven.xaero.me:Xaeros_Minimap:${rootProject.xaerosminimap_version}:forge"
 
     common(project(path: ':common', configuration: 'namedElements')) { transitive false }
     shadowCommon project(path: ':common', configuration: 'transformProductionForge')
