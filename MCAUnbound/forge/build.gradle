@@ -24,6 +24,8 @@ configurations {
 repositories {
     // GeckoLib
     maven { url "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/" }
+    // MCLib (GeckoLib runtime dependency)
+    maven { url "https://maven.blamejared.com" }
     // SmartBrainLib
     maven { url "https://dl.cloudsmith.io/public/tslat/sbl/maven/" }
     // FTB Library
@@ -38,6 +40,7 @@ dependencies {
 
     // GeckoLib — model loading + animation framework
     modImplementation "software.bernie.geckolib:geckolib-forge-1.20.1:${rootProject.geckolib_version}"
+    implementation "com.eliotlash.mclib:mclib:20"
 
     // SmartBrainLib — declarative AI brain system for entities
     modImplementation "net.tslat.smartbrainlib:SmartBrainLib-forge-1.20.1:${rootProject.smartbrainlib_version}"
