@@ -25,8 +25,9 @@ repositories {
     // GeckoLib
     maven { url "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/" }
     // SmartBrainLib
-    maven { url "https://maven.theillusivec4.top/" }
     maven { url "https://dl.cloudsmith.io/public/tslat/tslat-common/maven/" }
+    // FTB Library
+    maven { url "https://maven.saps.dev/minecraft" }
     // Xaero's Minimap / World Map
     maven { url "https://maven.xaero.me" }
 }
@@ -40,6 +41,9 @@ dependencies {
 
     // SmartBrainLib — declarative AI brain system for entities
     modImplementation "net.tslat.smartbrainlib:SmartBrainLib-forge-1.20.1:${rootProject.smartbrainlib_version}"
+
+    // FTB Library — GUI creation framework and utilities (used for villager interaction UI)
+    modImplementation "dev.ftb.mods:ftb-library-forge:${rootProject.ftb_library_version}"
 
     // Xaero's Minimap — runtime only, for in-game testing/navigation
     modRuntimeOnly "maven.xaero.me:XaerosWorldMap:${rootProject.xaerosworldmap_version}:forge"

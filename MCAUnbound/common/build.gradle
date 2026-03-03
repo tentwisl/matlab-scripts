@@ -5,6 +5,7 @@ architectury {
 repositories {
   maven { url "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/" }
   maven { url "https://dl.cloudsmith.io/public/tslat/tslat-common/maven/" }
+  maven { url "https://maven.saps.dev/minecraft" }
 }
 
 dependencies {
@@ -21,6 +22,9 @@ dependencies {
 
   // SmartBrainLib — compile-only in common for AI brain references
   modCompileOnly "net.tslat.smartbrainlib:SmartBrainLib-forge-1.20.1:${rootProject.smartbrainlib_version}"
+
+  // FTB Library — compile-only so common GUI code can reference its widget API
+  modCompileOnly "dev.ftb.mods:ftb-library-forge:${rootProject.ftb_library_version}"
 }
 
 
