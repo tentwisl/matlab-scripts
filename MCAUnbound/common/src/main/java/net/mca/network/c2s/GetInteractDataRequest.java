@@ -18,6 +18,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.registry.Registries;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.math.BlockPos;
 
 import java.io.Serial;
 import java.util.Optional;
