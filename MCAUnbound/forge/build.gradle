@@ -22,32 +22,40 @@ configurations {
 }
 
 repositories {
-    // GeckoLib
+    maven { url "https://maven.ftb.dev/releases" }
+    maven { url "https://maven.architectury.dev/" }
     maven { url "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/" }
-    // SmartBrainLib
     maven { url "https://dl.cloudsmith.io/public/tslat/sbl/maven/" }
-    // FTB Library
     maven { url "https://maven.saps.dev/minecraft" }
-    // Xaero's Minimap / World Map
-    maven { url "https://maven.xaero.me" }
+
+    // FIXED: Swapped the broken Xaero maven for Modrinth's highly reliable Maven
+    maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+    }
+
+    maven { url "https://maven.blamejared.com/" }
+    maven { url "https://modmaven.dev/" }
 }
 
 dependencies {
-    forge "net.minecraftforge:forge:$rootProject.forge_version"
-    modApi "dev.architectury:architectury-forge:$rootProject.architectury_version"
+    forge "net.minecraftforge:forge:${rootProject.forge_version}"
 
-    // GeckoLib — model loading + animation framework
-    modImplementation "software.bernie.geckolib:geckolib-forge-1.20.1:${rootProject.geckolib_version}"
+    // Architectury Forge
+    modApi "dev.architectury:architectury-forge:${rootProject.architectury_version}"
 
-    // SmartBrainLib — declarative AI brain system for entities
-    modImplementation "net.tslat.smartbrainlib:SmartBrainLib-forge-1.20.1:${rootProject.smartbrainlib_version}"
-
-    // FTB Library — GUI creation framework and utilities (used for villager interaction UI)
+    // FTB Library Forge
     modImplementation "dev.ftb.mods:ftb-library-forge:${rootProject.ftb_library_version}"
 
-    // Xaero's Minimap — runtime only, for in-game testing/navigation
-    modRuntimeOnly "maven.xaero.me:XaerosWorldMap:${rootProject.xaerosworldmap_version}:forge"
-    modRuntimeOnly "maven.xaero.me:Xaeros_Minimap:${rootProject.xaerosminimap_version}:forge"
+    // GeckoLib Forge
+    modImplementation "software.bernie.geckolib:geckolib-forge-1.20.1:${rootProject.geckolib_version}"
+
+    // SmartBrainLib Forge
+    modImplementation "net.tslat.smartbrainlib:SmartBrainLib-forge-1.20.1:${rootProject.smartbrainlib_version}"
+
+    // FIXED: Formatted for Modrinth Maven (maven.modrinth:<project-slug>:<version>)
+    modRuntimeOnly "maven.modrinth:xaeros-world-map:${rootProject.xaerosworldmap_version}_Forge_1.20"
+    modRuntimeOnly "maven.modrinth:xaeros-minimap:${rootProject.xaerosminimap_version}_Forge_1.20"
 
     common(project(path: ':common', configuration: 'namedElements')) { transitive false }
     shadowCommon project(path: ':common', configuration: 'transformProductionForge')
