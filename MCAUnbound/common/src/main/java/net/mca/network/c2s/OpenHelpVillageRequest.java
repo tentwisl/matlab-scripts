@@ -10,6 +10,7 @@ import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 
 import java.io.Serial;
@@ -35,10 +36,16 @@ public class OpenHelpVillageRequest implements Message {
 
         // Find the leader villager and resolve their village for robust Town Hall lookup.
         Entity entity = world.getEntity(leaderUUID);
-        if (!(entity instanceof VillagerEntityMCA villager)) return;
+        if (!(entity instanceof VillagerEntityMCA villager)) {
+            player.sendMessage(Text.literal("§cThe village leader could not be found. Are they loaded?"), false);
+            return;
+        }
 
         Optional<Village> homeVillage = villager.getResidency().getHomeVillage();
-        if (homeVillage.isEmpty()) return;
+        if (homeVillage.isEmpty()) {
+            player.sendMessage(Text.literal("§cThis villager has no associated village."), false);
+            return;
+        }
 
         Village village = homeVillage.get();
         int villageId   = village.getId();
@@ -62,7 +69,10 @@ public class OpenHelpVillageRequest implements Message {
                 .orElse(entity.getBlockPos());
 
         TownHallBlockEntity townHall = findTownHall(world, villageId, centerPos, entity.getBlockPos());
-        if (townHall == null) return;
+        if (townHall == null) {
+            player.sendMessage(Text.literal("§cNo Town Hall was found for this village. Place a Town Hall block near the village center to use this feature."), false);
+            return;
+        }
 
         // Cache position so future opens are instant.
         village.setTownHallPos(townHall.getPos());
