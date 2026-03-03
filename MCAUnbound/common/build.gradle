@@ -18,13 +18,13 @@ dependencies {
   modImplementation "dev.architectury:architectury:$rootProject.architectury_version"
 
   // GeckoLib — compile-only so common code can reference GeckoLib types
-  modCompileOnly "software.bernie.geckolib:geckolib-forge-1.20.1:${rootProject.geckolib_version}"
+  modCompileOnly("software.bernie.geckolib:geckolib-forge-1.20.1:${rootProject.geckolib_version}") { transitive = false }
 
   // SmartBrainLib — compile-only in common for AI brain references
-  modCompileOnly "net.tslat.smartbrainlib:SmartBrainLib-forge-1.20.1:${rootProject.smartbrainlib_version}"
+  modCompileOnly("net.tslat.smartbrainlib:SmartBrainLib-forge-1.20.1:${rootProject.smartbrainlib_version}") { transitive = false }
 
   // FTB Library — compile-only so common GUI code can reference its widget API
-  modCompileOnly "dev.ftb.mods:ftb-library-forge:${rootProject.ftb_library_version}"
+  modCompileOnly("dev.ftb.mods:ftb-library-forge:${rootProject.ftb_library_version}") { transitive = false }
 }
 
 

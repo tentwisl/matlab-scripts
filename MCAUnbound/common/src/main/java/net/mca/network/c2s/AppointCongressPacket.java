@@ -41,7 +41,7 @@ public class AppointCongressPacket implements Message {
         if (congress.size() >= CongressData.DEFAULT_SEATS) return;  // Congress is full
         if (congress.isMember(villagerEntityId))             return;  // Already a member
 
-        Entity entity = world.getEntityByUuid(villagerEntityId);
+        Entity entity = world.getEntity(villagerEntityId);
         if (entity == null) return;
 
         congress.addMember(new CongressMember(villagerEntityId, false));
