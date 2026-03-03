@@ -464,10 +464,11 @@ public class VillagerEntityMCA extends VillagerEntity implements VillagerLike<Vi
                         if (getUuid().equals(village.getNpcLeaderUUID())) {
                             String key = "mcaunbound_leader_greeted_" + village.getId() + "_" + getUuid();
                             if (!serverPlayer.getCommandTags().contains(key)) {
-                                sendChatMessage(serverPlayer,
+                                sendChatMessage(
                                         Text.literal("Welcome to our humble village of " + village.getName()
                                                 + ", my name is " + getName().getString()
-                                                + ", I am the village's leader."));
+                                                + ", I am the village's leader."),
+                                        serverPlayer);
                                 serverPlayer.addScoreboardTag(key);
                                 PlayerSaveData.get(serverPlayer).markDirty();
                             }
