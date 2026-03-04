@@ -1,0 +1,38 @@
+{
+  "category": "greet",
+  "subCategories": [
+    {
+      "id": "friendly",
+      "label": "Friendly",
+      "playerOptions": [
+        "Hey kiddo!",
+        "Are you behaving today?"
+      ],
+      "results": [
+        {
+          "baseChance": 6,
+          "conditions": [
+            { "chance": 3, "mood": "HAPPY" }
+          ],
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "Goo goo gaga!",
+            "I want cookies!"
+          ]
+        },
+        {
+          "baseChance": 4,
+          "applyFatigue": true,
+          "conditions": [
+            { "chance": 3, "mood": "ANGRY" }
+          ],
+          "actions": { "negative": 1 },
+          "npcResponses": [
+            "Nooo!",
+            "I'm grumpy!"
+          ]
+        }
+      ]
+    }
+  ]
+}

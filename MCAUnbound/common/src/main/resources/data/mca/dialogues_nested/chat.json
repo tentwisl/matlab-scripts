@@ -1,0 +1,9 @@
+{
+  "category": "chat",
+  "subCategories": [
+    {"id":"work","label":"Work","playerOptions":["How is work today?","Any difficult orders?"],"results":[{"baseChance":5,"conditions":[{"chance":2,"job":"LEATHERWORKER"}],"actions":{"positive":2},"npcResponses":["Busy, but good work.","Always something to do."]}]},
+    {"id":"village","label":"Village","playerOptions":["Any village news?","How are people doing this week?"],"results":[{"baseChance":5,"actions":{"positive":1},"npcResponses":["Quiet so far.","Could be better, could be worse."]}]},
+    {"id":"weather","label":"Weather","playerOptions":["Looks like rain.","Good weather for indoor crafting."],"results":[{"baseChance":5,"conditions":[{"chance":2,"job":"FARMER"}],"actions":{"positive":2},"npcResponses":["Rain would help the crops.","Let's hope for clear skies."]}]},
+    {"id":"personal","label":"Personal","playerOptions":["How have you been feeling?","Anything on your mind today?"],"results":[{"baseChance":4,"actions":{"positive":1},"npcResponses":["Thanks for asking.","I appreciate you checking in."]}]}
+  ]
+}

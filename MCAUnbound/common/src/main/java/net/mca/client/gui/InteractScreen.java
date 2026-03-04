@@ -1,6 +1,7 @@
 package net.mca.client.gui;
 
 import net.mca.MCA;
+import net.mca.ProfessionsMCA;
 import net.mca.cobalt.network.NetworkHandler;
 import net.mca.client.gui.widget.PaneEntries;
 import net.mca.client.gui.widget.PaneEntries.ButtonSpec;
@@ -11,8 +12,16 @@ import net.mca.entity.ai.Genetics;
 import net.mca.entity.ai.Memories;
 import net.mca.entity.ai.Traits;
 import net.mca.entity.ai.brain.VillagerBrain;
+import net.mca.entity.ai.relationship.AgeState;
 import net.mca.entity.ai.relationship.CompassionateEntity;
+import net.mca.entity.ai.relationship.Personality;
 import net.mca.entity.ai.relationship.RelationshipState;
+import net.mca.entity.interaction.dynamicdialogue.DialogueJsonManager;
+import net.mca.entity.interaction.dynamicdialogue.DialogueCalculator;
+import net.mca.entity.interaction.dynamicdialogue.MainDialogueCategory;
+import net.mca.entity.interaction.dynamicdialogue.NpcJob;
+import net.mca.entity.interaction.dynamicdialogue.NpcMood;
+import net.mca.entity.interaction.dynamicdialogue.NpcTrait;
 import net.mca.entity.interaction.Constraint;
 import net.mca.network.c2s.*;
 import net.mca.resources.data.analysis.Analysis;
@@ -28,6 +37,7 @@ import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+import net.minecraft.village.VillagerProfession;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
@@ -92,6 +102,11 @@ public class InteractScreen extends AbstractDynamicScreen {
     // ── Gift mode ─────────────────────────────────────────────────────────────
     private boolean inGiftMode;
 
+    private final DialogueJsonManager dialogueJsonManager = new DialogueJsonManager();
+
+    private MainDialogueCategory selectedTalkCategory;
+    private List<DialogueOptionEntry> activeDialogueOptions = List.of();
+
     public InteractScreen(VillagerLike<?> villager) {
         super(Text.literal("Interact"));
         this.villager = villager;
@@ -132,29 +147,52 @@ public class InteractScreen extends AbstractDynamicScreen {
         pane.add(PaneEntries.spacer(6));
 
         List<ButtonSpec> talkButtons = new ArrayList<>();
-        talkButtons.add(ButtonSpec.of("Greet",   () -> sendInteract("gui.button.greet")));
-        talkButtons.add(ButtonSpec.of("Joke",    () -> sendInteract("gui.button.joke")));
-        talkButtons.add(ButtonSpec.of("Story",   () -> sendInteract("gui.button.story")));
+        talkButtons.add(ButtonSpec.of("Greet",   () -> openDialogueCategory(MainDialogueCategory.GREET)));
+        talkButtons.add(ButtonSpec.of("Joke",    () -> openDialogueCategory(MainDialogueCategory.JOKE)));
+        talkButtons.add(ButtonSpec.of("Story",   () -> openDialogueCategory(MainDialogueCategory.STORY)));
 
-        boolean isAdult = c.contains(Constraint.ADULT);
-        talkButtons.add(isAdult
-                ? ButtonSpec.of("Flirt",  () -> sendInteract("gui.button.flirt"))
-                : ButtonSpec.disabled("Flirt"));
+        if (isJuvenileVillager()) {
+            talkButtons.add(ButtonSpec.of("Play", () -> openDialogueCategory(MainDialogueCategory.PLAY)));
+        } else {
+            boolean isAdult = c.contains(Constraint.ADULT);
+            talkButtons.add(isAdult
+                    ? ButtonSpec.of("Romance",  () -> openDialogueCategory(MainDialogueCategory.ROMANCE))
+                    : ButtonSpec.disabled("Romance"));
+        }
 
-        talkButtons.add(ButtonSpec.of("Chat",    () -> {})); // placeholder
-        talkButtons.add(ButtonSpec.of("Rumors",  () -> {})); // placeholder
+        talkButtons.add(ButtonSpec.of("Chat",    () -> openDialogueCategory(MainDialogueCategory.CHAT)));
+        talkButtons.add(ButtonSpec.of("Rumors",  () -> sendInteract("gui.button.location")));
         talkButtons.add(ButtonSpec.of("Ask",     () -> {})); // placeholder
 
-        boolean canKiss = c.contains(Constraint.HEARTS_100);
-        talkButtons.add(canKiss
-                ? ButtonSpec.of("Kiss ♥", () -> sendInteract("gui.button.kiss"))
-                : ButtonSpec.disabled("Kiss (100 ♥)"));
-
         pane.add(PaneEntries.buttonGrid(talkButtons, 2, 20));
+
+        if (selectedTalkCategory != null && !activeDialogueOptions.isEmpty()) {
+            pane.add(PaneEntries.spacer(8));
+            pane.add(PaneEntries.label("§f  " + selectedTalkCategory.name() + " options", 0xAA111111));
+            for (DialogueOptionEntry option : activeDialogueOptions) {
+                pane.add(PaneEntries.buttonRow(option.optionText(), option.subCategoryId(),
+                        () -> onDialogueSubButtonClicked(option)));
+            }
+
+            if (selectedTalkCategory == MainDialogueCategory.ROMANCE) {
+                pane.add(PaneEntries.spacer(4));
+                pane.add(PaneEntries.divider());
+                pane.add(PaneEntries.buttonRow("Hug", "Use default MCA hug dialogue logic",
+                        () -> sendInteract("gui.button.hug")));
+                pane.add(PaneEntries.buttonRow("Kiss ♥", "Use default MCA kiss dialogue logic",
+                        () -> sendInteract("gui.button.kiss")));
+            }
+        }
     }
 
     private void buildActionsTab(ScrollPane pane, Set<Constraint> c) {
         pane.add(PaneEntries.spacer(6));
+
+        VillagerBrain<?> brain = villager.getVillagerBrain();
+        Memories memory = brain.getMemoriesForPlayer(player);
+        int hearts = memory.getHearts();
+        boolean isMarriedToThisNpc = c.contains(Constraint.SPOUSE);
+        boolean canCommandMovement = hearts >= 50;
 
         pane.add(PaneEntries.buttonRow("Gift Items", "Give a gift",
                 () -> { inGiftMode = true; disableAllButtons(); }));
@@ -162,10 +200,23 @@ public class InteractScreen extends AbstractDynamicScreen {
         boolean isTrader = c.contains(Constraint.TRADER);
         pane.add(isTrader
                 ? PaneEntries.buttonRow("Trade", "Open trade menu",
-                    () -> NetworkHandler.sendToServer(
-                            new InteractionVillagerMessage("gui.button.trade", villager.asEntity().getUuid())))
+                    () -> sendInteract("gui.button.trade"))
                 : PaneEntries.buttonRow("Trade", "(Requires Trader)",
                     () -> {}, true));
+
+        pane.add(PaneEntries.buttonRow("Divorce", "End your marriage with this NPC",
+                () -> sendInteract("gui.button.divorceConfirm"), !isMarriedToThisNpc));
+        pane.add(PaneEntries.buttonRow("Procreate", "Try to have a child together",
+                () -> sendInteract("gui.button.procreate"), !isMarriedToThisNpc));
+
+        pane.add(PaneEntries.divider());
+
+        pane.add(PaneEntries.buttonRow("Follow", "Ask this villager to follow you",
+                () -> sendInteract("gui.button.follow"), !canCommandMovement));
+        pane.add(PaneEntries.buttonRow("Stay Here", "Ask this villager to stay put",
+                () -> sendInteract("gui.button.stay"), !canCommandMovement));
+        pane.add(PaneEntries.buttonRow("Pickup", "Pick up this baby villager",
+                () -> sendInteract("gui.button.pick_up"), !isBabyVillager()));
 
         pane.add(PaneEntries.divider());
 
@@ -193,7 +244,7 @@ public class InteractScreen extends AbstractDynamicScreen {
                 pane.add(PaneEntries.buttonRow("Alliance Proposed ✓",
                         "This leader has agreed to join your nation",
                         () -> {}, true));
-            } else if (c.contains(Constraint.HEARTS_100)) {
+            } else if (hearts >= 100) {
                 pane.add(PaneEntries.buttonRow("Propose Nation Alliance",
                         "Ask this leader to join your nation (requires 100 ♥)",
                         () -> NetworkHandler.sendToServer(
@@ -219,6 +270,7 @@ public class InteractScreen extends AbstractDynamicScreen {
         pane.add(PaneEntries.label("§f  Villager Info", 0xAA111111));
 
         pane.add(PaneEntries.infoRow("Name",  villager.asEntity().getName().getString(), 0xFFFFFF));
+        pane.add(PaneEntries.infoRow("Age",   villager.getAgeState().getName().getString(), 0xFFDDAA));
         pane.add(PaneEntries.infoRow("Mood",  brain.getMood().getText().getString(),
                 brain.getMood().getColor().getColorValue()));
 
@@ -268,6 +320,113 @@ public class InteractScreen extends AbstractDynamicScreen {
     private void sendInteract(String buttonId) {
         NetworkHandler.sendToServer(
                 new InteractionVillagerMessage(buttonId, villager.asEntity().getUuid()));
+    }
+
+    private void openDialogueCategory(MainDialogueCategory category) {
+        selectedTalkCategory = category;
+        String categoryKey = category.name().toLowerCase(Locale.ENGLISH);
+        activeDialogueOptions = dialogueJsonManager.getPlayerOptions(categoryKey, isJuvenileVillager()).stream()
+                .map(option -> new DialogueOptionEntry(option.category(), option.subCategoryId(), option.playerLine()))
+                .toList();
+        buildTabPanel();
+    }
+
+    private void onDialogueSubButtonClicked(DialogueOptionEntry option) {
+        Memories memory = villager.getVillagerBrain().getMemoriesForPlayer(player);
+
+        DialogueJsonManager.JsonSubCategory subCategory = dialogueJsonManager
+                .getSubCategory(option.categoryKey(), option.subCategoryId(), isJuvenileVillager())
+                .orElse(null);
+
+        DialogueCalculator.JsonEvaluationResult result = DialogueCalculator.calculateFromJson(
+                option.categoryKey(),
+                subCategory,
+                toNpcTrait(villager.getVillagerBrain().getPersonality()),
+                toNpcMood(villager.getVillagerBrain().getMood().getName()),
+                memory.getHearts(),
+                toNpcJob(),
+                memory.getLastUsedDialogueSubtype(),
+                memory.getRepeatedDialogueCount(),
+                memory.getInteractionFatigue(),
+                villager.asEntity().getRandom()
+        );
+
+        memory.modHearts(result.relationshipPointChange());
+        memory.modInteractionFatigue(1);
+
+        String interactionKey = option.categoryKey() + ":" + option.subCategoryId();
+        if (interactionKey.equalsIgnoreCase(memory.getLastUsedDialogueSubtype())) {
+            memory.setRepeatedDialogueCount(memory.getRepeatedDialogueCount() + 1);
+        } else {
+            memory.setRepeatedDialogueCount(0);
+        }
+        memory.setLastUsedDialogueSubtype(interactionKey);
+
+        sendVillagerChat(result.npcResponse());
+
+        openDialogueCategory(selectedTalkCategory);
+    }
+
+    private void sendVillagerChat(String message) {
+        MutableText name = Text.literal(villager.asEntity().getName().getString()).formatted(Formatting.GOLD);
+        MutableText separator = Text.literal(": ").formatted(Formatting.GRAY);
+        MutableText body = Text.literal(message).formatted(Formatting.WHITE);
+        player.sendMessage(name.append(separator).append(body), false);
+    }
+
+    private boolean isJuvenileVillager() {
+        AgeState ageState = villager.getAgeState();
+        return ageState == AgeState.BABY || ageState == AgeState.TODDLER || ageState == AgeState.CHILD;
+    }
+
+    private boolean isBabyVillager() {
+        return villager.getAgeState() == AgeState.BABY;
+    }
+
+    private NpcJob toNpcJob() {
+        if (isNpcLeader) {
+            return NpcJob.VILLAGE_LEADER;
+        }
+
+        VillagerProfession job = villager.getVillagerData().getProfession();
+        if (job == VillagerProfession.LEATHERWORKER) {
+            return NpcJob.LEATHERWORKER;
+        }
+        if (job == VillagerProfession.FARMER) {
+            return NpcJob.FARMER;
+        }
+        if (job == ProfessionsMCA.GUARD.get()) {
+            return NpcJob.GUARD;
+        }
+        return NpcJob.NONE;
+    }
+
+    private NpcTrait toNpcTrait(Personality personality) {
+        return switch (personality) {
+            case WITTY, PEPPY, FRIENDLY -> NpcTrait.JOVIAL;
+            case GRUMPY, GLOOMY -> NpcTrait.GRUMPY;
+            case FLIRTY -> NpcTrait.FLIRTATIOUS;
+            case SHY, SENSITIVE -> NpcTrait.SHY;
+            case CONFIDENT, ATHLETIC, GREEDY, ODD, LAZY -> NpcTrait.SERIOUS;
+            case UNASSIGNED -> NpcTrait.NORMAL;
+        };
+    }
+
+    private NpcMood toNpcMood(String moodName) {
+        String normalized = moodName == null ? "" : moodName.toLowerCase(Locale.ENGLISH);
+        if (normalized.contains("happy") || normalized.contains("overjoyed") || normalized.contains("fine")) {
+            return NpcMood.HAPPY;
+        }
+        if (normalized.contains("angry") || normalized.contains("mad") || normalized.contains("furious")) {
+            return NpcMood.ANGRY;
+        }
+        if (normalized.contains("sad") || normalized.contains("depressed") || normalized.contains("gloom")) {
+            return NpcMood.SAD;
+        }
+        return NpcMood.NEUTRAL;
+    }
+
+    private record DialogueOptionEntry(String categoryKey, String subCategoryId, String optionText) {
     }
 
     // ── Rendering ─────────────────────────────────────────────────────────────

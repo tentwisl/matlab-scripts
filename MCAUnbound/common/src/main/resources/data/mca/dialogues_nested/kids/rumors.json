@@ -1,0 +1,23 @@
+{
+  "category": "rumors",
+  "subCategories": [
+    {
+      "id": "kid_rumor",
+      "label": "Kid Rumor",
+      "playerOptions": [
+        "Heard any playground rumors?",
+        "Any secret kid news?"
+      ],
+      "results": [
+        {
+          "baseChance": 6,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "I saw a chicken steal seeds!",
+            "Shh... cookie stash behind the well!"
+          ]
+        }
+      ]
+    }
+  ]
+}
