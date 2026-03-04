@@ -43,8 +43,10 @@ public final class TownHallCallManager {
 
         // Force MCA autonomous movement while called.
         villager.getVillagerBrain().setMoveState(MoveState.MOVE, null);
-        pathTowardTarget(villager, task, villager.getServerWorld());
-        task.nextPathTick = nowTick + REPATH_TICKS;
+        if (villager.getWorld() instanceof ServerWorld world) {
+            pathTowardTarget(villager, task, world);
+            task.nextPathTick = nowTick + REPATH_TICKS;
+        }
     }
 
     public static boolean cancelWaitingOnInteract(VillagerEntityMCA villager) {
