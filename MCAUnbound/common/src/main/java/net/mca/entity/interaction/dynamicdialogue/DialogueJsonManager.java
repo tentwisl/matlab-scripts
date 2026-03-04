@@ -33,10 +33,11 @@ import java.util.*;
  */
 public final class DialogueJsonManager {
     private static final Gson GSON = new Gson();
-    private static final List<String> CATEGORIES = List.of("common", "greet", "joke", "story", "romance", "chat", "rumors");
+    private static final List<String> CATEGORIES = List.of("common", "greet", "joke", "story", "romance", "play", "chat", "rumors");
     private static final net.minecraft.util.math.random.Random RANDOM = net.minecraft.util.math.random.Random.create();
 
     private final Map<String, DialogueCategoryFile> categoryFiles = new HashMap<>();
+    private final Map<String, DialogueCategoryFile> kidsCategoryFiles = new HashMap<>();
 
     public DialogueJsonManager() {
         reload();
@@ -44,13 +45,15 @@ public final class DialogueJsonManager {
 
     public void reload() {
         categoryFiles.clear();
+        kidsCategoryFiles.clear();
         for (String category : CATEGORIES) {
-            loadCategory(category).ifPresent(file -> categoryFiles.put(category, file));
+            loadCategory(category, false).ifPresent(file -> categoryFiles.put(category, file));
+            loadCategory(category, true).ifPresent(file -> kidsCategoryFiles.put(category, file));
         }
     }
 
-    public List<PlayerOption> getPlayerOptions(String category) {
-        DialogueCategoryFile file = categoryFiles.get(category);
+    public List<PlayerOption> getPlayerOptions(String category, boolean isChild) {
+        DialogueCategoryFile file = getCategoryFile(category, isChild);
         if (file == null || file.subCategories == null) {
             return List.of();
         }
@@ -66,8 +69,8 @@ public final class DialogueJsonManager {
         return options;
     }
 
-    public Optional<JsonSubCategory> getSubCategory(String category, String subCategoryId) {
-        DialogueCategoryFile file = categoryFiles.get(category);
+    public Optional<JsonSubCategory> getSubCategory(String category, String subCategoryId, boolean isChild) {
+        DialogueCategoryFile file = getCategoryFile(category, isChild);
         if (file == null || file.subCategories == null) {
             return Optional.empty();
         }
@@ -77,16 +80,26 @@ public final class DialogueJsonManager {
                 .findFirst();
     }
 
-    public String randomBurnoutLine() {
-        DialogueCategoryFile common = categoryFiles.get("common");
+    public String randomBurnoutLine(boolean isChild) {
+        DialogueCategoryFile common = getCategoryFile("common", isChild);
         if (common != null && common.burnoutResponses != null && !common.burnoutResponses.isEmpty()) {
             return common.burnoutResponses.get(RANDOM.nextInt(common.burnoutResponses.size()));
         }
         return "I need a break from talking right now.";
     }
 
-    private Optional<DialogueCategoryFile> loadCategory(String category) {
-        String path = "data/mca/dialogues_nested/" + category + ".json";
+    private DialogueCategoryFile getCategoryFile(String category, boolean isChild) {
+        DialogueCategoryFile file = isChild ? kidsCategoryFiles.get(category) : categoryFiles.get(category);
+        if (file == null && isChild) {
+            file = categoryFiles.get(category);
+        }
+        return file;
+    }
+
+    private Optional<DialogueCategoryFile> loadCategory(String category, boolean isChild) {
+        String path = isChild
+                ? "data/mca/dialogues_nested/kids/" + category + ".json"
+                : "data/mca/dialogues_nested/" + category + ".json";
         try (InputStream stream = DialogueJsonManager.class.getClassLoader().getResourceAsStream(path)) {
             if (stream == null) {
                 return Optional.empty();

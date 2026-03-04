@@ -12,6 +12,7 @@ import net.mca.entity.ai.Genetics;
 import net.mca.entity.ai.Memories;
 import net.mca.entity.ai.Traits;
 import net.mca.entity.ai.brain.VillagerBrain;
+import net.mca.entity.ai.relationship.AgeState;
 import net.mca.entity.ai.relationship.CompassionateEntity;
 import net.mca.entity.ai.relationship.Personality;
 import net.mca.entity.ai.relationship.RelationshipState;
@@ -151,10 +152,14 @@ public class InteractScreen extends AbstractDynamicScreen {
         talkButtons.add(ButtonSpec.of("Joke",    () -> openDialogueCategory(MainDialogueCategory.JOKE)));
         talkButtons.add(ButtonSpec.of("Story",   () -> openDialogueCategory(MainDialogueCategory.STORY)));
 
-        boolean isAdult = c.contains(Constraint.ADULT);
-        talkButtons.add(isAdult
-                ? ButtonSpec.of("Romance",  () -> openDialogueCategory(MainDialogueCategory.ROMANCE))
-                : ButtonSpec.disabled("Romance"));
+        if (isChildOrToddlerVillager()) {
+            talkButtons.add(ButtonSpec.of("Play", () -> openDialogueCategory(MainDialogueCategory.PLAY)));
+        } else {
+            boolean isAdult = c.contains(Constraint.ADULT);
+            talkButtons.add(isAdult
+                    ? ButtonSpec.of("Romance",  () -> openDialogueCategory(MainDialogueCategory.ROMANCE))
+                    : ButtonSpec.disabled("Romance"));
+        }
 
         talkButtons.add(ButtonSpec.of("Chat",    () -> openDialogueCategory(MainDialogueCategory.CHAT)));
         talkButtons.add(ButtonSpec.of("Rumors",  () -> sendInteract("gui.button.location")));
@@ -318,7 +323,7 @@ public class InteractScreen extends AbstractDynamicScreen {
     private void openDialogueCategory(MainDialogueCategory category) {
         selectedTalkCategory = category;
         String categoryKey = category.name().toLowerCase(Locale.ENGLISH);
-        activeDialogueOptions = dialogueJsonManager.getPlayerOptions(categoryKey).stream()
+        activeDialogueOptions = dialogueJsonManager.getPlayerOptions(categoryKey, isChildOrToddlerVillager()).stream()
                 .map(option -> new DialogueOptionEntry(option.category(), option.subCategoryId(), option.playerLine()))
                 .toList();
         buildTabPanel();
@@ -328,7 +333,7 @@ public class InteractScreen extends AbstractDynamicScreen {
         Memories memory = villager.getVillagerBrain().getMemoriesForPlayer(player);
 
         DialogueJsonManager.JsonSubCategory subCategory = dialogueJsonManager
-                .getSubCategory(option.categoryKey(), option.subCategoryId())
+                .getSubCategory(option.categoryKey(), option.subCategoryId(), isChildOrToddlerVillager())
                 .orElse(null);
 
         DialogueCalculator.JsonEvaluationResult result = DialogueCalculator.calculateFromJson(
@@ -361,10 +366,16 @@ public class InteractScreen extends AbstractDynamicScreen {
     }
 
     private void sendVillagerChat(String message) {
-        String formatted = "<" + villager.asEntity().getName().getString() + "> " + message;
-        player.sendMessage(Text.literal(formatted).formatted(Formatting.GRAY), false);
+        MutableText name = Text.literal(villager.asEntity().getName().getString()).formatted(Formatting.GOLD);
+        MutableText separator = Text.literal(": ").formatted(Formatting.GRAY);
+        MutableText body = Text.literal(message).formatted(Formatting.WHITE);
+        player.sendMessage(name.append(separator).append(body), false);
     }
 
+    private boolean isChildOrToddlerVillager() {
+        AgeState ageState = villager.getAgeState();
+        return ageState == AgeState.TODDLER || ageState == AgeState.CHILD;
+    }
 
     private NpcJob toNpcJob() {
         if (isNpcLeader) {

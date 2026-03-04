@@ -5,6 +5,7 @@ public enum MainDialogueCategory {
     JOKE,
     STORY,
     ROMANCE,
+    PLAY,
     CHAT,
     RUMORS
 }
