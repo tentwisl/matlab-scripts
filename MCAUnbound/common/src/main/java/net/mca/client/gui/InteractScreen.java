@@ -160,10 +160,7 @@ public class InteractScreen extends AbstractDynamicScreen {
         talkButtons.add(ButtonSpec.of("Rumors",  () -> sendInteract("gui.button.location")));
         talkButtons.add(ButtonSpec.of("Ask",     () -> {})); // placeholder
 
-        boolean canKiss = c.contains(Constraint.HEARTS_100);
-        talkButtons.add(canKiss
-                ? ButtonSpec.of("Kiss ♥", () -> sendInteract("gui.button.kiss"))
-                : ButtonSpec.disabled("Kiss (100 ♥)"));
+        talkButtons.add(ButtonSpec.of("Kiss ♥", () -> sendInteract("gui.button.kiss")));
 
         pane.add(PaneEntries.buttonGrid(talkButtons, 2, 20));
 
@@ -234,7 +231,7 @@ public class InteractScreen extends AbstractDynamicScreen {
                 pane.add(PaneEntries.buttonRow("Alliance Proposed ✓",
                         "This leader has agreed to join your nation",
                         () -> {}, true));
-            } else if (c.contains(Constraint.HEARTS_100)) {
+            } else if (hearts >= 100) {
                 pane.add(PaneEntries.buttonRow("Propose Nation Alliance",
                         "Ask this leader to join your nation (requires 100 ♥)",
                         () -> NetworkHandler.sendToServer(
@@ -323,12 +320,6 @@ public class InteractScreen extends AbstractDynamicScreen {
     private void onDialogueSubButtonClicked(DialogueOptionEntry option) {
         Memories memory = villager.getVillagerBrain().getMemoriesForPlayer(player);
 
-        if (isTiredOfTalking(memory)) {
-            sendVillagerChat(dialogueJsonManager.randomBurnoutLine());
-            openDialogueCategory(selectedTalkCategory);
-            return;
-        }
-
         DialogueJsonManager.JsonSubCategory subCategory = dialogueJsonManager
                 .getSubCategory(option.categoryKey(), option.subCategoryId())
                 .orElse(null);
@@ -342,6 +333,7 @@ public class InteractScreen extends AbstractDynamicScreen {
                 toNpcJob(),
                 memory.getLastUsedDialogueSubtype(),
                 memory.getRepeatedDialogueCount(),
+                memory.getInteractionFatigue(),
                 villager.asEntity().getRandom()
         );
 
@@ -364,10 +356,6 @@ public class InteractScreen extends AbstractDynamicScreen {
     private void sendVillagerChat(String message) {
         String formatted = "<" + villager.asEntity().getName().getString() + "> " + message;
         player.sendMessage(Text.literal(formatted).formatted(Formatting.GRAY), false);
-    }
-
-    private boolean isTiredOfTalking(Memories memory) {
-        return memory.getInteractionFatigue() >= FATIGUE_BURNOUT_THRESHOLD;
     }
 
 

@@ -120,6 +120,7 @@ public final class DialogueJsonManager {
 
     public static class JsonResult {
         public int baseChance;
+        public boolean applyFatigue;
         public List<JsonCondition> conditions;
         public JsonActions actions;
         public List<String> npcResponses;

@@ -1,5 +1,7 @@
 package net.mca.entity.interaction.dynamicdialogue;
 
+import net.mca.Config;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -17,6 +19,7 @@ public final class DialogueCalculator {
                                                          NpcJob npcJob,
                                                          String lastUsedKey,
                                                          int repetitionCount,
+                                                         int interactionFatigue,
                                                          net.minecraft.util.math.random.Random random) {
         if (subCategory == null || subCategory.results == null || subCategory.results.isEmpty()) {
             return new JsonEvaluationResult(0, ReactionType.NEUTRAL, "...", false);
@@ -29,19 +32,20 @@ public final class DialogueCalculator {
             }
 
             int weight = result.baseChance;
-            boolean valid = true;
             if (result.conditions != null) {
                 for (DialogueJsonManager.JsonCondition condition : result.conditions) {
-                    if (!matchesCondition(condition, currentHearts, npcJob, trait, mood)) {
-                        valid = false;
-                        break;
+                    if (matchesCondition(condition, currentHearts, npcJob, trait, mood)) {
+                        weight += condition.chance;
                     }
-                    weight += condition.chance;
                 }
             }
 
-            if (valid) {
-                validResults.add(new WeightedResult(result, Math.max(1, weight)));
+            if (result.applyFatigue && interactionFatigue > 0) {
+                weight -= (int) (interactionFatigue * Config.getInstance().interactionChanceFatigue);
+            }
+
+            if (weight > 0) {
+                validResults.add(new WeightedResult(result, weight));
             }
         }
 
