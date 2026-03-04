@@ -23,7 +23,7 @@
     {
       "id": "kid_rumor",
       "label": "Kid Rumor",
-      "age_group": "child",
+      "age_group": "juvenile",
       "playerOptions": [
         "Heard any playground rumors?",
         "Any secret kid news?"

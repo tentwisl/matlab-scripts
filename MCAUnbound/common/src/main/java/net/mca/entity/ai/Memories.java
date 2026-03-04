@@ -20,7 +20,13 @@ public class Memories {
 
     private String lastUsedDialogueSubtype = "";
 
+    private String secondLastUsedDialogueSubtype = "";
+
     private int repeatedDialogueCount;
+
+    private int alternatingDialogueCount;
+
+    private int lastInteractionDelta;
 
     private final VillagerBrain<?> brain;
 
@@ -91,6 +97,33 @@ public class Memories {
         brain.updateMemories(this);
     }
 
+    public String getSecondLastUsedDialogueSubtype() {
+        return secondLastUsedDialogueSubtype;
+    }
+
+    public void setSecondLastUsedDialogueSubtype(String value) {
+        this.secondLastUsedDialogueSubtype = value == null ? "" : value;
+        brain.updateMemories(this);
+    }
+
+    public int getAlternatingDialogueCount() {
+        return alternatingDialogueCount;
+    }
+
+    public void setAlternatingDialogueCount(int value) {
+        this.alternatingDialogueCount = Math.max(0, value);
+        brain.updateMemories(this);
+    }
+
+    public int getLastInteractionDelta() {
+        return lastInteractionDelta;
+    }
+
+    public void setLastInteractionDelta(int value) {
+        this.lastInteractionDelta = value;
+        brain.updateMemories(this);
+    }
+
     public long getLastSeen() {
         return lastSeen;
     }
@@ -108,7 +141,10 @@ public class Memories {
         nbt.putInt("interactionFatigue", interactionFatigue);
         nbt.putInt("dialogueType", dialogueType.ordinal());
         nbt.putString("lastUsedDialogueSubtype", lastUsedDialogueSubtype);
+        nbt.putString("secondLastUsedDialogueSubtype", secondLastUsedDialogueSubtype);
         nbt.putInt("repeatedDialogueCount", repeatedDialogueCount);
+        nbt.putInt("alternatingDialogueCount", alternatingDialogueCount);
+        nbt.putInt("lastInteractionDelta", lastInteractionDelta);
         nbt.putLong("lastSeen", lastSeen);
 
         return nbt;
@@ -125,7 +161,10 @@ public class Memories {
         memories.interactionFatigue = tag.getInt("interactionFatigue");
         memories.dialogueType = DialogueType.byId(tag.getInt("dialogueType"));
         memories.lastUsedDialogueSubtype = tag.contains("lastUsedDialogueSubtype") ? tag.getString("lastUsedDialogueSubtype") : "";
+        memories.secondLastUsedDialogueSubtype = tag.contains("secondLastUsedDialogueSubtype") ? tag.getString("secondLastUsedDialogueSubtype") : "";
         memories.repeatedDialogueCount = tag.getInt("repeatedDialogueCount");
+        memories.alternatingDialogueCount = tag.getInt("alternatingDialogueCount");
+        memories.lastInteractionDelta = tag.getInt("lastInteractionDelta");
         memories.lastSeen = tag.getLong("lastSeen");
 
         return memories;

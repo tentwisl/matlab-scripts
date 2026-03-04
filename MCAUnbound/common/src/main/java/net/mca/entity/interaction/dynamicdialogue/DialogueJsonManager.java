@@ -100,7 +100,7 @@ public final class DialogueJsonManager {
         return switch (normalized) {
             case "baby" -> ageState == AgeState.BABY;
             case "toddler" -> ageState == AgeState.TODDLER;
-            case "child" -> ageState == AgeState.CHILD;
+            case "child" -> ageState == AgeState.TODDLER || ageState == AgeState.CHILD;
             case "juvenile", "kids", "kid" -> ageState == AgeState.BABY || ageState == AgeState.TODDLER || ageState == AgeState.CHILD;
             case "adult" -> ageState == AgeState.ADULT || ageState == AgeState.TEEN;
             default -> true;

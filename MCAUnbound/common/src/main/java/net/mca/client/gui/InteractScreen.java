@@ -295,6 +295,10 @@ public class InteractScreen extends AbstractDynamicScreen {
 
         int hc = hearts < 0 ? 0xFF5555 : hearts >= 100 ? 0xFFD700 : 0xFF6666;
         pane.add(PaneEntries.infoRow("Hearts",  hearts + " ♥", hc));
+        int lastDelta = memory.getLastInteractionDelta();
+        String deltaLabel = lastDelta > 0 ? "+" + lastDelta : Integer.toString(lastDelta);
+        int deltaColor = lastDelta > 0 ? 0x77FF77 : (lastDelta < 0 ? 0xFF7777 : 0xBBBBBB);
+        pane.add(PaneEntries.infoRow("Last Interaction", deltaLabel, deltaColor));
 
         String village = villageName.isEmpty() ? "None" : villageName;
         pane.add(PaneEntries.infoRow("Village", village, 0x55FF55));
@@ -352,12 +356,20 @@ public class InteractScreen extends AbstractDynamicScreen {
                 toNpcJob(),
                 memory.getLastUsedDialogueSubtype(),
                 memory.getRepeatedDialogueCount(),
+                memory.getAlternatingDialogueCount(),
                 memory.getInteractionFatigue(),
                 villager.asEntity().getRandom()
         );
 
         memory.modHearts(result.relationshipPointChange());
         memory.modInteractionFatigue(1);
+        memory.setLastInteractionDelta(result.relationshipPointChange());
+
+        if (result.relationshipPointChange() > 0) {
+            villager.getVillagerBrain().modifyMoodValue(1);
+        } else if (result.relationshipPointChange() < 0) {
+            villager.getVillagerBrain().modifyMoodValue(-2);
+        }
 
         String interactionKey = option.categoryKey() + ":" + option.subCategoryId();
         if (interactionKey.equalsIgnoreCase(memory.getLastUsedDialogueSubtype())) {
@@ -365,6 +377,17 @@ public class InteractScreen extends AbstractDynamicScreen {
         } else {
             memory.setRepeatedDialogueCount(0);
         }
+
+        boolean alternatingWithPrevious = !memory.getSecondLastUsedDialogueSubtype().isBlank()
+                && interactionKey.equalsIgnoreCase(memory.getSecondLastUsedDialogueSubtype())
+                && !interactionKey.equalsIgnoreCase(memory.getLastUsedDialogueSubtype());
+        if (alternatingWithPrevious) {
+            memory.setAlternatingDialogueCount(memory.getAlternatingDialogueCount() + 1);
+        } else {
+            memory.setAlternatingDialogueCount(0);
+        }
+
+        memory.setSecondLastUsedDialogueSubtype(memory.getLastUsedDialogueSubtype());
         memory.setLastUsedDialogueSubtype(interactionKey);
 
         String response = result.npcResponse();

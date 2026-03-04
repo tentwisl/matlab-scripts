@@ -19,6 +19,7 @@ public final class DialogueCalculator {
                                                          NpcJob npcJob,
                                                          String lastUsedKey,
                                                          int repetitionCount,
+                                                         int alternatingCount,
                                                          int interactionFatigue,
                                                          net.minecraft.util.math.random.Random random) {
         if (subCategory == null || subCategory.results == null || subCategory.results.isEmpty()) {
@@ -65,6 +66,16 @@ public final class DialogueCalculator {
         double moodScaled = rawScore * getMoodMultiplier(rawScore, mood);
         int finalScore = (int) Math.round(moodScaled);
 
+        if (interactionFatigue >= 6) {
+            finalScore = Math.min(finalScore, 1);
+        }
+        if (interactionFatigue >= 10 && finalScore > 0) {
+            finalScore = 0;
+        }
+        if (interactionFatigue >= 14 && finalScore >= 0) {
+            finalScore = -1;
+        }
+
         String currentKey = (category + ":" + subCategory.id).toLowerCase(Locale.ENGLISH);
         if (lastUsedKey != null && lastUsedKey.equalsIgnoreCase(currentKey)) {
             if (repetitionCount >= 2) {
@@ -75,6 +86,22 @@ public final class DialogueCalculator {
             return new JsonEvaluationResult(finalScore,
                     ReactionType.REPETITIVE,
                     pickNpcResponse(chosen, random, "You're repeating yourself."),
+                    getJobModifier(category, subCategory.id, npcJob) != 0);
+        }
+
+        if (alternatingCount >= 2) {
+            finalScore = Math.min(-2, finalScore - 3);
+            return new JsonEvaluationResult(finalScore,
+                    ReactionType.REPETITIVE,
+                    pickNpcResponse(chosen, random, "You keep bouncing between the same lines."),
+                    getJobModifier(category, subCategory.id, npcJob) != 0);
+        }
+
+        if (interactionFatigue >= 16 && finalScore > -3) {
+            finalScore = -3;
+            return new JsonEvaluationResult(finalScore,
+                    ReactionType.NEGATIVE,
+                    pickNpcResponse(chosen, random, "I'm tired of talking right now."),
                     getJobModifier(category, subCategory.id, npcJob) != 0);
         }
 
