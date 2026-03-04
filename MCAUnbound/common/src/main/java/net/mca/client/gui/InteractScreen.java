@@ -70,6 +70,7 @@ public class InteractScreen extends AbstractDynamicScreen {
     private static final int HEADER_H      = 96;  // portrait + padding
     private static final int TAB_H         = 22;
     private static final int PANEL_W       = 280;
+    private static final int FATIGUE_BURNOUT_THRESHOLD = 4;
 
     // ── Villager reference ─────────────────────────────────────────────────────
     private final VillagerLike<?> villager;
