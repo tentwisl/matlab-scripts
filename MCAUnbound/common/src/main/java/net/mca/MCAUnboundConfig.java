@@ -29,4 +29,6 @@ public class MCAUnboundConfig {
      * to unlock the "Propose Nation Alliance" dialogue option.
      */
     public int nationAllianceHeartThreshold = 100;
+    /** Testing override: allow nation formation with this many allied villages (0 means own village only). */
+    public int nationFormationMinAlliedVillages = 0;
 }
