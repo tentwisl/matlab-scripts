@@ -5,6 +5,7 @@ import net.mca.cobalt.network.NetworkHandler;
 import net.mca.network.c2s.AttemptLeadershipRequest;
 import net.mca.network.c2s.FormNationPacket;
 import net.mca.network.c2s.HighlightVillagerRequest;
+import net.mca.network.c2s.TownHallResidentActionPacket;
 import net.mca.network.s2c.TownHallDataResponse;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -36,6 +37,9 @@ public class TownHallScreen extends ExtendedScreen {
     // ── Per-villager data: UUID string → hearts / name ────────────────────────
     private final Map<String, Integer> villagerHearts = new LinkedHashMap<>();
     private final Map<String, String>  villagerNames  = new LinkedHashMap<>();
+    private final Map<String, String>  villagerMoods  = new LinkedHashMap<>();
+    private final Map<String, String>  villagerJobs   = new LinkedHashMap<>();
+    private final Map<String, Boolean> villagerMarried = new LinkedHashMap<>();
 
     // ── Leadership ────────────────────────────────────────────────────────────
     private boolean hasLeader           = false;
@@ -62,6 +66,7 @@ public class TownHallScreen extends ExtendedScreen {
 
     // ── Ordered UUID list (built from villagerNames keyset each render) ────────
     private List<String> orderedUuids = new ArrayList<>();
+    private String selectedResidentUuid = "";
 
     // ── Pending requests ──────────────────────────────────────────────────────
     /** [itemName, remaining, total] display strings */
@@ -100,15 +105,34 @@ public class TownHallScreen extends ExtendedScreen {
             }).dimensions(cx - 68, bottomY - 22, 136, 20).build());
         }
 
-        // Form Nation — shown only if the player is already the leader and has
-        // convinced at least 2 other village leaders.
-        if (isPlayerLeader && convincedLeaderCount >= 2) {
+        // Form Nation — shown if player is leader and has enough allied villages by config.
+        if (isPlayerLeader && convincedLeaderCount >= MCAUnboundConfig.get().nationFormationMinAlliedVillages) {
             addDrawableChild(ButtonWidget.builder(
                     Text.literal("Form Nation (" + convincedLeaderCount + " allied)"),
                     b -> {
                         NetworkHandler.sendToServer(new FormNationPacket(blockPos));
                         close();
                     }).dimensions(cx - 80, bottomY - 44, 160, 20).build());
+        }
+
+        // resident action controls
+        if (selectedResidentUuid != null && !selectedResidentUuid.isBlank()) {
+            int hearts = villagerHearts.getOrDefault(selectedResidentUuid, 0);
+            boolean canResident = hearts >= MCAUnboundConfig.get().residentHeartThreshold;
+            boolean canLeader = hearts >= MCAUnboundConfig.get().leaderHeartThreshold;
+
+            int actionY = bottomY - 66;
+            addDrawableChild(ButtonWidget.builder(Text.literal("Call"), b -> sendResidentAction("call"))
+                    .dimensions(cx - 120, actionY, 56, 20).build());
+            addDrawableChild(ButtonWidget.builder(Text.literal("Follow"), b -> sendResidentAction("follow"))
+                    .dimensions(cx - 60, actionY, 56, 20).build()).active = canResident;
+            addDrawableChild(ButtonWidget.builder(Text.literal("Stay"), b -> sendResidentAction("stay"))
+                    .dimensions(cx, actionY, 56, 20).build()).active = canResident;
+            addDrawableChild(ButtonWidget.builder(Text.literal("Mount"), b -> sendResidentAction("mount"))
+                    .dimensions(cx + 60, actionY, 56, 20).build()).active = canResident;
+
+            addDrawableChild(ButtonWidget.builder(Text.literal("Access Inventory"), b -> sendResidentAction("inventory"))
+                    .dimensions(cx - 78, actionY - 22, 156, 20).build()).active = canLeader;
         }
 
         // Scroll buttons
@@ -121,6 +145,16 @@ public class TownHallScreen extends ExtendedScreen {
             addDrawableChild(ButtonWidget.builder(Text.literal("▼"), b ->
                     scrollOffset = Math.min(orderedUuids.size() - VISIBLE_ROWS, scrollOffset + 1)
             ).dimensions(listX + 246, listStartY + VISIBLE_ROWS * ROW_HEIGHT - 18, 18, 18).build());
+        }
+    }
+
+    private void sendResidentAction(String action) {
+        if (selectedResidentUuid == null || selectedResidentUuid.isBlank()) {
+            return;
+        }
+        try {
+            NetworkHandler.sendToServer(new TownHallResidentActionPacket(blockPos, UUID.fromString(selectedResidentUuid), action));
+        } catch (IllegalArgumentException ignored) {
         }
     }
 
@@ -198,8 +232,16 @@ public class TownHallScreen extends ExtendedScreen {
             int faceColor = hovered ? 0xFFE8D6B5 : 0xFFD9C4A2;
             ctx.drawTextWithShadow(textRenderer, "☺", listX, y, faceColor);
 
-            String display = name.length() > 24 ? name.substring(0, 22) + ".." : name;
+            String display = name.length() > 16 ? name.substring(0, 14) + ".." : name;
+            String mood = villagerMoods.getOrDefault(uuid, "unknown");
+            String job = villagerJobs.getOrDefault(uuid, "none").replace('_', ' ');
+            boolean married = villagerMarried.getOrDefault(uuid, false);
             ctx.drawTextWithShadow(textRenderer, display, listX + 12, y, hovered ? 0xFFFFFF : 0xCCCCCC);
+            ctx.drawTextWithShadow(textRenderer, mood, listX + 100, y, 0x99CCFF);
+            ctx.drawTextWithShadow(textRenderer, job, listX + 145, y, 0xD0D0D0);
+            if (married) {
+                ctx.drawTextWithShadow(textRenderer, "💍", listX + 232, y, 0xFFD700);
+            }
 
             int heartColor;
             if      (hearts >= cfg.leaderHeartThreshold)   heartColor = 0x55FF55;
@@ -256,6 +298,8 @@ public class TownHallScreen extends ExtendedScreen {
                     String uuidStr = orderedUuids.get(i);
                     try {
                         UUID uuid = UUID.fromString(uuidStr);
+                        selectedResidentUuid = uuidStr;
+                        rebuildButtons();
                         NetworkHandler.sendToServer(new HighlightVillagerRequest(uuid));
                     } catch (IllegalArgumentException ignored) { }
                     return true;
@@ -291,6 +335,9 @@ public class TownHallScreen extends ExtendedScreen {
 
         villagerHearts.clear();
         villagerNames.clear();
+        villagerMoods.clear();
+        villagerJobs.clear();
+        villagerMarried.clear();
 
         if (root.contains("villagerHearts")) {
             NbtCompound hn = root.getCompound("villagerHearts");
@@ -299,6 +346,18 @@ public class TownHallScreen extends ExtendedScreen {
         if (root.contains("villagerNames")) {
             NbtCompound nn = root.getCompound("villagerNames");
             for (String k : nn.getKeys()) villagerNames.put(k, nn.getString(k));
+        }
+        if (root.contains("villagerMoods")) {
+            NbtCompound mn = root.getCompound("villagerMoods");
+            for (String k : mn.getKeys()) villagerMoods.put(k, mn.getString(k));
+        }
+        if (root.contains("villagerJobs")) {
+            NbtCompound jn = root.getCompound("villagerJobs");
+            for (String k : jn.getKeys()) villagerJobs.put(k, jn.getString(k));
+        }
+        if (root.contains("villagerMarried")) {
+            NbtCompound mar = root.getCompound("villagerMarried");
+            for (String k : mar.getKeys()) villagerMarried.put(k, mar.getBoolean(k));
         }
 
         hasLeader            = root.getBoolean("hasLeader");

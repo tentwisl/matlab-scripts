@@ -40,6 +40,7 @@ public final class DialogueJsonManager {
     private final Map<String, DialogueCategoryFile> categoryFiles = new HashMap<>();
     private final Map<String, DialogueCategoryFile> kidsCategoryFiles = new HashMap<>();
     private EscalationDialogueFile escalationDialogueFile = new EscalationDialogueFile();
+    private IntroDialogueFile introDialogueFile = new IntroDialogueFile();
 
     public DialogueJsonManager() {
         reload();
@@ -53,6 +54,7 @@ public final class DialogueJsonManager {
             loadCategory(category, true).ifPresent(file -> kidsCategoryFiles.put(category, file));
         }
         escalationDialogueFile = loadEscalationFile().orElseGet(EscalationDialogueFile::new);
+        introDialogueFile = loadIntroFile().orElseGet(IntroDialogueFile::new);
     }
 
     public List<PlayerOption> getPlayerOptions(String category, boolean isChild, AgeState ageState) {
@@ -93,6 +95,63 @@ public final class DialogueJsonManager {
     }
 
 
+
+    public String buildIntroLine(boolean firstMeeting,
+                                 NpcTrait trait,
+                                 String playerName,
+                                 String npcName,
+                                 String jobKey,
+                                 String jobDisplay,
+                                 String rivalName) {
+        String tone = pickToneVariant(firstMeeting, trait)
+                .replace("{player}", playerName)
+                .replace("{npc}", npcName);
+
+        StringBuilder line = new StringBuilder(tone);
+
+        String normalizedJobKey = jobKey == null ? "none" : jobKey.toLowerCase(Locale.ENGLISH);
+        boolean canOfferService = !normalizedJobKey.equals("none")
+                && !normalizedJobKey.equals("jobless")
+                && !normalizedJobKey.equals("guard")
+                && !normalizedJobKey.equals("village_leader");
+
+        if (canOfferService) {
+            String service = introDialogueFile.service_description.getOrDefault(normalizedJobKey, "a helping hand");
+            String template = introDialogueFile.job_intro_template == null || introDialogueFile.job_intro_template.isBlank()
+                    ? "I'm the {job} around here. Let me know if you need {service}."
+                    : introDialogueFile.job_intro_template;
+            line.append(' ').append(template
+                    .replace("{job}", jobDisplay)
+                    .replace("{service}", service));
+
+            if (rivalName != null && !rivalName.isBlank()) {
+                String rivalTemplate = introDialogueFile.rivalry_template == null || introDialogueFile.rivalry_template.isBlank()
+                        ? "...and don't listen to {rival}, their {service} isn't nearly as good as mine."
+                        : introDialogueFile.rivalry_template;
+                line.append(' ').append(rivalTemplate
+                        .replace("{rival}", rivalName)
+                        .replace("{service}", service));
+            }
+        }
+
+        return line.toString();
+    }
+
+    private String pickToneVariant(boolean firstMeeting, NpcTrait trait) {
+        String key = trait == null ? "normal" : trait.name().toLowerCase(Locale.ENGLISH);
+        Map<String, String> toneMap = firstMeeting
+                ? introDialogueFile.first_tone_variants
+                : introDialogueFile.standard_tone_variants;
+        if (toneMap == null || toneMap.isEmpty()) {
+            return "Hello {player}, I'm {npc}.";
+        }
+
+        if (toneMap.containsKey(key)) {
+            return toneMap.get(key);
+        }
+        return toneMap.getOrDefault("normal", "Hello {player}, I'm {npc}.");
+    }
+
     public Optional<String> getEscalatedResponse(int sessionHeartDelta, boolean lockoutActive) {
         if (lockoutActive) {
             return Optional.of(pickEscalationLine(escalationDialogueFile.lockout, "I have nothing to say to you right now."));
@@ -113,6 +172,23 @@ public final class DialogueJsonManager {
         return lines.get(RANDOM.nextInt(lines.size()));
     }
 
+
+    private Optional<IntroDialogueFile> loadIntroFile() {
+        String path = "data/mca/dialogues_nested/common/intro.json";
+        try (InputStream stream = DialogueJsonManager.class.getClassLoader().getResourceAsStream(path)) {
+            if (stream == null) {
+                return Optional.empty();
+            }
+            IntroDialogueFile parsed = GSON.fromJson(new InputStreamReader(stream, StandardCharsets.UTF_8), IntroDialogueFile.class);
+            return Optional.ofNullable(parsed);
+        } catch (RuntimeException ex) {
+            MCA.LOGGER.warn("Failed to parse intro dialogue json {}", path, ex);
+            return Optional.empty();
+        } catch (Exception ex) {
+            MCA.LOGGER.warn("Failed to load intro dialogue json {}", path, ex);
+            return Optional.empty();
+        }
+    }
 
     private Optional<EscalationDialogueFile> loadEscalationFile() {
         String path = "data/mca/dialogues_nested/common/escalation.json";
@@ -217,5 +293,13 @@ public final class DialogueJsonManager {
         public List<String> annoyed = List.of();
         public List<String> severe_dismissive = List.of();
         public List<String> lockout = List.of();
+    }
+
+    public static class IntroDialogueFile {
+        public Map<String, String> first_tone_variants = new HashMap<>();
+        public Map<String, String> standard_tone_variants = new HashMap<>();
+        public Map<String, String> service_description = new HashMap<>();
+        public String job_intro_template = "I'm the {job} around here. Let me know if you need {service}.";
+        public String rivalry_template = "...and don't listen to {rival}, their {service} isn't nearly as good as mine.";
     }
 }

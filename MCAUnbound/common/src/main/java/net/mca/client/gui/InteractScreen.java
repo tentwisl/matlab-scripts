@@ -38,7 +38,9 @@ import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.world.World;
 import net.minecraft.village.VillagerProfession;
 import org.lwjgl.glfw.GLFW;
 
@@ -131,6 +133,7 @@ public class InteractScreen extends AbstractDynamicScreen {
         }
 
         memory.setSessionHeartDelta(0);
+        triggerInitialGreeting(memory);
 
         NetworkHandler.sendToServer(new GetInteractDataRequest(villager.asEntity().getUuid()));
         buildTabPanel();
@@ -344,6 +347,60 @@ public class InteractScreen extends AbstractDynamicScreen {
                 new InteractionVillagerMessage(buttonId, villager.asEntity().getUuid()));
     }
 
+
+    private void triggerInitialGreeting(Memories memory) {
+        boolean firstMeeting = !memory.hasMet() || memory.getHearts() == 0;
+        String greeting = buildFirstGreeting(firstMeeting);
+        sendVillagerChat(greeting);
+        if (!memory.hasMet()) {
+            memory.setHasMet(true);
+        }
+    }
+
+    private String buildFirstGreeting(boolean firstMeeting) {
+        NpcTrait trait = toNpcTrait(villager.getVillagerBrain().getPersonality());
+        String playerName = player.getName().getString();
+        String npcName = villager.asEntity().getName().getString();
+
+        NpcJob npcJob = toNpcJob();
+        String jobDisplay = profession == null || profession.isBlank() ? "Jobless" : profession;
+        String jobKey = getIntroJobKey(npcJob);
+
+        Optional<VillagerEntityMCA> rival = findRival(villager.asEntity().getWorld(), villager.asEntity().getBlockPos(), npcJob);
+        String rivalName = rival.map(r -> r.getName().getString()).orElse("");
+
+        return dialogueJsonManager.buildIntroLine(firstMeeting, trait, playerName, npcName, jobKey, jobDisplay, rivalName);
+    }
+
+    private String getIntroJobKey(NpcJob npcJob) {
+        if (npcJob == NpcJob.NONE) {
+            return "jobless";
+        }
+        if (npcJob == NpcJob.VILLAGE_LEADER) {
+            return "village_leader";
+        }
+        if (npcJob == NpcJob.GUARD) {
+            return "guard";
+        }
+        if (profession != null && !profession.isBlank()) {
+            return profession.trim().toLowerCase(Locale.ENGLISH).replace(" ", "_");
+        }
+        return npcJob.name().toLowerCase(Locale.ENGLISH);
+    }
+
+    private Optional<VillagerEntityMCA> findRival(World world, BlockPos pos, NpcJob job) {
+        if (job == NpcJob.NONE || job == NpcJob.GUARD || job == NpcJob.VILLAGE_LEADER) {
+            return Optional.empty();
+        }
+
+        return world.getEntitiesByClass(VillagerEntityMCA.class,
+                        new Box(pos).expand(64),
+                        candidate -> !candidate.getUuid().equals(villager.asEntity().getUuid())
+                                && candidate.getVillagerData().getProfession() == villager.getVillagerData().getProfession())
+                .stream()
+                .findFirst();
+    }
+
     private void openDialogueCategory(MainDialogueCategory category) {
         Memories memory = villager.getVillagerBrain().getMemoriesForPlayer(player);
         if (isTalkLockedOut(memory)) {
@@ -490,7 +547,7 @@ public class InteractScreen extends AbstractDynamicScreen {
     private void sendVillagerChat(String message) {
         MutableText name = Text.literal(villager.asEntity().getName().getString()).formatted(Formatting.GOLD);
         MutableText separator = Text.literal(": ").formatted(Formatting.GRAY);
-        MutableText body = Text.literal(message).formatted(Formatting.WHITE);
+        MutableText body = Text.literal(message).formatted(Formatting.GRAY);
         player.sendMessage(name.append(separator).append(body), false);
     }
 
