@@ -157,7 +157,7 @@ public class InteractScreen extends AbstractDynamicScreen {
                 : ButtonSpec.disabled("Romance"));
 
         talkButtons.add(ButtonSpec.of("Chat",    () -> openDialogueCategory(MainDialogueCategory.CHAT)));
-        talkButtons.add(ButtonSpec.of("Rumors",  () -> openDialogueCategory(MainDialogueCategory.RUMORS)));
+        talkButtons.add(ButtonSpec.of("Rumors",  () -> sendInteract("gui.button.location")));
         talkButtons.add(ButtonSpec.of("Ask",     () -> {})); // placeholder
 
         boolean canKiss = c.contains(Constraint.HEARTS_100);
@@ -180,16 +180,33 @@ public class InteractScreen extends AbstractDynamicScreen {
     private void buildActionsTab(ScrollPane pane, Set<Constraint> c) {
         pane.add(PaneEntries.spacer(6));
 
+        VillagerBrain<?> brain = villager.getVillagerBrain();
+        Memories memory = brain.getMemoriesForPlayer(player);
+        int hearts = memory.getHearts();
+        boolean isMarriedToThisNpc = c.contains(Constraint.SPOUSE);
+        boolean canCommandMovement = hearts >= 50;
+
         pane.add(PaneEntries.buttonRow("Gift Items", "Give a gift",
                 () -> { inGiftMode = true; disableAllButtons(); }));
 
         boolean isTrader = c.contains(Constraint.TRADER);
         pane.add(isTrader
                 ? PaneEntries.buttonRow("Trade", "Open trade menu",
-                    () -> NetworkHandler.sendToServer(
-                            new InteractionVillagerMessage("gui.button.trade", villager.asEntity().getUuid())))
+                    () -> sendInteract("gui.button.trade"))
                 : PaneEntries.buttonRow("Trade", "(Requires Trader)",
                     () -> {}, true));
+
+        pane.add(PaneEntries.buttonRow("Divorce", "End your marriage with this NPC",
+                () -> sendInteract("gui.button.divorceConfirm"), !isMarriedToThisNpc));
+        pane.add(PaneEntries.buttonRow("Procreate", "Try to have a child together",
+                () -> sendInteract("gui.button.procreate"), !isMarriedToThisNpc));
+
+        pane.add(PaneEntries.divider());
+
+        pane.add(PaneEntries.buttonRow("Follow", "Ask this villager to follow you",
+                () -> sendInteract("gui.button.follow"), !canCommandMovement));
+        pane.add(PaneEntries.buttonRow("Stay Here", "Ask this villager to stay put",
+                () -> sendInteract("gui.button.stay"), !canCommandMovement));
 
         pane.add(PaneEntries.divider());
 
