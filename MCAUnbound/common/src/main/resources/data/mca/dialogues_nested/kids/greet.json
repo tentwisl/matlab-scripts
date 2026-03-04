@@ -7,7 +7,7 @@
       "age_group": "baby",
       "playerOptions": [
         "Who's a happy little one?",
-        "Hiiiii baby!"
+        "Hi baby!"
       ],
       "results": [
         {
@@ -37,7 +37,8 @@
           "actions": { "positive": 1 },
           "npcResponses": [
             "Hi! Wanna play?",
-            "Can we get cookies?"
+            "Can we get cookies?",
+            "Can we go somewhere?"
           ]
         },
         {
@@ -49,7 +50,10 @@
           "actions": { "negative": 1 },
           "npcResponses": [
             "Nooo!",
-            "I'm grumpy!"
+            "I'm grumpy!",
+            "Grrrrr",
+            "I'm bored of yoouuu",
+            "I wanna do something else"
           ]
         }
       ]
