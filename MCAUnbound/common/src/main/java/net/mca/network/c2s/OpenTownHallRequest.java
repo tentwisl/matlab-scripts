@@ -50,6 +50,9 @@ public class OpenTownHallRequest implements Message {
         // Gather per-villager hearts for this player
         Map<UUID, Integer> villagerHearts = new LinkedHashMap<>();
         Map<UUID, String> villagerNames = new LinkedHashMap<>();
+        Map<UUID, String> villagerMoods = new LinkedHashMap<>();
+        Map<UUID, String> villagerJobs = new LinkedHashMap<>();
+        Map<UUID, Boolean> villagerMarried = new LinkedHashMap<>();
 
         if (village.isPresent()) {
             Village v = village.get();
@@ -58,6 +61,9 @@ public class OpenTownHallRequest implements Message {
                 Memories memory = villager.getVillagerBrain().getMemoriesForPlayer(player);
                 villagerHearts.put(villager.getUuid(), memory.getHearts());
                 villagerNames.put(villager.getUuid(), villager.getName().getString());
+                villagerMoods.put(villager.getUuid(), villager.getVillagerBrain().getMood().getName());
+                villagerJobs.put(villager.getUuid(), villager.getProfession().id());
+                villagerMarried.put(villager.getUuid(), villager.getRelationships().isMarried());
             }
 
             // Include residents not currently loaded (from residentNames map)
@@ -66,6 +72,9 @@ public class OpenTownHallRequest implements Message {
                     villagerNames.put(entry.getKey(), entry.getValue());
                     // Use village reputation data for unloaded villagers
                     villagerHearts.putIfAbsent(entry.getKey(), 0);
+                    villagerMoods.putIfAbsent(entry.getKey(), "unknown");
+                    villagerJobs.putIfAbsent(entry.getKey(), "none");
+                    villagerMarried.putIfAbsent(entry.getKey(), false);
                 }
             }
         }
@@ -80,6 +89,9 @@ public class OpenTownHallRequest implements Message {
                 townHall,
                 villagerHearts,
                 villagerNames,
+                villagerMoods,
+                villagerJobs,
+                villagerMarried,
                 player.getUuid(),
                 convincedLeaderCount
         ), player);
