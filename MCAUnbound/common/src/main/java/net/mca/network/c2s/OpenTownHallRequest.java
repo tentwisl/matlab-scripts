@@ -6,6 +6,8 @@ import net.mca.cobalt.network.NetworkHandler;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.entity.ai.Memories;
 import net.mca.network.s2c.TownHallDataResponse;
+import net.mca.server.world.data.GeopoliticalManager;
+import net.mca.server.world.data.GeopoliticalProfileManager;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
 import net.minecraft.block.entity.BlockEntity;
@@ -46,6 +48,8 @@ public class OpenTownHallRequest implements Message {
         }
 
         Optional<Village> village = vm.getOrEmpty(villageId);
+        GeopoliticalManager geo = GeopoliticalManager.get(world);
+        GeopoliticalProfileManager profiles = GeopoliticalProfileManager.get(world);
 
         // Gather per-villager hearts for this player
         Map<UUID, Integer> villagerHearts = new LinkedHashMap<>();
@@ -59,7 +63,15 @@ public class OpenTownHallRequest implements Message {
             List<VillagerEntityMCA> residents = v.getResidents(world);
             for (VillagerEntityMCA villager : residents) {
                 Memories memory = villager.getVillagerBrain().getMemoriesForPlayer(player);
-                villagerHearts.put(villager.getUuid(), memory.getHearts());
+                int effectiveHearts = memory.getHearts();
+                GeopoliticalProfileManager.PoliticalProfile profile = profiles.getProfile(villager.getUuid()).orElse(null);
+                if (profile != null && profile.nationFounder() != null) {
+                    GeopoliticalNation nation = geo.getNation(profile.nationFounder()).orElse(null);
+                    if (nation != null) {
+                        effectiveHearts = (int) Math.round(geo.computeNationLikenessPercent(world, nation, player) * 100.0D);
+                    }
+                }
+                villagerHearts.put(villager.getUuid(), effectiveHearts);
                 villagerNames.put(villager.getUuid(), villager.getName().getString());
                 villagerMoods.put(villager.getUuid(), villager.getVillagerBrain().getMood().getName());
                 villagerJobs.put(villager.getUuid(), villager.getProfession().id());

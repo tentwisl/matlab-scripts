@@ -6,6 +6,7 @@ import net.mca.cobalt.network.Message;
 import net.mca.item.ItemsMCA;
 import net.mca.server.world.data.GeopoliticalManager;
 import net.mca.server.world.data.GeopoliticalNation;
+import net.mca.server.world.data.GeopoliticalProfileManager;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
 import net.minecraft.block.entity.BlockEntity;
@@ -69,7 +70,7 @@ public class FormNationPacket implements Message {
         int minAlliedVillages = Math.max(0, MCAUnboundConfig.get().nationFormationMinAlliedVillages);
         if (convinced.size() < minAlliedVillages) {
             player.sendMessage(
-                    Text.literal("You need to convince at least 2 other village leaders first. ("
+                    Text.literal("You need to convince more village leaders first. ("
                             + convinced.size() + "/" + minAlliedVillages + " convinced)").formatted(Formatting.RED),
                     false);
             return;
@@ -90,6 +91,30 @@ public class FormNationPacket implements Message {
         }
         nation.setGovernmentType(GeopoliticalNation.GovernmentType.UNSET);
         geo.markDirty();
+
+        GeopoliticalProfileManager profileManager = GeopoliticalProfileManager.get(world);
+        vm.getOrEmpty(townHall.getVillageId()).ifPresent(v -> v.getResidents(world).forEach(resident -> {
+            var existing = profileManager.getProfile(resident.getUuid()).orElse(null);
+            double lfp = existing != null ? existing.lfp() : 20.0D;
+            double nfp = existing != null ? existing.nfp() : 0.0D;
+            double n = existing != null ? existing.nationalist() : world.random.nextDouble();
+            double c = existing != null ? existing.communist() : world.random.nextDouble();
+            double a = existing != null ? existing.authoritarian() : world.random.nextDouble();
+            double l = existing != null ? existing.libertarian() : world.random.nextDouble();
+            profileManager.setProfile(resident.getUuid(), new GeopoliticalProfileManager.PoliticalProfile(lfp, nfp, n, c, a, l, player.getUuid()));
+        }));
+        for (Village v : convinced) {
+            v.getResidents(world).forEach(resident -> {
+                var existing = profileManager.getProfile(resident.getUuid()).orElse(null);
+                double lfp = existing != null ? existing.lfp() : 20.0D;
+                double nfp = existing != null ? existing.nfp() : 0.0D;
+                double n = existing != null ? existing.nationalist() : world.random.nextDouble();
+                double c = existing != null ? existing.communist() : world.random.nextDouble();
+                double a = existing != null ? existing.authoritarian() : world.random.nextDouble();
+                double l = existing != null ? existing.libertarian() : world.random.nextDouble();
+                profileManager.setProfile(resident.getUuid(), new GeopoliticalProfileManager.PoliticalProfile(lfp, nfp, n, c, a, l, player.getUuid()));
+            });
+        }
 
         // Give the player a Nation Block item
         ItemStack nationBlock = new ItemStack(ItemsMCA.NATION_BLOCK.get());

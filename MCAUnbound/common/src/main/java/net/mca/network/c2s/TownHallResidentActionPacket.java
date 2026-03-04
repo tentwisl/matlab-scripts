@@ -43,7 +43,25 @@ public class TownHallResidentActionPacket implements Message {
         }
 
         switch (action.toLowerCase()) {
-            case "call" -> TownHallCallManager.startCall(villager, villager.getBlockPos(), player.getBlockPos(), world.getTime());
+            case "call" -> {
+                if (!villager.getWorld().getRegistryKey().equals(player.getWorld().getRegistryKey())) {
+                    player.sendMessage(Text.literal("Cannot call residents across dimensions."), false);
+                    return;
+                }
+                if (villager.isSleeping()) {
+                    player.sendMessage(Text.literal("This resident is currently sleeping."), false);
+                    return;
+                }
+                if (villager.getAttacker() != null || villager.getTarget() != null) {
+                    player.sendMessage(Text.literal("This resident is currently in combat."), false);
+                    return;
+                }
+                if (TownHallCallManager.isCalled(villager.getUuid())) {
+                    player.sendMessage(Text.literal("This resident is already responding to a call."), false);
+                    return;
+                }
+                TownHallCallManager.startCall(villager, villager.getBlockPos(), player.getBlockPos(), world.getTime());
+            }
             case "follow" -> villager.getVillagerBrain().setMoveState(MoveState.FOLLOW, player);
             case "stay" -> villager.getVillagerBrain().setMoveState(MoveState.STAY, player);
             case "mount" -> villager.startRiding(player, true);

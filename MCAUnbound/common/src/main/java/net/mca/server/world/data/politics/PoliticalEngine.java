@@ -5,6 +5,7 @@ import net.mca.entity.VillagerEntityMCA;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public final class PoliticalEngine {
     private PoliticalEngine() {
@@ -21,7 +22,7 @@ public final class PoliticalEngine {
             default -> 20;
         };
 
-        // Placeholder trait preferences (can be wired to genetics/traits systems later)
+        // Trait preference placeholder bucket; future hook can map actual MCA traits/genetics.
         score += 3;
 
         String mood = villager.getVillagerBrain().getMood().getName().toLowerCase();
@@ -36,22 +37,43 @@ public final class PoliticalEngine {
             default -> 0;
         };
 
-        return Math.max(0, Math.min(100, score));
+        return clamp(score, 0, 100);
     }
 
     public static double computeNfp(PoliticalCompass compass, PolicyVector policy) {
-        return policy.dot(compass);
+        return clamp(policy.dot(compass), -100, 100);
+    }
+
+    /** Final_NFP_Change = Σ(policyWeight[axis] * compass[axis]). */
+    public static double applyPolicyImpact(double currentNfp, PoliticalCompass compass, PolicyVector policy) {
+        double delta = policy.dot(compass);
+        return clamp(currentNfp + delta, -100, 100);
     }
 
     public static VillagerEntityMCA chooseVoteTarget(List<VillagerEntityMCA> candidates,
                                                      Map<VillagerEntityMCA, FavorProfile> profiles,
                                                      boolean proPresident) {
-        return candidates.stream()
+        if (candidates.isEmpty()) return null;
+
+        List<VillagerEntityMCA> bracket = candidates.stream()
                 .filter(c -> {
                     FavorProfile p = profiles.get(c);
                     return p != null && (proPresident ? p.nfp() >= 0 : p.nfp() < 0);
                 })
-                .max(Comparator.comparingDouble(c -> profiles.get(c).lfp()))
-                .orElse(candidates.isEmpty() ? null : candidates.get(0));
+                .toList();
+
+        List<VillagerEntityMCA> pool = bracket.isEmpty() ? candidates : bracket;
+
+        // Tie-break order: highest LFP, then highest NFP, then UUID lexical.
+        return pool.stream()
+                .max(Comparator
+                        .comparingDouble((VillagerEntityMCA c) -> profiles.getOrDefault(c, new FavorProfile(0, 0, new PoliticalCompass(0.5, 0.5, 0.5, 0.5))).lfp())
+                        .thenComparingDouble(c -> profiles.getOrDefault(c, new FavorProfile(0, 0, new PoliticalCompass(0.5, 0.5, 0.5, 0.5))).nfp())
+                        .thenComparing(c -> c.getUuid().toString()))
+                .orElse(candidates.get(0));
+    }
+
+    private static double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
     }
 }

@@ -17,6 +17,7 @@ public class GeopoliticalNation {
     private int populationCap;
     private GovernmentType governmentType = GovernmentType.UNSET;
     private final Set<Integer> villageIds = new HashSet<>();
+    private int birthedChildrenCount;
 
     public GeopoliticalNation(UUID founder, String name) {
         this.founder = founder;
@@ -34,8 +35,10 @@ public class GeopoliticalNation {
     public GovernmentType getGovernmentType() { return governmentType; }
     public void setGovernmentType(GovernmentType governmentType) { if (this.governmentType == GovernmentType.UNSET) this.governmentType = governmentType; }
     public Set<Integer> getVillageIds() { return villageIds; }
+    public int getBirthedChildrenCount() { return birthedChildrenCount; }
+    public void setBirthedChildrenCount(int count) { this.birthedChildrenCount = Math.max(0, count); }
 
-    public double computeReputationPercent(int residentCount, int heartSum, int birthedChildrenCount) {
+    public double computeReputationPercent(int residentCount, int heartSum) {
         int pool = Math.max(1, residentCount * 100);
         int adjusted = heartSum + (birthedChildrenCount * 25);
         return Math.max(0.0D, Math.min(1.0D, adjusted / (double) pool));
@@ -48,6 +51,7 @@ public class GeopoliticalNation {
         nbt.putBoolean("capitalToggle", capitalToggle);
         nbt.putInt("populationCap", populationCap);
         nbt.putInt("governmentType", governmentType.ordinal());
+        nbt.putInt("birthedChildrenCount", birthedChildrenCount);
         NbtList villages = new NbtList();
         villageIds.forEach(id -> villages.add(NbtString.of(Integer.toString(id))));
         nbt.put("villageIds", villages);
@@ -59,6 +63,7 @@ public class GeopoliticalNation {
         nation.capitalToggle = nbt.getBoolean("capitalToggle");
         nation.populationCap = nbt.getInt("populationCap");
         nation.governmentType = GovernmentType.values()[Math.min(nbt.getInt("governmentType"), GovernmentType.values().length - 1)];
+        nation.birthedChildrenCount = nbt.getInt("birthedChildrenCount");
         NbtList villages = nbt.getList("villageIds", 8);
         for (int i = 0; i < villages.size(); i++) nation.villageIds.add(Integer.parseInt(villages.getString(i)));
         return nation;

@@ -105,9 +105,8 @@ public class TownHallScreen extends ExtendedScreen {
             }).dimensions(cx - 68, bottomY - 22, 136, 20).build());
         }
 
-        // Form Nation — shown only if the player is already the leader and has
-        // convinced at least 2 other village leaders.
-        if (isPlayerLeader && convincedLeaderCount >= 2) {
+        // Form Nation — shown if player is leader and has enough allied villages by config.
+        if (isPlayerLeader && convincedLeaderCount >= MCAUnboundConfig.get().nationFormationMinAlliedVillages) {
             addDrawableChild(ButtonWidget.builder(
                     Text.literal("Form Nation (" + convincedLeaderCount + " allied)"),
                     b -> {

@@ -1,6 +1,7 @@
 package net.mca.server.world.data;
 
 import net.mca.entity.VillagerEntityMCA;
+import net.mca.entity.ai.MoveState;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 
@@ -20,8 +21,16 @@ public final class TownHallCallManager {
     private TownHallCallManager() {
     }
 
+    public static boolean isCalled(UUID villagerId) {
+        return TASKS.containsKey(villagerId);
+    }
+
     public static void startCall(VillagerEntityMCA villager, BlockPos origin, BlockPos target, long nowTick) {
-        TASKS.put(villager.getUuid(), new CallTask(origin.toImmutable(), target.toImmutable(), nowTick + PHASE_TICKS, nowTick + PHASE_TICKS * 2));
+        MoveState previous = villager.getVillagerBrain().getMoveState();
+        TASKS.put(villager.getUuid(), new CallTask(origin.toImmutable(), target.toImmutable(), nowTick + PHASE_TICKS, nowTick + PHASE_TICKS * 2, previous));
+
+        // Pause autonomous stay/follow logic during call handling.
+        villager.getVillagerBrain().setMoveState(MoveState.MOVE, null);
         villager.getNavigation().startMovingTo(target.getX() + 0.5D, target.getY(), target.getZ() + 0.5D, 1.05D);
     }
 
@@ -42,13 +51,14 @@ public final class TownHallCallManager {
             CallTask task = e.getValue();
             if (now >= task.returnAtTick) {
                 villager.getNavigation().startMovingTo(task.origin.getX() + 0.5D, task.origin.getY(), task.origin.getZ() + 0.5D, 1.0D);
+                villager.getVillagerBrain().setMoveState(task.previousMoveState, null);
                 it.remove();
-            } else if (now >= task.interactionEndsAtTick && now % 40 == 0) {
+            } else if (now >= task.interactionEndsAtTick) {
                 villager.getNavigation().stop();
             }
         }
     }
 
-    private record CallTask(BlockPos origin, BlockPos target, long interactionEndsAtTick, long returnAtTick) {
+    private record CallTask(BlockPos origin, BlockPos target, long interactionEndsAtTick, long returnAtTick, MoveState previousMoveState) {
     }
 }
