@@ -1,0 +1,10 @@
+{
+  "category": "story",
+  "subCategories": [
+    {"id":"heroic","label":"Heroic","playerOptions":["I defended the gate all night.","I rescued a trader from a ravine."],"results":[{"baseChance":5,"conditions":[{"chance":2,"job":"GUARD"}],"actions":{"positive":2},"npcResponses":["That's genuinely impressive.","You have courage."]}]},
+    {"id":"tragic","label":"Tragic","playerOptions":["I lost my first home in a raid.","I rebuilt from nothing."],"results":[{"baseChance":4,"actions":{"positive":1},"npcResponses":["I'm sorry you went through that.","Thank you for sharing that."]}]},
+    {"id":"humorous","label":"Humorous","playerOptions":["I fought a skeleton with a fish.","I adopted three cats by accident."],"results":[{"baseChance":5,"actions":{"positive":1},"npcResponses":["Now that's a story.","I needed that laugh."]}]},
+    {"id":"mysterious","label":"Mysterious","playerOptions":["I heard bells in an empty cave.","I found tracks ending at a stone wall."],"results":[{"baseChance":4,"actions":{"positive":1},"npcResponses":["That's unsettling...",
+"Tell me more when you learn something."]}]}
+  ]
+}

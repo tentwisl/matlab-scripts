@@ -5,9 +5,11 @@ import net.mca.cobalt.network.NetworkHandler;
 import net.mca.network.c2s.AttemptLeadershipRequest;
 import net.mca.network.c2s.FormNationPacket;
 import net.mca.network.c2s.HighlightVillagerRequest;
+import net.mca.network.c2s.TownHallResidentActionPacket;
 import net.mca.network.s2c.TownHallDataResponse;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
+import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.text.Text;
@@ -22,7 +24,7 @@ import java.util.*;
  *   <li>Village name, resident count, and current leader (NPC or player)</li>
  *   <li>Scrollable resident list with per-villager hearts, colour-coded by threshold</li>
  *   <li>Simple face glyph avatar next to each villager name</li>
- *   <li>Click a villager row to highlight them in-world (Glowing for 30 s)</li>
+ *   <li>Click a villager row to select them, then use action buttons below</li>
  *   <li>Pending village supply requests section</li>
  *   <li>"Attempt Leadership" button when the player is eligible</li>
  * </ul>
@@ -36,6 +38,10 @@ public class TownHallScreen extends ExtendedScreen {
     // ── Per-villager data: UUID string → hearts / name ────────────────────────
     private final Map<String, Integer> villagerHearts = new LinkedHashMap<>();
     private final Map<String, String>  villagerNames  = new LinkedHashMap<>();
+    private final Map<String, String>  villagerMoods  = new LinkedHashMap<>();
+    private final Map<String, String>  villagerJobs   = new LinkedHashMap<>();
+    private final Map<String, Boolean> villagerMarried = new LinkedHashMap<>();
+    private final Map<String, Boolean> villagerLoaded = new LinkedHashMap<>();
 
     // ── Leadership ────────────────────────────────────────────────────────────
     private boolean hasLeader           = false;
@@ -53,6 +59,10 @@ public class TownHallScreen extends ExtendedScreen {
     private int scrollOffset = 0;
     private static final int VISIBLE_ROWS = 9;
     private static final int ROW_HEIGHT   = 14;
+    private static final int LIST_WIDTH   = 304;
+    private static final int COL_MOOD_X   = 132;
+    private static final int COL_JOB_X    = 196;
+    private static final int COL_HEARTS_X = 260;
     /** Y-start of the first rendered row (set in render(), used in mouseClicked) */
     private int listStartY = 80;
 
@@ -62,6 +72,8 @@ public class TownHallScreen extends ExtendedScreen {
 
     // ── Ordered UUID list (built from villagerNames keyset each render) ────────
     private List<String> orderedUuids = new ArrayList<>();
+    private String selectedResidentUuid = "";
+    private final Set<String> highlightToggles = new HashSet<>();
 
     // ── Pending requests ──────────────────────────────────────────────────────
     /** [itemName, remaining, total] display strings */
@@ -84,8 +96,7 @@ public class TownHallScreen extends ExtendedScreen {
         int bottomY = height - 28;
 
         // Close
-        addDrawableChild(ButtonWidget.builder(Text.literal("Close"), b -> close())
-                .dimensions(cx - 40, bottomY, 80, 20).build());
+        addDarkButton(cx - 40, bottomY, 80, 20, "Close", this::close, true);
 
         // Attempt Leadership
         boolean canAttempt = !villagerHearts.isEmpty()
@@ -94,33 +105,76 @@ public class TownHallScreen extends ExtendedScreen {
                 && !(hasLeader && leaderIsPlayer);
 
         if (canAttempt) {
-            addDrawableChild(ButtonWidget.builder(Text.literal("Attempt Leadership"), b -> {
+            addDarkButton(cx - 68, bottomY - 22, 136, 20, "Attempt Leadership", () -> {
                 NetworkHandler.sendToServer(new AttemptLeadershipRequest(blockPos));
                 close();
-            }).dimensions(cx - 68, bottomY - 22, 136, 20).build());
+            }, true);
         }
 
-        // Form Nation — shown only if the player is already the leader and has
-        // convinced at least 2 other village leaders.
-        if (isPlayerLeader && convincedLeaderCount >= 2) {
-            addDrawableChild(ButtonWidget.builder(
-                    Text.literal("Form Nation (" + convincedLeaderCount + " allied)"),
-                    b -> {
+        if (isPlayerLeader && convincedLeaderCount >= MCAUnboundConfig.get().nationFormationMinAlliedVillages) {
+            addDarkButton(cx - 80, bottomY - 44, 160, 20,
+                    "Form Nation (" + convincedLeaderCount + " allied)",
+                    () -> {
                         NetworkHandler.sendToServer(new FormNationPacket(blockPos));
                         close();
-                    }).dimensions(cx - 80, bottomY - 44, 160, 20).build());
+                    }, true);
         }
 
-        // Scroll buttons
-        if (orderedUuids.size() > VISIBLE_ROWS) {
-            int listX = width / 2 - 120;
-            addDrawableChild(ButtonWidget.builder(Text.literal("▲"), b ->
-                    scrollOffset = Math.max(0, scrollOffset - 1)
-            ).dimensions(listX + 246, listStartY, 18, 18).build());
+        if (selectedResidentUuid != null && !selectedResidentUuid.isBlank()) {
+            int hearts = villagerHearts.getOrDefault(selectedResidentUuid, 0);
+            boolean loaded = villagerLoaded.getOrDefault(selectedResidentUuid, false);
+            boolean canResident = loaded && hearts >= MCAUnboundConfig.get().residentHeartThreshold;
+            boolean canLeader = loaded && hearts >= MCAUnboundConfig.get().leaderHeartThreshold;
 
-            addDrawableChild(ButtonWidget.builder(Text.literal("▼"), b ->
-                    scrollOffset = Math.min(orderedUuids.size() - VISIBLE_ROWS, scrollOffset + 1)
-            ).dimensions(listX + 246, listStartY + VISIBLE_ROWS * ROW_HEIGHT - 18, 18, 18).build());
+            int actionY = bottomY - 66;
+            boolean highlighted = highlightToggles.contains(selectedResidentUuid);
+            addDarkButton(cx - 78, actionY - 22, 156, 20, highlighted ? "Highlight: ON" : "Highlight: OFF", () -> toggleSelectedHighlight(), loaded);
+            addDarkButton(cx - 120, actionY, 56, 20, "Call", () -> sendSelectedResidentAction("call"), loaded);
+            addDarkButton(cx - 60, actionY, 56, 20, "Follow", () -> sendSelectedResidentAction("follow"), canResident);
+            addDarkButton(cx, actionY, 56, 20, "Stay", () -> sendSelectedResidentAction("stay"), canResident);
+            addDarkButton(cx + 60, actionY, 56, 20, "Mount", () -> sendSelectedResidentAction("mount"), canResident);
+            addDarkButton(cx - 78, actionY - 44, 156, 20, "Access Inventory", () -> sendSelectedResidentAction("inventory"), canLeader);
+        }
+
+        if (orderedUuids.size() > VISIBLE_ROWS) {
+            int listX = width / 2 - (LIST_WIDTH / 2 - 8);
+            addDarkButton(listX + LIST_WIDTH - 2, listStartY, 18, 18, "▲", () ->
+                    scrollOffset = Math.max(0, scrollOffset - 1), true);
+            addDarkButton(listX + LIST_WIDTH - 2, listStartY + VISIBLE_ROWS * ROW_HEIGHT - 18, 18, 18, "▼", () ->
+                    scrollOffset = Math.min(orderedUuids.size() - VISIBLE_ROWS, scrollOffset + 1), true);
+        }
+    }
+
+    private void addDarkButton(int x, int y, int w, int h, String label, Runnable action, boolean active) {
+        DarkButtonWidget button = new DarkButtonWidget(x, y, w, h, Text.literal(label), action);
+        button.active = active;
+        addDrawableChild(button);
+    }
+
+    private void toggleSelectedHighlight() {
+        if (selectedResidentUuid == null || selectedResidentUuid.isBlank()) {
+            return;
+        }
+        try {
+            UUID uuid = UUID.fromString(selectedResidentUuid);
+            if (highlightToggles.contains(selectedResidentUuid)) {
+                highlightToggles.remove(selectedResidentUuid);
+            } else {
+                highlightToggles.add(selectedResidentUuid);
+            }
+            NetworkHandler.sendToServer(new HighlightVillagerRequest(uuid));
+            rebuildButtons();
+        } catch (IllegalArgumentException ignored) {
+        }
+    }
+
+    private void sendSelectedResidentAction(String action) {
+        if (selectedResidentUuid == null || selectedResidentUuid.isBlank()) {
+            return;
+        }
+        try {
+            NetworkHandler.sendToServer(new TownHallResidentActionPacket(blockPos, UUID.fromString(selectedResidentUuid), action));
+        } catch (IllegalArgumentException ignored) {
         }
     }
 
@@ -135,13 +189,21 @@ public class TownHallScreen extends ExtendedScreen {
         int cx = width / 2;
         int y  = 12;
 
+        int panelLeft = cx - 160;
+        int panelRight = cx + 160;
+        int panelTop = 8;
+        int panelBottom = Math.min(height - 56, 250);
+        ctx.fill(panelLeft, panelTop, panelRight, panelBottom, 0xC0101014);
+        ctx.fill(panelLeft, panelTop, panelRight, panelTop + 1, 0xFF3A3A46);
+        ctx.fill(panelLeft, panelBottom - 1, panelRight, panelBottom, 0xFF3A3A46);
+
         // Title
         ctx.drawCenteredTextWithShadow(textRenderer, "§6§lTown Hall — " + villageName, cx, y, 0xFFFFFF);
         y += 16;
 
         // Population (use actual resident count) + leader
         int residentCount = villagerNames.size();
-        ctx.drawTextWithShadow(textRenderer, "Residents: " + residentCount + "/" + maxPopulation, cx - 120, y, 0xCCCCCC);
+        ctx.drawTextWithShadow(textRenderer, "Residents: " + residentCount, cx - 152, y, 0xCCCCCC);
 
         if (hasLeader) {
             String prefix = leaderIsPlayer ? "§a[Player] " : "§b[NPC] ";
@@ -163,20 +225,22 @@ public class TownHallScreen extends ExtendedScreen {
                     cx, y, 0xFFFFFF);
         } else {
             ctx.drawCenteredTextWithShadow(textRenderer,
-                    "§6Status: §fOutsider  (need §e" + cfg.residentHeartThreshold + "§f ♥ with all to become resident)",
+                    "§6Status: §fOutsider",
                     cx, y, 0xFFFFFF);
         }
         y += 18;
 
         // ── Resident list ─────────────────────────────────────────────────────
-        int listX = cx - 120;
+        int listX = cx - 144;
         listStartY = y;
 
         // Header row
-        ctx.fill(listX - 4, y - 2, listX + 248, y + 12, 0x99000000);
+        ctx.fill(listX - 4, y - 2, listX + LIST_WIDTH, y + 12, 0xCC151515);
         ctx.drawTextWithShadow(textRenderer, "§fVillager", listX + 14, y, 0xFFFFFF);
-        ctx.drawTextWithShadow(textRenderer, "§fHearts", listX + 185, y, 0xFFFFFF);
-        ctx.drawTextWithShadow(textRenderer, "§7[click to highlight]", listX + 60, y + 1, 0x888888);
+        ctx.drawTextWithShadow(textRenderer, "§fMood", listX + COL_MOOD_X, y, 0x8FD3FF);
+        ctx.drawTextWithShadow(textRenderer, "§fJob", listX + COL_JOB_X, y, 0xDDDDDD);
+        ctx.drawTextWithShadow(textRenderer, "§fHearts", listX + COL_HEARTS_X, y, 0xFFFFFF);
+        ctx.drawTextWithShadow(textRenderer, "§7(click to select)", listX + 64, y + 1, 0x888888);
         y += ROW_HEIGHT;
 
         orderedUuids = new ArrayList<>(villagerNames.keySet());
@@ -188,18 +252,31 @@ public class TownHallScreen extends ExtendedScreen {
             String name    = villagerNames.getOrDefault(uuid, "???");
             int hearts     = villagerHearts.getOrDefault(uuid, 0);
 
-            boolean hovered = mouseX >= listX - 4 && mouseX < listX + 244
+            boolean hovered = mouseX >= listX - 4 && mouseX < listX + LIST_WIDTH
                     && mouseY >= y - 1 && mouseY < y + ROW_HEIGHT - 2;
 
-            int rowBg = hovered ? 0x66FFFFFF : (i % 2 == 0 ? 0x44000000 : 0x22000000);
-            ctx.fill(listX - 4, y - 1, listX + 244, y + ROW_HEIGHT - 2, rowBg);
+            boolean pin = highlightToggles.contains(uuid);
+            boolean loaded = villagerLoaded.getOrDefault(uuid, false);
+            int rowBg = pin ? 0x55335A33 : (hovered ? 0x66505058 : (i % 2 == 0 ? 0x44202026 : 0x22202026));
+            ctx.fill(listX - 4, y - 1, listX + LIST_WIDTH, y + ROW_HEIGHT - 2, rowBg);
 
             // Face marker (prevents flat color-block avatars).
             int faceColor = hovered ? 0xFFE8D6B5 : 0xFFD9C4A2;
             ctx.drawTextWithShadow(textRenderer, "☺", listX, y, faceColor);
 
-            String display = name.length() > 24 ? name.substring(0, 22) + ".." : name;
-            ctx.drawTextWithShadow(textRenderer, display, listX + 12, y, hovered ? 0xFFFFFF : 0xCCCCCC);
+            String display = name.length() > 20 ? name.substring(0, 18) + ".." : name;
+            String mood = villagerMoods.getOrDefault(uuid, "unknown");
+            String job = formatJobName(villagerJobs.getOrDefault(uuid, "none"));
+            boolean married = villagerMarried.getOrDefault(uuid, false);
+            int nameColor = loaded ? (hovered ? 0xFFFFFF : 0xD0D0D0) : 0x888888;
+            ctx.drawTextWithShadow(textRenderer, display, listX + 12, y, nameColor);
+            ctx.drawTextWithShadow(textRenderer, mood, listX + COL_MOOD_X, y, 0x99CCFF);
+            ctx.drawTextWithShadow(textRenderer, job, listX + COL_JOB_X, y, 0xD0D0D0);
+            if (pin) { ctx.drawTextWithShadow(textRenderer, "✦", listX + 3, y, 0x55FF55); }
+            if (!loaded) { ctx.drawTextWithShadow(textRenderer, "…", listX + LIST_WIDTH - 20, y, 0x999999); }
+            if (married) {
+                ctx.drawTextWithShadow(textRenderer, "💍", listX + LIST_WIDTH - 12, y, 0xFFD700);
+            }
 
             int heartColor;
             if      (hearts >= cfg.leaderHeartThreshold)   heartColor = 0x55FF55;
@@ -207,7 +284,7 @@ public class TownHallScreen extends ExtendedScreen {
             else if (hearts > 0)                            heartColor = 0xFFFF55;
             else                                            heartColor = 0xFF5555;
 
-            ctx.drawTextWithShadow(textRenderer, hearts + " ♥", listX + 185, y, heartColor);
+            ctx.drawTextWithShadow(textRenderer, hearts + " ♥", listX + COL_HEARTS_X - 8, y, heartColor);
             y += ROW_HEIGHT;
         }
 
@@ -224,16 +301,16 @@ public class TownHallScreen extends ExtendedScreen {
 
         // ── Pending supply requests ───────────────────────────────────────────
         if (!pendingRequests.isEmpty()) {
-            ctx.fill(listX - 4, y - 2, listX + 248, y + 12, 0x99220000);
+            ctx.fill(listX - 4, y - 2, listX + LIST_WIDTH, y + 12, 0x99220000);
             ctx.drawTextWithShadow(textRenderer, "§c§lPending Requests", listX, y, 0xFFFFFF);
             y += ROW_HEIGHT;
 
             for (int i = 0; i < pendingRequests.size(); i++) {
                 String[] r = pendingRequests.get(i);
                 int bg = i % 2 == 0 ? 0x44110000 : 0x22110000;
-                ctx.fill(listX - 4, y - 1, listX + 244, y + ROW_HEIGHT - 2, bg);
+                ctx.fill(listX - 4, y - 1, listX + LIST_WIDTH, y + ROW_HEIGHT - 2, bg);
                 ctx.drawTextWithShadow(textRenderer, "§f" + r[0], listX, y, 0xFFFFFF);
-                ctx.drawTextWithShadow(textRenderer, "§e" + r[1] + "§7/" + r[2], listX + 170, y, 0xFFFFFF);
+                ctx.drawTextWithShadow(textRenderer, "§e" + r[1] + "§7/" + r[2], listX + COL_HEARTS_X - 16, y, 0xFFFFFF);
                 y += ROW_HEIGHT;
             }
         }
@@ -244,7 +321,7 @@ public class TownHallScreen extends ExtendedScreen {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         int cx = width / 2;
-        int listX = cx - 120;
+        int listX = cx - 144;
 
         if (mouseX >= listX - 4 && mouseX < listX + 244) {
             int rowY = listStartY + ROW_HEIGHT; // +ROW_HEIGHT to skip the header
@@ -255,8 +332,9 @@ public class TownHallScreen extends ExtendedScreen {
                 if (mouseY >= rowY - 1 && mouseY < rowY + ROW_HEIGHT - 2) {
                     String uuidStr = orderedUuids.get(i);
                     try {
-                        UUID uuid = UUID.fromString(uuidStr);
-                        NetworkHandler.sendToServer(new HighlightVillagerRequest(uuid));
+                        UUID.fromString(uuidStr);
+                        selectedResidentUuid = uuidStr;
+                        rebuildButtons();
                     } catch (IllegalArgumentException ignored) { }
                     return true;
                 }
@@ -279,6 +357,33 @@ public class TownHallScreen extends ExtendedScreen {
         return super.mouseScrolled(mouseX, mouseY, amount);
     }
 
+    private String formatJobName(String rawJob) {
+        String clean = rawJob == null ? "none" : rawJob.trim();
+        int dot = clean.lastIndexOf('.');
+        if (dot >= 0 && dot < clean.length() - 1) {
+            clean = clean.substring(dot + 1);
+        }
+        clean = clean.replace('_', ' ');
+        if (clean.isBlank() || clean.equalsIgnoreCase("none")) {
+            return "None";
+        }
+
+        StringBuilder sb = new StringBuilder(clean.length());
+        boolean cap = true;
+        for (char c : clean.toCharArray()) {
+            if (c == ' ' ) {
+                sb.append(c);
+                cap = true;
+            } else if (cap) {
+                sb.append(Character.toUpperCase(c));
+                cap = false;
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
     // ── Data loading ──────────────────────────────────────────────────────────
 
     public void loadData(TownHallDataResponse response) {
@@ -291,6 +396,10 @@ public class TownHallScreen extends ExtendedScreen {
 
         villagerHearts.clear();
         villagerNames.clear();
+        villagerMoods.clear();
+        villagerJobs.clear();
+        villagerMarried.clear();
+        villagerLoaded.clear();
 
         if (root.contains("villagerHearts")) {
             NbtCompound hn = root.getCompound("villagerHearts");
@@ -299,6 +408,22 @@ public class TownHallScreen extends ExtendedScreen {
         if (root.contains("villagerNames")) {
             NbtCompound nn = root.getCompound("villagerNames");
             for (String k : nn.getKeys()) villagerNames.put(k, nn.getString(k));
+        }
+        if (root.contains("villagerMoods")) {
+            NbtCompound mn = root.getCompound("villagerMoods");
+            for (String k : mn.getKeys()) villagerMoods.put(k, mn.getString(k));
+        }
+        if (root.contains("villagerJobs")) {
+            NbtCompound jn = root.getCompound("villagerJobs");
+            for (String k : jn.getKeys()) villagerJobs.put(k, jn.getString(k));
+        }
+        if (root.contains("villagerMarried")) {
+            NbtCompound mar = root.getCompound("villagerMarried");
+            for (String k : mar.getKeys()) villagerMarried.put(k, mar.getBoolean(k));
+        }
+        if (root.contains("villagerLoaded")) {
+            NbtCompound ln = root.getCompound("villagerLoaded");
+            for (String k : ln.getKeys()) villagerLoaded.put(k, ln.getBoolean(k));
         }
 
         hasLeader            = root.getBoolean("hasLeader");
@@ -342,6 +467,43 @@ public class TownHallScreen extends ExtendedScreen {
         orderedUuids = new ArrayList<>(villagerNames.keySet());
 
         if (client != null) rebuildButtons();
+    }
+
+
+    private static class DarkButtonWidget extends ClickableWidget {
+        private final Runnable action;
+
+        private DarkButtonWidget(int x, int y, int width, int height, Text message, Runnable action) {
+            super(x, y, width, height, message);
+            this.action = action;
+        }
+
+        @Override
+        public void onClick(double mouseX, double mouseY) {
+            if (active && visible) {
+                action.run();
+            }
+        }
+
+        @Override
+        public void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
+            boolean hovered = isMouseOver(mouseX, mouseY);
+            int bg = !active ? 0x88303038 : (hovered ? 0xCC2A2A33 : 0xCC16161C);
+            int border = hovered ? 0xFF8E8E9C : 0xFF4A4A56;
+            context.fill(getX(), getY(), getX() + width, getY() + height, bg);
+            context.fill(getX(), getY(), getX() + width, getY() + 1, border);
+            context.fill(getX(), getY() + height - 1, getX() + width, getY() + height, border);
+            context.fill(getX(), getY(), getX() + 1, getY() + height, border);
+            context.fill(getX() + width - 1, getY(), getX() + width, getY() + height, border);
+            int textColor = active ? 0xE4E4EA : 0x777784;
+            context.drawCenteredTextWithShadow(net.minecraft.client.MinecraftClient.getInstance().textRenderer,
+                    getMessage(), getX() + width / 2, getY() + (height - 8) / 2, textColor);
+        }
+
+        @Override
+        protected void appendClickableNarrations(NarrationMessageBuilder builder) {
+            appendDefaultNarrations(builder);
+        }
     }
 
     @Override

@@ -1,0 +1,22 @@
+{
+  "first_tone_variants": {
+    "jovial": "Hi {player}! I'm {npc}, so great to finally meet you!",
+    "grumpy": "Ugh, another one? Name's {npc}. Make it quick.",
+    "serious": "Greetings, {player}. I am {npc}. I hope your stay is productive.",
+    "normal": "Hello {player}, I'm {npc}. Nice to meet you."
+  },
+  "standard_tone_variants": {
+    "jovial": "Hey again, {player}! {npc} here—always good to see you.",
+    "grumpy": "You again, {player}? {npc}. Keep it short.",
+    "serious": "Welcome back, {player}. {npc} at your service.",
+    "normal": "Good to see you again, {player}. I'm {npc}."
+  },
+  "service_description": {
+    "blacksmith": "repairs and tools",
+    "farmer": "fresh crops",
+    "alchemist": "brews and potions",
+    "leatherworker": "sturdy leather gear"
+  },
+  "job_intro_template": "I'm the {job} around here. Let me know if you need {service}.",
+  "rivalry_template": "...and don't listen to {rival}, their {service} isn't nearly as good as mine."
+}
