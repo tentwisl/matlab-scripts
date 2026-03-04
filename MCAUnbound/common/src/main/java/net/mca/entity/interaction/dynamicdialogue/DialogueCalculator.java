@@ -5,15 +5,33 @@ public final class DialogueCalculator {
     private DialogueCalculator() {
     }
 
-    public static InteractionResult calculate(DialogueSubtype subtype, NpcTrait trait, NpcMood mood, int currentHearts) {
+    public static InteractionResult calculate(DialogueSubtype subtype,
+                                              NpcTrait trait,
+                                              NpcMood mood,
+                                              int currentHearts,
+                                              NpcJob npcJob,
+                                              DialogueSubtype lastUsedSubtype,
+                                              int repetitionCount) {
         int rawScore = subtype.getBaseScore();
         rawScore += getTraitModifier(subtype, trait);
         rawScore += getHeartModifier(subtype, currentHearts);
 
+        int jobModifier = getJobModifier(subtype, npcJob);
+        rawScore += jobModifier;
+
         double scaled = rawScore * getMoodMultiplier(rawScore, mood);
         int finalScore = (int) Math.round(scaled);
 
-        return new InteractionResult(finalScore, toReactionType(finalScore));
+        if (lastUsedSubtype != null && lastUsedSubtype == subtype) {
+            if (repetitionCount >= 2) {
+                finalScore = Math.min(-3, finalScore - 4);
+            } else {
+                finalScore = Math.min(0, finalScore);
+            }
+            return new InteractionResult(finalScore, ReactionType.REPETITIVE, jobModifier != 0);
+        }
+
+        return new InteractionResult(finalScore, toReactionType(finalScore), jobModifier != 0);
     }
 
     private static int getTraitModifier(DialogueSubtype subtype, NpcTrait trait) {
@@ -67,6 +85,32 @@ public final class DialogueCalculator {
             return subtype.isBoldRomance() ? 4 : 2;
         }
         return subtype.isBoldRomance() ? -1 : 1;
+    }
+
+    private static int getJobModifier(DialogueSubtype subtype, NpcJob npcJob) {
+        return switch (npcJob) {
+            case VILLAGE_LEADER -> switch (subtype) {
+                case GREET_FORMAL, CHAT_WORK, RUMORS_WARNING -> 2;
+                case GREET_CASUAL, JOKE_CHEESY -> -2;
+                default -> 0;
+            };
+            case LEATHERWORKER -> switch (subtype) {
+                case CHAT_WORK, STORY_HEROIC -> 1;
+                case ROMANCE_SUGGESTIVE_ACTION -> -1;
+                default -> 0;
+            };
+            case FARMER -> switch (subtype) {
+                case CHAT_WEATHER, CHAT_VILLAGE -> 2;
+                case JOKE_DARK -> -1;
+                default -> 0;
+            };
+            case GUARD -> switch (subtype) {
+                case GREET_FORMAL, RUMORS_WARNING, STORY_HEROIC -> 2;
+                case ROMANCE_BOLD, ROMANCE_SUGGESTIVE_ACTION -> -2;
+                default -> 0;
+            };
+            case NONE -> 0;
+        };
     }
 
     private static double getMoodMultiplier(int rawScore, NpcMood mood) {

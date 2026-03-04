@@ -1,6 +1,7 @@
 package net.mca.client.gui;
 
 import net.mca.MCA;
+import net.mca.ProfessionsMCA;
 import net.mca.cobalt.network.NetworkHandler;
 import net.mca.client.gui.widget.PaneEntries;
 import net.mca.client.gui.widget.PaneEntries.ButtonSpec;
@@ -19,6 +20,7 @@ import net.mca.entity.interaction.dynamicdialogue.DialogueCalculator;
 import net.mca.entity.interaction.dynamicdialogue.DialogueSubtype;
 import net.mca.entity.interaction.dynamicdialogue.InteractionResult;
 import net.mca.entity.interaction.dynamicdialogue.MainDialogueCategory;
+import net.mca.entity.interaction.dynamicdialogue.NpcJob;
 import net.mca.entity.interaction.dynamicdialogue.NpcMood;
 import net.mca.entity.interaction.dynamicdialogue.NpcTrait;
 import net.mca.entity.interaction.Constraint;
@@ -36,6 +38,7 @@ import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+import net.minecraft.village.VillagerProfession;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
@@ -66,6 +69,7 @@ public class InteractScreen extends AbstractDynamicScreen {
     private static final int HEADER_H      = 96;  // portrait + padding
     private static final int TAB_H         = 22;
     private static final int PANEL_W       = 280;
+    private static final int FATIGUE_BURNOUT_THRESHOLD = 4;
 
     // ── Villager reference ─────────────────────────────────────────────────────
     private final VillagerLike<?> villager;
@@ -300,20 +304,81 @@ public class InteractScreen extends AbstractDynamicScreen {
 
     private void onDialogueSubButtonClicked(DialogueSubtype subtype) {
         Memories memory = villager.getVillagerBrain().getMemoriesForPlayer(player);
+
+        if (isTiredOfTalking(memory)) {
+            sendVillagerChat(DialogueBank.randomBurnoutResponse());
+            openDialogueCategory(subtype.getCategory());
+            return;
+        }
+
+        DialogueSubtype lastSubtype = parseSubtype(memory.getLastUsedDialogueSubtype());
+        int repeatCount = memory.getRepeatedDialogueCount();
+
         InteractionResult result = DialogueCalculator.calculate(
                 subtype,
                 toNpcTrait(villager.getVillagerBrain().getPersonality()),
                 toNpcMood(villager.getVillagerBrain().getMood().getName()),
-                memory.getHearts()
+                memory.getHearts(),
+                toNpcJob(),
+                lastSubtype,
+                repeatCount
         );
 
         memory.modHearts(result.relationshipPointChange());
+        memory.modInteractionFatigue(1);
+
+        if (lastSubtype == subtype) {
+            memory.setRepeatedDialogueCount(repeatCount + 1);
+        } else {
+            memory.setRepeatedDialogueCount(0);
+        }
+        memory.setLastUsedDialogueSubtype(subtype.name());
 
         String response = DialogueBank.randomNpcResponse(subtype.getCategory(), result.reactionType());
-        player.sendMessage(Text.literal(villager.asEntity().getName().getString() + ": " + response)
-                .formatted(Formatting.GRAY), true);
+        if (result.jobInfluenced()) {
+            response = response + " " + DialogueBank.randomJobFlavor(toNpcJob());
+        }
+        sendVillagerChat(response);
 
         openDialogueCategory(subtype.getCategory());
+    }
+
+    private void sendVillagerChat(String message) {
+        String formatted = "<" + villager.asEntity().getName().getString() + "> " + message;
+        player.sendMessage(Text.literal(formatted).formatted(Formatting.GRAY), false);
+    }
+
+    private boolean isTiredOfTalking(Memories memory) {
+        return memory.getInteractionFatigue() >= FATIGUE_BURNOUT_THRESHOLD;
+    }
+
+    private DialogueSubtype parseSubtype(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return DialogueSubtype.valueOf(value);
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+    }
+
+    private NpcJob toNpcJob() {
+        if (isNpcLeader) {
+            return NpcJob.VILLAGE_LEADER;
+        }
+
+        VillagerProfession job = villager.getVillagerData().getProfession();
+        if (job == VillagerProfession.LEATHERWORKER) {
+            return NpcJob.LEATHERWORKER;
+        }
+        if (job == VillagerProfession.FARMER) {
+            return NpcJob.FARMER;
+        }
+        if (job == ProfessionsMCA.GUARD.get()) {
+            return NpcJob.GUARD;
+        }
+        return NpcJob.NONE;
     }
 
     private NpcTrait toNpcTrait(Personality personality) {
