@@ -1,0 +1,9 @@
+{
+  "category": "rumors",
+  "subCategories": [
+    {"id":"spooky","label":"Spooky","playerOptions":["Heard lights were seen in the old mine.","People heard whispers near the cemetery."],"results":[{"baseChance":4,"actions":{"positive":1},"npcResponses":["I've heard that too.","Let's avoid that place at night."]}]},
+    {"id":"drama","label":"Drama","playerOptions":["Two families are refusing trade.","The market had another argument today."],"results":[{"baseChance":4,"actions":{"positive":0},"npcResponses":["Village politics never ends.","I hope they settle it soon."]}]},
+    {"id":"treasure","label":"Treasure","playerOptions":["A map points to loot under the ruined tower.","A traveler mentioned gold by the river bend."],"results":[{"baseChance":4,"actions":{"positive":1},"npcResponses":["Now that is useful information.","Maybe we should investigate."]}]},
+    {"id":"warning","label":"Warning","playerOptions":["Scouts saw danger near the north path.","Hostile mobs are gathering after sunset."],"results":[{"baseChance":5,"conditions":[{"chance":2,"job":"GUARD"}],"actions":{"positive":2},"npcResponses":["Good warning. I'll stay alert.","Thanks for letting me know."]}]}
+  ]
+}

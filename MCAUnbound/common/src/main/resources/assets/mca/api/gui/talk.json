@@ -109,7 +109,7 @@
     "height": 20,
     "notifyServer": true,
     "targetServer": false,
-    "constraints": "hearts_100",
+    "constraints": "",
     "hideOnFail": true,
     "isInteraction": true
   }
