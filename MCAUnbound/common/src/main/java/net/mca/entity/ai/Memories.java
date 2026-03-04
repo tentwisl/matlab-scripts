@@ -28,6 +28,10 @@ public class Memories {
 
     private int lastInteractionDelta;
 
+    private int sessionHeartDelta;
+
+    private long refusingToTalkUntil;
+
     private final VillagerBrain<?> brain;
 
     private long lastSeen;
@@ -124,6 +128,29 @@ public class Memories {
         brain.updateMemories(this);
     }
 
+    public int getSessionHeartDelta() {
+        return sessionHeartDelta;
+    }
+
+    public void setSessionHeartDelta(int value) {
+        this.sessionHeartDelta = value;
+        brain.updateMemories(this);
+    }
+
+    public void modSessionHeartDelta(int value) {
+        this.sessionHeartDelta += value;
+        brain.updateMemories(this);
+    }
+
+    public long getRefusingToTalkUntil() {
+        return refusingToTalkUntil;
+    }
+
+    public void setRefusingToTalkUntil(long value) {
+        this.refusingToTalkUntil = Math.max(0L, value);
+        brain.updateMemories(this);
+    }
+
     public long getLastSeen() {
         return lastSeen;
     }
@@ -145,6 +172,8 @@ public class Memories {
         nbt.putInt("repeatedDialogueCount", repeatedDialogueCount);
         nbt.putInt("alternatingDialogueCount", alternatingDialogueCount);
         nbt.putInt("lastInteractionDelta", lastInteractionDelta);
+        nbt.putInt("sessionHeartDelta", sessionHeartDelta);
+        nbt.putLong("refusingToTalkUntil", refusingToTalkUntil);
         nbt.putLong("lastSeen", lastSeen);
 
         return nbt;
@@ -165,6 +194,8 @@ public class Memories {
         memories.repeatedDialogueCount = tag.getInt("repeatedDialogueCount");
         memories.alternatingDialogueCount = tag.getInt("alternatingDialogueCount");
         memories.lastInteractionDelta = tag.getInt("lastInteractionDelta");
+        memories.sessionHeartDelta = tag.getInt("sessionHeartDelta");
+        memories.refusingToTalkUntil = tag.getLong("refusingToTalkUntil");
         memories.lastSeen = tag.getLong("lastSeen");
 
         return memories;

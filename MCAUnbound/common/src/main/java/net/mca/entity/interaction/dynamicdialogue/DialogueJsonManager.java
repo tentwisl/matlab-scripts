@@ -39,6 +39,7 @@ public final class DialogueJsonManager {
 
     private final Map<String, DialogueCategoryFile> categoryFiles = new HashMap<>();
     private final Map<String, DialogueCategoryFile> kidsCategoryFiles = new HashMap<>();
+    private EscalationDialogueFile escalationDialogueFile = new EscalationDialogueFile();
 
     public DialogueJsonManager() {
         reload();
@@ -51,6 +52,7 @@ public final class DialogueJsonManager {
             loadCategory(category, false).ifPresent(file -> categoryFiles.put(category, file));
             loadCategory(category, true).ifPresent(file -> kidsCategoryFiles.put(category, file));
         }
+        escalationDialogueFile = loadEscalationFile().orElseGet(EscalationDialogueFile::new);
     }
 
     public List<PlayerOption> getPlayerOptions(String category, boolean isChild, AgeState ageState) {
@@ -90,6 +92,44 @@ public final class DialogueJsonManager {
         return "I need a break from talking right now.";
     }
 
+
+    public Optional<String> getEscalatedResponse(int sessionHeartDelta, boolean lockoutActive) {
+        if (lockoutActive) {
+            return Optional.of(pickEscalationLine(escalationDialogueFile.lockout, "I have nothing to say to you right now."));
+        }
+        if (sessionHeartDelta <= -20) {
+            return Optional.of(pickEscalationLine(escalationDialogueFile.severe_dismissive, "Enough. Leave me alone."));
+        }
+        if (sessionHeartDelta <= -5) {
+            return Optional.of(pickEscalationLine(escalationDialogueFile.annoyed, "You're getting on my nerves."));
+        }
+        return Optional.empty();
+    }
+
+    private String pickEscalationLine(List<String> lines, String fallback) {
+        if (lines == null || lines.isEmpty()) {
+            return fallback;
+        }
+        return lines.get(RANDOM.nextInt(lines.size()));
+    }
+
+
+    private Optional<EscalationDialogueFile> loadEscalationFile() {
+        String path = "data/mca/dialogues_nested/common/escalation.json";
+        try (InputStream stream = DialogueJsonManager.class.getClassLoader().getResourceAsStream(path)) {
+            if (stream == null) {
+                return Optional.empty();
+            }
+            EscalationDialogueFile parsed = GSON.fromJson(new InputStreamReader(stream, StandardCharsets.UTF_8), EscalationDialogueFile.class);
+            return Optional.ofNullable(parsed);
+        } catch (RuntimeException ex) {
+            MCA.LOGGER.warn("Failed to parse escalation dialogue json {}", path, ex);
+            return Optional.empty();
+        } catch (Exception ex) {
+            MCA.LOGGER.warn("Failed to load escalation dialogue json {}", path, ex);
+            return Optional.empty();
+        }
+    }
 
     private boolean matchesAgeGroup(String ageGroup, AgeState ageState) {
         if (ageGroup == null || ageGroup.isBlank() || ageState == null) {
@@ -171,5 +211,11 @@ public final class DialogueJsonManager {
         public int positive;
         public int negative;
         public String command;
+    }
+
+    public static class EscalationDialogueFile {
+        public List<String> annoyed = List.of();
+        public List<String> severe_dismissive = List.of();
+        public List<String> lockout = List.of();
     }
 }

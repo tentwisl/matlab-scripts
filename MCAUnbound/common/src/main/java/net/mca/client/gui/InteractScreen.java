@@ -70,7 +70,10 @@ public class InteractScreen extends AbstractDynamicScreen {
     private static final int HEADER_H      = 96;  // portrait + padding
     private static final int TAB_H         = 22;
     private static final int PANEL_W       = 280;
-    private static final int FATIGUE_BURNOUT_THRESHOLD = 4;
+    private static final int ANNOYED_THRESHOLD = -5;
+    private static final int LOCKOUT_THRESHOLD = -15;
+    private static final int BURNOUT_LOCKOUT_FATIGUE = 16;
+    private static final long TALK_LOCKOUT_DURATION_TICKS = 12000L;
 
     // ── Villager reference ─────────────────────────────────────────────────────
     private final VillagerLike<?> villager;
@@ -119,6 +122,16 @@ public class InteractScreen extends AbstractDynamicScreen {
 
     @Override
     public void init() {
+        Memories memory = villager.getVillagerBrain().getMemoriesForPlayer(player);
+        if (isTalkLockedOut(memory)) {
+            sendVillagerChat(dialogueJsonManager.getEscalatedResponse(memory.getSessionHeartDelta(), true)
+                    .orElse("I have nothing to say to you right now."));
+            close();
+            return;
+        }
+
+        memory.setSessionHeartDelta(0);
+
         NetworkHandler.sendToServer(new GetInteractDataRequest(villager.asEntity().getUuid()));
         buildTabPanel();
     }
@@ -332,6 +345,14 @@ public class InteractScreen extends AbstractDynamicScreen {
     }
 
     private void openDialogueCategory(MainDialogueCategory category) {
+        Memories memory = villager.getVillagerBrain().getMemoriesForPlayer(player);
+        if (isTalkLockedOut(memory)) {
+            sendVillagerChat(dialogueJsonManager.getEscalatedResponse(memory.getSessionHeartDelta(), true)
+                    .orElse("I have nothing to say to you right now."));
+            close();
+            return;
+        }
+
         selectedTalkCategory = category;
         String categoryKey = category.name().toLowerCase(Locale.ENGLISH);
         activeDialogueOptions = dialogueJsonManager.getPlayerOptions(categoryKey, isJuvenileVillager(), villager.getAgeState()).stream()
@@ -342,6 +363,12 @@ public class InteractScreen extends AbstractDynamicScreen {
 
     private void onDialogueSubButtonClicked(DialogueOptionEntry option) {
         Memories memory = villager.getVillagerBrain().getMemoriesForPlayer(player);
+        if (isTalkLockedOut(memory)) {
+            sendVillagerChat(dialogueJsonManager.getEscalatedResponse(memory.getSessionHeartDelta(), true)
+                    .orElse("I have nothing to say to you right now."));
+            close();
+            return;
+        }
 
         DialogueJsonManager.JsonSubCategory subCategory = dialogueJsonManager
                 .getSubCategory(option.categoryKey(), option.subCategoryId(), isJuvenileVillager(), villager.getAgeState())
@@ -364,6 +391,10 @@ public class InteractScreen extends AbstractDynamicScreen {
         memory.modHearts(result.relationshipPointChange());
         memory.modInteractionFatigue(1);
         memory.setLastInteractionDelta(result.relationshipPointChange());
+
+        if (result.relationshipPointChange() < 0) {
+            memory.modSessionHeartDelta(result.relationshipPointChange());
+        }
 
         if (result.relationshipPointChange() > 0) {
             villager.getVillagerBrain().modifyMoodValue(1);
@@ -390,14 +421,45 @@ public class InteractScreen extends AbstractDynamicScreen {
         memory.setSecondLastUsedDialogueSubtype(memory.getLastUsedDialogueSubtype());
         memory.setLastUsedDialogueSubtype(interactionKey);
 
-        String response = result.npcResponse();
-        if (isJuvenileVillager() && option.categoryKey().equalsIgnoreCase("rumors")) {
+        boolean shouldLockOut = memory.getSessionHeartDelta() <= LOCKOUT_THRESHOLD
+                || (memory.getSessionHeartDelta() < 0 && memory.getInteractionFatigue() >= BURNOUT_LOCKOUT_FATIGUE);
+
+        if (shouldLockOut) {
+            memory.setRefusingToTalkUntil(villager.asEntity().getWorld().getTime() + TALK_LOCKOUT_DURATION_TICKS);
+        }
+
+        String response = dialogueJsonManager
+                .getEscalatedResponse(memory.getSessionHeartDelta(), false)
+                .orElse(result.npcResponse());
+
+        if (isJuvenileVillager() && option.categoryKey().equalsIgnoreCase("rumors") && memory.getSessionHeartDelta() > ANNOYED_THRESHOLD) {
             response = applyKidRumorNameFormatting(response);
         }
 
         sendVillagerChat(response);
 
+        if (shouldLockOut) {
+            close();
+            return;
+        }
+
         openDialogueCategory(selectedTalkCategory);
+    }
+
+    private boolean isTalkLockedOut(Memories memory) {
+        long refusingToTalkUntil = memory.getRefusingToTalkUntil();
+        if (refusingToTalkUntil <= 0L) {
+            return false;
+        }
+
+        long worldTime = villager.asEntity().getWorld().getTime();
+        if (worldTime < refusingToTalkUntil) {
+            return true;
+        }
+
+        memory.setRefusingToTalkUntil(0L);
+        memory.setSessionHeartDelta(0);
+        return false;
     }
 
 
