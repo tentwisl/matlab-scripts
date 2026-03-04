@@ -1,12 +1,9 @@
 package net.mca.server.world.data;
 
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.server.world.ServerWorld;
 
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 import java.util.UUID;
 
@@ -17,9 +14,12 @@ public final class TownHallHighlightManager {
     private TownHallHighlightManager() {
     }
 
-    public static boolean toggle(UUID villagerId) {
+    public static boolean toggle(UUID villagerId, ServerWorld sourceWorld) {
         if (HIGHLIGHTED.contains(villagerId)) {
             HIGHLIGHTED.remove(villagerId);
+            if (sourceWorld.getEntity(villagerId) instanceof LivingEntity living) {
+                living.setGlowing(false);
+            }
             return false;
         }
         HIGHLIGHTED.add(villagerId);
@@ -31,15 +31,10 @@ public final class TownHallHighlightManager {
     }
 
     public static void tick(ServerWorld world) {
-        Iterator<UUID> it = HIGHLIGHTED.iterator();
-        while (it.hasNext()) {
-            UUID uuid = it.next();
-            if (!(world.getEntity(uuid) instanceof LivingEntity living)) {
-                it.remove();
-                continue;
+        for (UUID uuid : HIGHLIGHTED) {
+            if (world.getEntity(uuid) instanceof LivingEntity living) {
+                living.setGlowing(true);
             }
-            // Refresh short glow continuously while toggled on.
-            living.addStatusEffect(new StatusEffectInstance(StatusEffects.GLOWING, 40, 0, false, false), null);
         }
     }
 }

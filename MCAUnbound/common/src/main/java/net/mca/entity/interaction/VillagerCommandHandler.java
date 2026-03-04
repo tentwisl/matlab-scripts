@@ -16,6 +16,7 @@ import net.mca.resources.data.dialogue.Question;
 import net.mca.server.world.data.FamilyTree;
 import net.mca.server.world.data.FamilyTreeNode;
 import net.mca.server.world.data.PlayerSaveData;
+import net.mca.server.world.data.TownHallCallManager;
 import net.mca.util.WorldUtils;
 import net.minecraft.entity.Saddleable;
 import net.minecraft.entity.ai.FuzzyPositions;
@@ -46,6 +47,10 @@ public class VillagerCommandHandler extends EntityCommandHandler<VillagerEntityM
     @Override
     public boolean handle(ServerPlayerEntity player, String command) {
         Memories memory = entity.getVillagerBrain().getMemoriesForPlayer(player);
+
+        // If this villager is in Town Hall call-wait mode, interaction cancels waiting
+        // and returns it to default MCA autonomous pathing immediately.
+        TownHallCallManager.cancelWaitingOnInteract(entity);
 
         if (MoveState.byCommand(command).filter(state -> {
             entity.getVillagerBrain().setMoveState(state, player);

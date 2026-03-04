@@ -69,7 +69,7 @@ public class TownHallResidentActionPacket implements Message {
                     player.sendMessage(Text.literal("This resident is already responding to a call."), false);
                     return;
                 }
-                TownHallCallManager.startCall(villager, villager.getBlockPos(), player.getBlockPos(), world.getTime());
+                TownHallCallManager.startCall(villager, player.getUuid(), BlockPos.fromLong(townHallPos), world.getTime());
                 player.sendMessage(Text.literal(villager.getName().getString() + " is on their way."), false);
             }
             case "follow" -> {
@@ -84,7 +84,7 @@ public class TownHallResidentActionPacket implements Message {
                 boolean mounted = villager.startRiding(player, true);
                 player.sendMessage(Text.literal(mounted ? villager.getName().getString() + " mounted successfully." : "Mount failed."), false);
             }
-            case "inventory" -> player.sendMessage(Text.literal("Inventory access requested for " + villager.getName().getString() + "."), false);
+            case "inventory" -> player.openHandledScreen(villager);
             default -> player.sendMessage(Text.literal("Unknown resident action: " + action), false);
         }
     }

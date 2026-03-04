@@ -27,7 +27,7 @@ public class HighlightVillagerRequest implements Message {
     @Override
     public void receive(ServerPlayerEntity player) {
         UUID villagerUUID = new UUID(mostSigBits, leastSigBits);
-        boolean enabled = TownHallHighlightManager.toggle(villagerUUID);
+        boolean enabled = TownHallHighlightManager.toggle(villagerUUID, player.getServerWorld());
         player.sendMessage(Text.literal(enabled ? "Town Hall highlight enabled." : "Town Hall highlight disabled."), false);
     }
 }

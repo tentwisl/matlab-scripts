@@ -59,6 +59,10 @@ public class TownHallScreen extends ExtendedScreen {
     private int scrollOffset = 0;
     private static final int VISIBLE_ROWS = 9;
     private static final int ROW_HEIGHT   = 14;
+    private static final int LIST_WIDTH   = 304;
+    private static final int COL_MOOD_X   = 132;
+    private static final int COL_JOB_X    = 196;
+    private static final int COL_HEARTS_X = 260;
     /** Y-start of the first rendered row (set in render(), used in mouseClicked) */
     private int listStartY = 80;
 
@@ -133,10 +137,10 @@ public class TownHallScreen extends ExtendedScreen {
         }
 
         if (orderedUuids.size() > VISIBLE_ROWS) {
-            int listX = width / 2 - 120;
-            addDarkButton(listX + 246, listStartY, 18, 18, "▲", () ->
+            int listX = width / 2 - (LIST_WIDTH / 2 - 8);
+            addDarkButton(listX + LIST_WIDTH - 2, listStartY, 18, 18, "▲", () ->
                     scrollOffset = Math.max(0, scrollOffset - 1), true);
-            addDarkButton(listX + 246, listStartY + VISIBLE_ROWS * ROW_HEIGHT - 18, 18, 18, "▼", () ->
+            addDarkButton(listX + LIST_WIDTH - 2, listStartY + VISIBLE_ROWS * ROW_HEIGHT - 18, 18, 18, "▼", () ->
                     scrollOffset = Math.min(orderedUuids.size() - VISIBLE_ROWS, scrollOffset + 1), true);
         }
     }
@@ -185,8 +189,8 @@ public class TownHallScreen extends ExtendedScreen {
         int cx = width / 2;
         int y  = 12;
 
-        int panelLeft = cx - 128;
-        int panelRight = cx + 128;
+        int panelLeft = cx - 160;
+        int panelRight = cx + 160;
         int panelTop = 8;
         int panelBottom = Math.min(height - 56, 250);
         ctx.fill(panelLeft, panelTop, panelRight, panelBottom, 0xC0101014);
@@ -199,7 +203,7 @@ public class TownHallScreen extends ExtendedScreen {
 
         // Population (use actual resident count) + leader
         int residentCount = villagerNames.size();
-        ctx.drawTextWithShadow(textRenderer, "Residents: " + residentCount + "/" + maxPopulation, cx - 120, y, 0xCCCCCC);
+        ctx.drawTextWithShadow(textRenderer, "Residents: " + residentCount, cx - 152, y, 0xCCCCCC);
 
         if (hasLeader) {
             String prefix = leaderIsPlayer ? "§a[Player] " : "§b[NPC] ";
@@ -221,22 +225,22 @@ public class TownHallScreen extends ExtendedScreen {
                     cx, y, 0xFFFFFF);
         } else {
             ctx.drawCenteredTextWithShadow(textRenderer,
-                    "§6Status: §fOutsider  (need §e" + cfg.residentHeartThreshold + "§f ♥ with all to become resident)",
+                    "§6Status: §fOutsider",
                     cx, y, 0xFFFFFF);
         }
         y += 18;
 
         // ── Resident list ─────────────────────────────────────────────────────
-        int listX = cx - 120;
+        int listX = cx - 144;
         listStartY = y;
 
         // Header row
-        ctx.fill(listX - 4, y - 2, listX + 248, y + 12, 0xCC151515);
+        ctx.fill(listX - 4, y - 2, listX + LIST_WIDTH, y + 12, 0xCC151515);
         ctx.drawTextWithShadow(textRenderer, "§fVillager", listX + 14, y, 0xFFFFFF);
-        ctx.drawTextWithShadow(textRenderer, "§fMood", listX + 100, y, 0x8FD3FF);
-        ctx.drawTextWithShadow(textRenderer, "§fJob", listX + 145, y, 0xDDDDDD);
-        ctx.drawTextWithShadow(textRenderer, "§fHearts", listX + 198, y, 0xFFFFFF);
-        ctx.drawTextWithShadow(textRenderer, "§7(click to select)", listX + 78, y + 1, 0x888888);
+        ctx.drawTextWithShadow(textRenderer, "§fMood", listX + COL_MOOD_X, y, 0x8FD3FF);
+        ctx.drawTextWithShadow(textRenderer, "§fJob", listX + COL_JOB_X, y, 0xDDDDDD);
+        ctx.drawTextWithShadow(textRenderer, "§fHearts", listX + COL_HEARTS_X, y, 0xFFFFFF);
+        ctx.drawTextWithShadow(textRenderer, "§7(click to select)", listX + 64, y + 1, 0x888888);
         y += ROW_HEIGHT;
 
         orderedUuids = new ArrayList<>(villagerNames.keySet());
@@ -248,30 +252,30 @@ public class TownHallScreen extends ExtendedScreen {
             String name    = villagerNames.getOrDefault(uuid, "???");
             int hearts     = villagerHearts.getOrDefault(uuid, 0);
 
-            boolean hovered = mouseX >= listX - 4 && mouseX < listX + 244
+            boolean hovered = mouseX >= listX - 4 && mouseX < listX + LIST_WIDTH
                     && mouseY >= y - 1 && mouseY < y + ROW_HEIGHT - 2;
 
             boolean pin = highlightToggles.contains(uuid);
             boolean loaded = villagerLoaded.getOrDefault(uuid, false);
             int rowBg = pin ? 0x55335A33 : (hovered ? 0x66505058 : (i % 2 == 0 ? 0x44202026 : 0x22202026));
-            ctx.fill(listX - 4, y - 1, listX + 244, y + ROW_HEIGHT - 2, rowBg);
+            ctx.fill(listX - 4, y - 1, listX + LIST_WIDTH, y + ROW_HEIGHT - 2, rowBg);
 
             // Face marker (prevents flat color-block avatars).
             int faceColor = hovered ? 0xFFE8D6B5 : 0xFFD9C4A2;
             ctx.drawTextWithShadow(textRenderer, "☺", listX, y, faceColor);
 
-            String display = name.length() > 16 ? name.substring(0, 14) + ".." : name;
+            String display = name.length() > 20 ? name.substring(0, 18) + ".." : name;
             String mood = villagerMoods.getOrDefault(uuid, "unknown");
-            String job = villagerJobs.getOrDefault(uuid, "none").replace('_', ' ');
+            String job = formatJobName(villagerJobs.getOrDefault(uuid, "none"));
             boolean married = villagerMarried.getOrDefault(uuid, false);
             int nameColor = loaded ? (hovered ? 0xFFFFFF : 0xD0D0D0) : 0x888888;
             ctx.drawTextWithShadow(textRenderer, display, listX + 12, y, nameColor);
-            ctx.drawTextWithShadow(textRenderer, mood, listX + 100, y, 0x99CCFF);
-            ctx.drawTextWithShadow(textRenderer, job, listX + 145, y, 0xD0D0D0);
+            ctx.drawTextWithShadow(textRenderer, mood, listX + COL_MOOD_X, y, 0x99CCFF);
+            ctx.drawTextWithShadow(textRenderer, job, listX + COL_JOB_X, y, 0xD0D0D0);
             if (pin) { ctx.drawTextWithShadow(textRenderer, "✦", listX + 3, y, 0x55FF55); }
-            if (!loaded) { ctx.drawTextWithShadow(textRenderer, "…", listX + 224, y, 0x999999); }
+            if (!loaded) { ctx.drawTextWithShadow(textRenderer, "…", listX + LIST_WIDTH - 20, y, 0x999999); }
             if (married) {
-                ctx.drawTextWithShadow(textRenderer, "💍", listX + 232, y, 0xFFD700);
+                ctx.drawTextWithShadow(textRenderer, "💍", listX + LIST_WIDTH - 12, y, 0xFFD700);
             }
 
             int heartColor;
@@ -280,7 +284,7 @@ public class TownHallScreen extends ExtendedScreen {
             else if (hearts > 0)                            heartColor = 0xFFFF55;
             else                                            heartColor = 0xFF5555;
 
-            ctx.drawTextWithShadow(textRenderer, hearts + " ♥", listX + 185, y, heartColor);
+            ctx.drawTextWithShadow(textRenderer, hearts + " ♥", listX + COL_HEARTS_X - 8, y, heartColor);
             y += ROW_HEIGHT;
         }
 
@@ -297,16 +301,16 @@ public class TownHallScreen extends ExtendedScreen {
 
         // ── Pending supply requests ───────────────────────────────────────────
         if (!pendingRequests.isEmpty()) {
-            ctx.fill(listX - 4, y - 2, listX + 248, y + 12, 0x99220000);
+            ctx.fill(listX - 4, y - 2, listX + LIST_WIDTH, y + 12, 0x99220000);
             ctx.drawTextWithShadow(textRenderer, "§c§lPending Requests", listX, y, 0xFFFFFF);
             y += ROW_HEIGHT;
 
             for (int i = 0; i < pendingRequests.size(); i++) {
                 String[] r = pendingRequests.get(i);
                 int bg = i % 2 == 0 ? 0x44110000 : 0x22110000;
-                ctx.fill(listX - 4, y - 1, listX + 244, y + ROW_HEIGHT - 2, bg);
+                ctx.fill(listX - 4, y - 1, listX + LIST_WIDTH, y + ROW_HEIGHT - 2, bg);
                 ctx.drawTextWithShadow(textRenderer, "§f" + r[0], listX, y, 0xFFFFFF);
-                ctx.drawTextWithShadow(textRenderer, "§e" + r[1] + "§7/" + r[2], listX + 170, y, 0xFFFFFF);
+                ctx.drawTextWithShadow(textRenderer, "§e" + r[1] + "§7/" + r[2], listX + COL_HEARTS_X - 16, y, 0xFFFFFF);
                 y += ROW_HEIGHT;
             }
         }
@@ -317,7 +321,7 @@ public class TownHallScreen extends ExtendedScreen {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         int cx = width / 2;
-        int listX = cx - 120;
+        int listX = cx - 144;
 
         if (mouseX >= listX - 4 && mouseX < listX + 244) {
             int rowY = listStartY + ROW_HEIGHT; // +ROW_HEIGHT to skip the header
@@ -351,6 +355,33 @@ public class TownHallScreen extends ExtendedScreen {
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, amount);
+    }
+
+    private String formatJobName(String rawJob) {
+        String clean = rawJob == null ? "none" : rawJob.trim();
+        int dot = clean.lastIndexOf('.');
+        if (dot >= 0 && dot < clean.length() - 1) {
+            clean = clean.substring(dot + 1);
+        }
+        clean = clean.replace('_', ' ');
+        if (clean.isBlank() || clean.equalsIgnoreCase("none")) {
+            return "None";
+        }
+
+        StringBuilder sb = new StringBuilder(clean.length());
+        boolean cap = true;
+        for (char c : clean.toCharArray()) {
+            if (c == ' ' ) {
+                sb.append(c);
+                cap = true;
+            } else if (cap) {
+                sb.append(Character.toUpperCase(c));
+                cap = false;
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
     // ── Data loading ──────────────────────────────────────────────────────────

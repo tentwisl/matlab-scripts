@@ -49,5 +49,6 @@ public class OpenGuiRequest implements Message {
         NEEDLE_AND_THREAD,
         COMB,
         CLOSE,
+        NATION_MANAGEMENT,
     }
 }
