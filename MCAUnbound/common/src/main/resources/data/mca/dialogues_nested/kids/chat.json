@@ -1,0 +1,41 @@
+{
+  "category": "chat",
+  "subCategories": [
+    {
+      "id": "toys",
+      "label": "Toys",
+      "playerOptions": [
+        "Want to play with your toys?",
+        "What's your favorite toy?"
+      ],
+      "results": [
+        {
+          "baseChance": 7,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "Toy time!",
+            "I like blocks!"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "snacks",
+      "label": "Snacks",
+      "playerOptions": [
+        "Are you hungry?",
+        "Want a little snack?"
+      ],
+      "results": [
+        {
+          "baseChance": 6,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "Cookies please!",
+            "Yummy!"
+          ]
+        }
+      ]
+    }
+  ]
+}

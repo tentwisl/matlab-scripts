@@ -25,5 +25,7 @@ public class NationBlockItem extends Item {
     public void appendTooltip(ItemStack stack, World world, List<Text> tooltip, TooltipContext context) {
         tooltip.add(Text.translatable("item.mca.nation_block.tooltip")
                 .formatted(Formatting.GOLD));
+        tooltip.add(Text.literal("Use while sneaking to open Nation analytics (WIP)")
+                .formatted(Formatting.GRAY));
     }
 }

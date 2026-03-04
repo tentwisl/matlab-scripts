@@ -21,6 +21,7 @@ public interface BlocksMCA {
     RegistrySupplier<Block> INFERNAL_FLAME = register("infernal_flame", () -> new InfernalFlameBlock(Block.Settings.copy(Blocks.SOUL_FIRE)));
 
     RegistrySupplier<Block> TOWN_HALL = register("town_hall", () -> new TownHallBlock(Block.Settings.copy(Blocks.OBSIDIAN).nonOpaque()));
+    RegistrySupplier<Block> NATION_BLOCK = register("nation_block", () -> new Block(Block.Settings.copy(Blocks.BEDROCK)));
 
     RegistrySupplier<Block> GRAVELLING_HEADSTONE = register("gravelling_headstone", () -> new TombstoneBlock(Block.Settings.copy(Blocks.STONE).nonOpaque(), 100, 50, new Vec3d(0, -25, 40), -90.0f,true, TombstoneBlock.GRAVELLING_SHAPE));
     RegistrySupplier<Block> UPRIGHT_HEADSTONE = register("upright_headstone", () -> new TombstoneBlock(Block.Settings.copy(Blocks.STONE).nonOpaque(), 70, 30, new Vec3d(0, -30, -8),0.0f, true, TombstoneBlock.UPRIGHT_SHAPE));
