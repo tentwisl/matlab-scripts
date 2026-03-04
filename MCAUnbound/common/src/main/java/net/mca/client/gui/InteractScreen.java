@@ -12,7 +12,15 @@ import net.mca.entity.ai.Memories;
 import net.mca.entity.ai.Traits;
 import net.mca.entity.ai.brain.VillagerBrain;
 import net.mca.entity.ai.relationship.CompassionateEntity;
+import net.mca.entity.ai.relationship.Personality;
 import net.mca.entity.ai.relationship.RelationshipState;
+import net.mca.entity.interaction.dynamicdialogue.DialogueBank;
+import net.mca.entity.interaction.dynamicdialogue.DialogueCalculator;
+import net.mca.entity.interaction.dynamicdialogue.DialogueSubtype;
+import net.mca.entity.interaction.dynamicdialogue.InteractionResult;
+import net.mca.entity.interaction.dynamicdialogue.MainDialogueCategory;
+import net.mca.entity.interaction.dynamicdialogue.NpcMood;
+import net.mca.entity.interaction.dynamicdialogue.NpcTrait;
 import net.mca.entity.interaction.Constraint;
 import net.mca.network.c2s.*;
 import net.mca.resources.data.analysis.Analysis;
@@ -92,6 +100,9 @@ public class InteractScreen extends AbstractDynamicScreen {
     // ── Gift mode ─────────────────────────────────────────────────────────────
     private boolean inGiftMode;
 
+    private MainDialogueCategory selectedTalkCategory;
+    private List<DialogueOptionEntry> activeDialogueOptions = List.of();
+
     public InteractScreen(VillagerLike<?> villager) {
         super(Text.literal("Interact"));
         this.villager = villager;
@@ -132,17 +143,17 @@ public class InteractScreen extends AbstractDynamicScreen {
         pane.add(PaneEntries.spacer(6));
 
         List<ButtonSpec> talkButtons = new ArrayList<>();
-        talkButtons.add(ButtonSpec.of("Greet",   () -> sendInteract("gui.button.greet")));
-        talkButtons.add(ButtonSpec.of("Joke",    () -> sendInteract("gui.button.joke")));
-        talkButtons.add(ButtonSpec.of("Story",   () -> sendInteract("gui.button.story")));
+        talkButtons.add(ButtonSpec.of("Greet",   () -> openDialogueCategory(MainDialogueCategory.GREET)));
+        talkButtons.add(ButtonSpec.of("Joke",    () -> openDialogueCategory(MainDialogueCategory.JOKE)));
+        talkButtons.add(ButtonSpec.of("Story",   () -> openDialogueCategory(MainDialogueCategory.STORY)));
 
         boolean isAdult = c.contains(Constraint.ADULT);
         talkButtons.add(isAdult
-                ? ButtonSpec.of("Flirt",  () -> sendInteract("gui.button.flirt"))
-                : ButtonSpec.disabled("Flirt"));
+                ? ButtonSpec.of("Romance",  () -> openDialogueCategory(MainDialogueCategory.ROMANCE))
+                : ButtonSpec.disabled("Romance"));
 
-        talkButtons.add(ButtonSpec.of("Chat",    () -> {})); // placeholder
-        talkButtons.add(ButtonSpec.of("Rumors",  () -> {})); // placeholder
+        talkButtons.add(ButtonSpec.of("Chat",    () -> openDialogueCategory(MainDialogueCategory.CHAT)));
+        talkButtons.add(ButtonSpec.of("Rumors",  () -> openDialogueCategory(MainDialogueCategory.RUMORS)));
         talkButtons.add(ButtonSpec.of("Ask",     () -> {})); // placeholder
 
         boolean canKiss = c.contains(Constraint.HEARTS_100);
@@ -151,6 +162,15 @@ public class InteractScreen extends AbstractDynamicScreen {
                 : ButtonSpec.disabled("Kiss (100 ♥)"));
 
         pane.add(PaneEntries.buttonGrid(talkButtons, 2, 20));
+
+        if (selectedTalkCategory != null && !activeDialogueOptions.isEmpty()) {
+            pane.add(PaneEntries.spacer(8));
+            pane.add(PaneEntries.label("§f  " + selectedTalkCategory.name() + " options", 0xAA111111));
+            for (DialogueOptionEntry option : activeDialogueOptions) {
+                pane.add(PaneEntries.buttonRow(option.optionText(), option.subtype().getDisplayName(),
+                        () -> onDialogueSubButtonClicked(option.subtype())));
+            }
+        }
     }
 
     private void buildActionsTab(ScrollPane pane, Set<Constraint> c) {
@@ -268,6 +288,60 @@ public class InteractScreen extends AbstractDynamicScreen {
     private void sendInteract(String buttonId) {
         NetworkHandler.sendToServer(
                 new InteractionVillagerMessage(buttonId, villager.asEntity().getUuid()));
+    }
+
+    private void openDialogueCategory(MainDialogueCategory category) {
+        selectedTalkCategory = category;
+        activeDialogueOptions = DialogueSubtype.forCategory(category).stream()
+                .map(subtype -> new DialogueOptionEntry(subtype, DialogueBank.randomPlayerOption(subtype)))
+                .toList();
+        buildTabPanel();
+    }
+
+    private void onDialogueSubButtonClicked(DialogueSubtype subtype) {
+        Memories memory = villager.getVillagerBrain().getMemoriesForPlayer(player);
+        InteractionResult result = DialogueCalculator.calculate(
+                subtype,
+                toNpcTrait(villager.getVillagerBrain().getPersonality()),
+                toNpcMood(villager.getVillagerBrain().getMood().getName()),
+                memory.getHearts()
+        );
+
+        memory.modHearts(result.relationshipPointChange());
+
+        String response = DialogueBank.randomNpcResponse(subtype.getCategory(), result.reactionType());
+        player.sendMessage(Text.literal(villager.asEntity().getName().getString() + ": " + response)
+                .formatted(Formatting.GRAY), true);
+
+        openDialogueCategory(subtype.getCategory());
+    }
+
+    private NpcTrait toNpcTrait(Personality personality) {
+        return switch (personality) {
+            case WITTY, PEPPY, FRIENDLY -> NpcTrait.JOVIAL;
+            case GRUMPY, GLOOMY -> NpcTrait.GRUMPY;
+            case FLIRTY -> NpcTrait.FLIRTATIOUS;
+            case SHY, SENSITIVE -> NpcTrait.SHY;
+            case CONFIDENT, ATHLETIC, GREEDY, ODD, LAZY -> NpcTrait.SERIOUS;
+            case UNASSIGNED -> NpcTrait.NORMAL;
+        };
+    }
+
+    private NpcMood toNpcMood(String moodName) {
+        String normalized = moodName == null ? "" : moodName.toLowerCase(Locale.ENGLISH);
+        if (normalized.contains("happy") || normalized.contains("overjoyed") || normalized.contains("fine")) {
+            return NpcMood.HAPPY;
+        }
+        if (normalized.contains("angry") || normalized.contains("mad") || normalized.contains("furious")) {
+            return NpcMood.ANGRY;
+        }
+        if (normalized.contains("sad") || normalized.contains("depressed") || normalized.contains("gloom")) {
+            return NpcMood.SAD;
+        }
+        return NpcMood.NEUTRAL;
+    }
+
+    private record DialogueOptionEntry(DialogueSubtype subtype, String optionText) {
     }
 
     // ── Rendering ─────────────────────────────────────────────────────────────
