@@ -58,6 +58,7 @@ public class OpenTownHallRequest implements Message {
         Map<UUID, String> villagerMoods = new LinkedHashMap<>();
         Map<UUID, String> villagerJobs = new LinkedHashMap<>();
         Map<UUID, Boolean> villagerMarried = new LinkedHashMap<>();
+        Map<UUID, Boolean> villagerLoaded = new LinkedHashMap<>();
 
         if (village.isPresent()) {
             Village v = village.get();
@@ -77,6 +78,7 @@ public class OpenTownHallRequest implements Message {
                 villagerMoods.put(villager.getUuid(), villager.getVillagerBrain().getMood().getName());
                 villagerJobs.put(villager.getUuid(), villager.getProfession().id());
                 villagerMarried.put(villager.getUuid(), villager.getRelationships().isMarried());
+                villagerLoaded.put(villager.getUuid(), true);
             }
 
             // Include residents not currently loaded (from residentNames map)
@@ -88,6 +90,7 @@ public class OpenTownHallRequest implements Message {
                     villagerMoods.putIfAbsent(entry.getKey(), "unknown");
                     villagerJobs.putIfAbsent(entry.getKey(), "none");
                     villagerMarried.putIfAbsent(entry.getKey(), false);
+                    villagerLoaded.putIfAbsent(entry.getKey(), false);
                 }
             }
         }
@@ -105,6 +108,7 @@ public class OpenTownHallRequest implements Message {
                 villagerMoods,
                 villagerJobs,
                 villagerMarried,
+                villagerLoaded,
                 player.getUuid(),
                 convincedLeaderCount
         ), player);

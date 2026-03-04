@@ -29,8 +29,9 @@ public class TownHallDataResponse extends NbtDataMessage {
                                  Map<UUID, String> villagerMoods,
                                  Map<UUID, String> villagerJobs,
                                  Map<UUID, Boolean> villagerMarried,
+                                 Map<UUID, Boolean> villagerLoaded,
                                  UUID playerId, int convincedLeaderCount) {
-        super(buildNbt(village, townHall, villagerHearts, villagerNames, villagerMoods, villagerJobs, villagerMarried, playerId, convincedLeaderCount));
+        super(buildNbt(village, townHall, villagerHearts, villagerNames, villagerMoods, villagerJobs, villagerMarried, villagerLoaded, playerId, convincedLeaderCount));
     }
 
     private static NbtCompound buildNbt(Village village, TownHallBlockEntity townHall,
@@ -39,6 +40,7 @@ public class TownHallDataResponse extends NbtDataMessage {
                                          Map<UUID, String> villagerMoods,
                                          Map<UUID, String> villagerJobs,
                                          Map<UUID, Boolean> villagerMarried,
+                                         Map<UUID, Boolean> villagerLoaded,
                                          UUID playerId, int convincedLeaderCount) {
         NbtCompound root = new NbtCompound();
 
@@ -80,6 +82,12 @@ public class TownHallDataResponse extends NbtDataMessage {
             marriedNbt.putBoolean(entry.getKey().toString(), entry.getValue());
         }
         root.put("villagerMarried", marriedNbt);
+
+        NbtCompound loadedNbt = new NbtCompound();
+        for (Map.Entry<UUID, Boolean> entry : villagerLoaded.entrySet()) {
+            loadedNbt.putBoolean(entry.getKey().toString(), entry.getValue());
+        }
+        root.put("villagerLoaded", loadedNbt);
 
         // Leadership data
         root.putBoolean("hasLeader", townHall.hasLeader());

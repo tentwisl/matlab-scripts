@@ -163,6 +163,7 @@ public class VillageManager extends PersistentState implements Iterable<Village>
 
         TownHallElectionResolver.tick(world, this);
         TownHallCallManager.tick(world);
+        TownHallHighlightManager.tick(world);
         GeopoliticalManager.get(world).ensureCongressionalReps(world);
         reapers.tick(world);
         SpawnQueue.getInstance().tick();
