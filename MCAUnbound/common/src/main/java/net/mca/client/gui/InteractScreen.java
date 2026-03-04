@@ -152,7 +152,7 @@ public class InteractScreen extends AbstractDynamicScreen {
         talkButtons.add(ButtonSpec.of("Joke",    () -> openDialogueCategory(MainDialogueCategory.JOKE)));
         talkButtons.add(ButtonSpec.of("Story",   () -> openDialogueCategory(MainDialogueCategory.STORY)));
 
-        if (isChildOrToddlerVillager()) {
+        if (isJuvenileVillager()) {
             talkButtons.add(ButtonSpec.of("Play", () -> openDialogueCategory(MainDialogueCategory.PLAY)));
         } else {
             boolean isAdult = c.contains(Constraint.ADULT);
@@ -216,6 +216,8 @@ public class InteractScreen extends AbstractDynamicScreen {
                 () -> sendInteract("gui.button.follow"), !canCommandMovement));
         pane.add(PaneEntries.buttonRow("Stay Here", "Ask this villager to stay put",
                 () -> sendInteract("gui.button.stay"), !canCommandMovement));
+        pane.add(PaneEntries.buttonRow("Pickup", "Pick up this baby villager",
+                () -> sendInteract("gui.button.pick_up"), !isBabyVillager()));
 
         pane.add(PaneEntries.divider());
 
@@ -269,6 +271,7 @@ public class InteractScreen extends AbstractDynamicScreen {
         pane.add(PaneEntries.label("§f  Villager Info", 0xAA111111));
 
         pane.add(PaneEntries.infoRow("Name",  villager.asEntity().getName().getString(), 0xFFFFFF));
+        pane.add(PaneEntries.infoRow("Age",   villager.getAgeState().getName().getString(), 0xFFDDAA));
         pane.add(PaneEntries.infoRow("Mood",  brain.getMood().getText().getString(),
                 brain.getMood().getColor().getColorValue()));
 
@@ -323,7 +326,7 @@ public class InteractScreen extends AbstractDynamicScreen {
     private void openDialogueCategory(MainDialogueCategory category) {
         selectedTalkCategory = category;
         String categoryKey = category.name().toLowerCase(Locale.ENGLISH);
-        activeDialogueOptions = dialogueJsonManager.getPlayerOptions(categoryKey, isChildOrToddlerVillager()).stream()
+        activeDialogueOptions = dialogueJsonManager.getPlayerOptions(categoryKey, isJuvenileVillager()).stream()
                 .map(option -> new DialogueOptionEntry(option.category(), option.subCategoryId(), option.playerLine()))
                 .toList();
         buildTabPanel();
@@ -333,7 +336,7 @@ public class InteractScreen extends AbstractDynamicScreen {
         Memories memory = villager.getVillagerBrain().getMemoriesForPlayer(player);
 
         DialogueJsonManager.JsonSubCategory subCategory = dialogueJsonManager
-                .getSubCategory(option.categoryKey(), option.subCategoryId(), isChildOrToddlerVillager())
+                .getSubCategory(option.categoryKey(), option.subCategoryId(), isJuvenileVillager())
                 .orElse(null);
 
         DialogueCalculator.JsonEvaluationResult result = DialogueCalculator.calculateFromJson(
@@ -372,9 +375,13 @@ public class InteractScreen extends AbstractDynamicScreen {
         player.sendMessage(name.append(separator).append(body), false);
     }
 
-    private boolean isChildOrToddlerVillager() {
+    private boolean isJuvenileVillager() {
         AgeState ageState = villager.getAgeState();
-        return ageState == AgeState.TODDLER || ageState == AgeState.CHILD;
+        return ageState == AgeState.BABY || ageState == AgeState.TODDLER || ageState == AgeState.CHILD;
+    }
+
+    private boolean isBabyVillager() {
+        return villager.getAgeState() == AgeState.BABY;
     }
 
     private NpcJob toNpcJob() {
