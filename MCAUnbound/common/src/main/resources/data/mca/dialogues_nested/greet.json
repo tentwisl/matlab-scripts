@@ -1,0 +1,115 @@
+{
+  "category": "greet",
+  "subCategories": [
+    {
+      "id": "friendly",
+      "label": "Friendly",
+      "playerOptions": [
+        "Hey! It's great to see you.",
+        "Good morning, friend."
+      ],
+      "results": [
+        {
+          "baseChance": 5,
+          "conditions": [
+            { "chance": 2, "hearts_min": 10 },
+            { "chance": 2, "mood": "HAPPY" }
+          ],
+          "actions": { "positive": 2 },
+          "npcResponses": [
+            "You always brighten my day.",
+            "It's good seeing you too."
+          ]
+        },
+        {
+          "baseChance": 2,
+          "conditions": [
+            { "chance": 3, "mood": "ANGRY" }
+          ],
+          "actions": { "negative": 1 },
+          "npcResponses": [
+            "Not now... I'm in a bad mood.",
+            "Let's keep this short."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "formal",
+      "label": "Formal",
+      "playerOptions": [
+        "Good day to you.",
+        "Greetings. I trust your duties are progressing well."
+      ],
+      "results": [
+        {
+          "baseChance": 4,
+          "conditions": [
+            { "chance": 4, "job": "VILLAGE_LEADER" },
+            { "chance": 2, "hearts_min": 25 }
+          ],
+          "actions": { "positive": 3 },
+          "npcResponses": [
+            "A respectful greeting is always welcome.",
+            "You carry yourself well."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "casual",
+      "label": "Casual",
+      "playerOptions": [
+        "Yo, how's it going?",
+        "Hey there!"
+      ],
+      "results": [
+        {
+          "baseChance": 5,
+          "conditions": [
+            { "chance": 1, "hearts_min": 0 },
+            { "chance": -2, "job": "VILLAGE_LEADER" }
+          ],
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "Doing alright.",
+            "Not bad, thanks."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bold",
+      "label": "Bold",
+      "playerOptions": [
+        "There you are. I've been looking for you.",
+        "Step aside, my favorite villager is here."
+      ],
+      "results": [
+        {
+          "baseChance": 3,
+          "conditions": [
+            { "chance": 3, "hearts_min": 60 },
+            { "chance": 2, "trait": "FLIRTATIOUS" }
+          ],
+          "actions": { "positive": 2 },
+          "npcResponses": [
+            "Confident today, aren't you?",
+            "You certainly know how to make an entrance."
+          ]
+        },
+        {
+          "baseChance": 2,
+          "conditions": [
+            { "chance": 4, "hearts_max": 20 }
+          ],
+          "actions": { "negative": 2 },
+          "npcResponses": [
+            "That was a bit much.",
+            "Let's keep things polite."
+          ]
+        }
+      ]
+    }
+  ]
+}
