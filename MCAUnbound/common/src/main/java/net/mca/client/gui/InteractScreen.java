@@ -15,10 +15,8 @@ import net.mca.entity.ai.brain.VillagerBrain;
 import net.mca.entity.ai.relationship.CompassionateEntity;
 import net.mca.entity.ai.relationship.Personality;
 import net.mca.entity.ai.relationship.RelationshipState;
-import net.mca.entity.interaction.dynamicdialogue.DialogueBank;
+import net.mca.entity.interaction.dynamicdialogue.DialogueJsonManager;
 import net.mca.entity.interaction.dynamicdialogue.DialogueCalculator;
-import net.mca.entity.interaction.dynamicdialogue.DialogueSubtype;
-import net.mca.entity.interaction.dynamicdialogue.InteractionResult;
 import net.mca.entity.interaction.dynamicdialogue.MainDialogueCategory;
 import net.mca.entity.interaction.dynamicdialogue.NpcJob;
 import net.mca.entity.interaction.dynamicdialogue.NpcMood;
@@ -104,6 +102,8 @@ public class InteractScreen extends AbstractDynamicScreen {
     // ── Gift mode ─────────────────────────────────────────────────────────────
     private boolean inGiftMode;
 
+    private final DialogueJsonManager dialogueJsonManager = new DialogueJsonManager();
+
     private MainDialogueCategory selectedTalkCategory;
     private List<DialogueOptionEntry> activeDialogueOptions = List.of();
 
@@ -171,8 +171,8 @@ public class InteractScreen extends AbstractDynamicScreen {
             pane.add(PaneEntries.spacer(8));
             pane.add(PaneEntries.label("§f  " + selectedTalkCategory.name() + " options", 0xAA111111));
             for (DialogueOptionEntry option : activeDialogueOptions) {
-                pane.add(PaneEntries.buttonRow(option.optionText(), option.subtype().getDisplayName(),
-                        () -> onDialogueSubButtonClicked(option.subtype())));
+                pane.add(PaneEntries.buttonRow(option.optionText(), option.subCategoryId(),
+                        () -> onDialogueSubButtonClicked(option)));
             }
         }
     }
@@ -313,51 +313,52 @@ public class InteractScreen extends AbstractDynamicScreen {
 
     private void openDialogueCategory(MainDialogueCategory category) {
         selectedTalkCategory = category;
-        activeDialogueOptions = DialogueSubtype.forCategory(category).stream()
-                .map(subtype -> new DialogueOptionEntry(subtype, DialogueBank.randomPlayerOption(subtype)))
+        String categoryKey = category.name().toLowerCase(Locale.ENGLISH);
+        activeDialogueOptions = dialogueJsonManager.getPlayerOptions(categoryKey).stream()
+                .map(option -> new DialogueOptionEntry(option.category(), option.subCategoryId(), option.playerLine()))
                 .toList();
         buildTabPanel();
     }
 
-    private void onDialogueSubButtonClicked(DialogueSubtype subtype) {
+    private void onDialogueSubButtonClicked(DialogueOptionEntry option) {
         Memories memory = villager.getVillagerBrain().getMemoriesForPlayer(player);
 
         if (isTiredOfTalking(memory)) {
-            sendVillagerChat(DialogueBank.randomBurnoutResponse());
-            openDialogueCategory(subtype.getCategory());
+            sendVillagerChat(dialogueJsonManager.randomBurnoutLine());
+            openDialogueCategory(selectedTalkCategory);
             return;
         }
 
-        DialogueSubtype lastSubtype = parseSubtype(memory.getLastUsedDialogueSubtype());
-        int repeatCount = memory.getRepeatedDialogueCount();
+        DialogueJsonManager.JsonSubCategory subCategory = dialogueJsonManager
+                .getSubCategory(option.categoryKey(), option.subCategoryId())
+                .orElse(null);
 
-        InteractionResult result = DialogueCalculator.calculate(
-                subtype,
+        DialogueCalculator.JsonEvaluationResult result = DialogueCalculator.calculateFromJson(
+                option.categoryKey(),
+                subCategory,
                 toNpcTrait(villager.getVillagerBrain().getPersonality()),
                 toNpcMood(villager.getVillagerBrain().getMood().getName()),
                 memory.getHearts(),
                 toNpcJob(),
-                lastSubtype,
-                repeatCount
+                memory.getLastUsedDialogueSubtype(),
+                memory.getRepeatedDialogueCount(),
+                villager.asEntity().getRandom()
         );
 
         memory.modHearts(result.relationshipPointChange());
         memory.modInteractionFatigue(1);
 
-        if (lastSubtype == subtype) {
-            memory.setRepeatedDialogueCount(repeatCount + 1);
+        String interactionKey = option.categoryKey() + ":" + option.subCategoryId();
+        if (interactionKey.equalsIgnoreCase(memory.getLastUsedDialogueSubtype())) {
+            memory.setRepeatedDialogueCount(memory.getRepeatedDialogueCount() + 1);
         } else {
             memory.setRepeatedDialogueCount(0);
         }
-        memory.setLastUsedDialogueSubtype(subtype.name());
+        memory.setLastUsedDialogueSubtype(interactionKey);
 
-        String response = DialogueBank.randomNpcResponse(subtype.getCategory(), result.reactionType());
-        if (result.jobInfluenced()) {
-            response = response + " " + DialogueBank.randomJobFlavor(toNpcJob());
-        }
-        sendVillagerChat(response);
+        sendVillagerChat(result.npcResponse());
 
-        openDialogueCategory(subtype.getCategory());
+        openDialogueCategory(selectedTalkCategory);
     }
 
     private void sendVillagerChat(String message) {
@@ -369,16 +370,6 @@ public class InteractScreen extends AbstractDynamicScreen {
         return memory.getInteractionFatigue() >= FATIGUE_BURNOUT_THRESHOLD;
     }
 
-    private DialogueSubtype parseSubtype(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        try {
-            return DialogueSubtype.valueOf(value);
-        } catch (IllegalArgumentException ex) {
-            return null;
-        }
-    }
 
     private NpcJob toNpcJob() {
         if (isNpcLeader) {
@@ -423,7 +414,7 @@ public class InteractScreen extends AbstractDynamicScreen {
         return NpcMood.NEUTRAL;
     }
 
-    private record DialogueOptionEntry(DialogueSubtype subtype, String optionText) {
+    private record DialogueOptionEntry(String categoryKey, String subCategoryId, String optionText) {
     }
 
     // ── Rendering ─────────────────────────────────────────────────────────────

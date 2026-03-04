@@ -1,114 +1,173 @@
 package net.mca.entity.interaction.dynamicdialogue;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
 public final class DialogueCalculator {
 
     private DialogueCalculator() {
     }
 
-    public static InteractionResult calculate(DialogueSubtype subtype,
-                                              NpcTrait trait,
-                                              NpcMood mood,
-                                              int currentHearts,
-                                              NpcJob npcJob,
-                                              DialogueSubtype lastUsedSubtype,
-                                              int repetitionCount) {
-        int rawScore = subtype.getBaseScore();
-        rawScore += getTraitModifier(subtype, trait);
-        rawScore += getHeartModifier(subtype, currentHearts);
+    public static JsonEvaluationResult calculateFromJson(String category,
+                                                         DialogueJsonManager.JsonSubCategory subCategory,
+                                                         NpcTrait trait,
+                                                         NpcMood mood,
+                                                         int currentHearts,
+                                                         NpcJob npcJob,
+                                                         String lastUsedKey,
+                                                         int repetitionCount,
+                                                         net.minecraft.util.math.random.Random random) {
+        if (subCategory == null || subCategory.results == null || subCategory.results.isEmpty()) {
+            return new JsonEvaluationResult(0, ReactionType.NEUTRAL, "...", false);
+        }
 
-        int jobModifier = getJobModifier(subtype, npcJob);
-        rawScore += jobModifier;
+        List<WeightedResult> validResults = new ArrayList<>();
+        for (DialogueJsonManager.JsonResult result : subCategory.results) {
+            if (result == null) {
+                continue;
+            }
 
-        double scaled = rawScore * getMoodMultiplier(rawScore, mood);
-        int finalScore = (int) Math.round(scaled);
+            int weight = result.baseChance;
+            boolean valid = true;
+            if (result.conditions != null) {
+                for (DialogueJsonManager.JsonCondition condition : result.conditions) {
+                    if (!matchesCondition(condition, currentHearts, npcJob, trait, mood)) {
+                        valid = false;
+                        break;
+                    }
+                    weight += condition.chance;
+                }
+            }
 
-        if (lastUsedSubtype != null && lastUsedSubtype == subtype) {
+            if (valid) {
+                validResults.add(new WeightedResult(result, Math.max(1, weight)));
+            }
+        }
+
+        if (validResults.isEmpty()) {
+            return new JsonEvaluationResult(0, ReactionType.NEUTRAL, "...", false);
+        }
+
+        DialogueJsonManager.JsonResult chosen = pickWeighted(validResults, random);
+        int base = Math.max(0, chosen.actions == null ? 0 : chosen.actions.positive)
+                - Math.max(0, chosen.actions == null ? 0 : chosen.actions.negative);
+
+        int rawScore = base
+                + getTraitModifier(category, subCategory.id, trait)
+                + getHeartModifier(category, subCategory.id, currentHearts)
+                + getJobModifier(category, subCategory.id, npcJob);
+
+        double moodScaled = rawScore * getMoodMultiplier(rawScore, mood);
+        int finalScore = (int) Math.round(moodScaled);
+
+        String currentKey = (category + ":" + subCategory.id).toLowerCase(Locale.ENGLISH);
+        if (lastUsedKey != null && lastUsedKey.equalsIgnoreCase(currentKey)) {
             if (repetitionCount >= 2) {
                 finalScore = Math.min(-3, finalScore - 4);
             } else {
                 finalScore = Math.min(0, finalScore);
             }
-            return new InteractionResult(finalScore, ReactionType.REPETITIVE, jobModifier != 0);
+            return new JsonEvaluationResult(finalScore,
+                    ReactionType.REPETITIVE,
+                    pickNpcResponse(chosen, random, "You're repeating yourself."),
+                    getJobModifier(category, subCategory.id, npcJob) != 0);
         }
 
-        return new InteractionResult(finalScore, toReactionType(finalScore), jobModifier != 0);
+        return new JsonEvaluationResult(finalScore,
+                toReactionType(finalScore),
+                pickNpcResponse(chosen, random, "..."),
+                getJobModifier(category, subCategory.id, npcJob) != 0);
     }
 
-    private static int getTraitModifier(DialogueSubtype subtype, NpcTrait trait) {
+    private static boolean matchesCondition(DialogueJsonManager.JsonCondition condition,
+                                            int hearts,
+                                            NpcJob job,
+                                            NpcTrait trait,
+                                            NpcMood mood) {
+        if (condition == null) {
+            return true;
+        }
+
+        if (condition.hearts_min != null && hearts < condition.hearts_min) {
+            return false;
+        }
+        if (condition.hearts_max != null && hearts > condition.hearts_max) {
+            return false;
+        }
+        if (condition.job != null && !condition.job.equalsIgnoreCase(job.name())) {
+            return false;
+        }
+        if (condition.trait != null && !condition.trait.equalsIgnoreCase(trait.name())) {
+            return false;
+        }
+        if (condition.mood != null && !condition.mood.equalsIgnoreCase(mood.name())) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static DialogueJsonManager.JsonResult pickWeighted(List<WeightedResult> valid,
+                                                               net.minecraft.util.math.random.Random random) {
+        int total = valid.stream().mapToInt(v -> v.weight).sum();
+        int target = random.nextInt(Math.max(1, total));
+
+        int running = 0;
+        for (WeightedResult v : valid) {
+            running += v.weight;
+            if (target < running) {
+                return v.result;
+            }
+        }
+        return valid.get(0).result;
+    }
+
+    private static String pickNpcResponse(DialogueJsonManager.JsonResult result,
+                                          net.minecraft.util.math.random.Random random,
+                                          String fallback) {
+        if (result.npcResponses == null || result.npcResponses.isEmpty()) {
+            return fallback;
+        }
+        return result.npcResponses.get(random.nextInt(result.npcResponses.size()));
+    }
+
+    private static int getTraitModifier(String category, String subId, NpcTrait trait) {
+        String key = (category + ":" + subId).toLowerCase(Locale.ENGLISH);
         return switch (trait) {
-            case JOVIAL -> switch (subtype.getCategory()) {
-                case JOKE, CHAT -> 2;
-                case STORY -> 1;
-                case ROMANCE -> subtype.isBoldRomance() ? -1 : 1;
-                default -> 0;
-            };
-            case SERIOUS -> switch (subtype) {
-                case JOKE_DARK, JOKE_CHEESY, JOKE_META -> -2;
-                case CHAT_WORK, STORY_HEROIC, STORY_MYSTERIOUS, GREET_FORMAL -> 2;
-                case ROMANCE_SUGGESTIVE_ACTION -> -2;
-                default -> 0;
-            };
-            case GRUMPY -> switch (subtype.getCategory()) {
-                case GREET, ROMANCE -> -2;
-                case RUMORS, STORY -> 1;
-                case CHAT -> -1;
-                default -> 0;
-            };
-            case FLIRTATIOUS -> switch (subtype) {
-                case ROMANCE_SWEET, ROMANCE_CHEESY -> 2;
-                case ROMANCE_BOLD, ROMANCE_SUGGESTIVE_ACTION -> 3;
-                case GREET_BOLD -> 1;
-                case CHAT_PERSONAL -> 1;
-                default -> 0;
-            };
-            case SHY -> switch (subtype) {
-                case ROMANCE_BOLD, ROMANCE_SUGGESTIVE_ACTION, GREET_BOLD -> -3;
-                case GREET_FRIENDLY, ROMANCE_SWEET, CHAT_WEATHER, CHAT_WORK -> 1;
-                default -> 0;
-            };
+            case JOVIAL -> key.contains("joke") || key.contains("chat") ? 2 : 0;
+            case SERIOUS -> key.contains("formal") ? 2 : (key.contains("joke") ? -1 : 0);
+            case GRUMPY -> key.contains("romance") || key.contains("bold") ? -2 : 0;
+            case FLIRTATIOUS -> key.contains("romance") ? 3 : 0;
+            case SHY -> key.contains("bold") ? -3 : 1;
             case NORMAL -> 0;
         };
     }
 
-    private static int getHeartModifier(DialogueSubtype subtype, int hearts) {
-        if (!subtype.isRomanceSubtype()) {
-            if (hearts < 0 && subtype.getCategory() == MainDialogueCategory.JOKE) {
-                return -1;
-            }
-            return hearts > 75 && subtype.getCategory() == MainDialogueCategory.GREET ? 1 : 0;
-        }
+    private static int getHeartModifier(String category, String subId, int hearts) {
+        String key = (category + ":" + subId).toLowerCase(Locale.ENGLISH);
+        boolean romance = key.contains("romance");
+        boolean bold = key.contains("bold") || key.contains("suggestive");
 
+        if (!romance) {
+            return hearts > 75 ? 1 : 0;
+        }
         if (hearts < 20) {
-            return subtype.isBoldRomance() ? -5 : -2;
+            return bold ? -5 : -2;
         }
         if (hearts > 75) {
-            return subtype.isBoldRomance() ? 4 : 2;
+            return bold ? 4 : 2;
         }
-        return subtype.isBoldRomance() ? -1 : 1;
+        return bold ? -1 : 1;
     }
 
-    private static int getJobModifier(DialogueSubtype subtype, NpcJob npcJob) {
+    private static int getJobModifier(String category, String subId, NpcJob npcJob) {
+        String key = (category + ":" + subId).toLowerCase(Locale.ENGLISH);
         return switch (npcJob) {
-            case VILLAGE_LEADER -> switch (subtype) {
-                case GREET_FORMAL, CHAT_WORK, RUMORS_WARNING -> 2;
-                case GREET_CASUAL, JOKE_CHEESY -> -2;
-                default -> 0;
-            };
-            case LEATHERWORKER -> switch (subtype) {
-                case CHAT_WORK, STORY_HEROIC -> 1;
-                case ROMANCE_SUGGESTIVE_ACTION -> -1;
-                default -> 0;
-            };
-            case FARMER -> switch (subtype) {
-                case CHAT_WEATHER, CHAT_VILLAGE -> 2;
-                case JOKE_DARK -> -1;
-                default -> 0;
-            };
-            case GUARD -> switch (subtype) {
-                case GREET_FORMAL, RUMORS_WARNING, STORY_HEROIC -> 2;
-                case ROMANCE_BOLD, ROMANCE_SUGGESTIVE_ACTION -> -2;
-                default -> 0;
-            };
+            case VILLAGE_LEADER -> key.contains("formal") ? 2 : (key.contains("casual") ? -2 : 0);
+            case LEATHERWORKER -> key.contains("work") ? 1 : 0;
+            case FARMER -> key.contains("weather") || key.contains("village") ? 2 : 0;
+            case GUARD -> key.contains("warning") || key.contains("heroic") ? 2 : 0;
             case NONE -> 0;
         };
     }
@@ -130,5 +189,14 @@ public final class DialogueCalculator {
             return ReactionType.NEGATIVE;
         }
         return ReactionType.NEUTRAL;
+    }
+
+    private record WeightedResult(DialogueJsonManager.JsonResult result, int weight) {
+    }
+
+    public record JsonEvaluationResult(int relationshipPointChange,
+                                       ReactionType reactionType,
+                                       String npcResponse,
+                                       boolean jobInfluenced) {
     }
 }
