@@ -125,11 +125,11 @@ public class TownHallScreen extends ExtendedScreen {
             int actionY = bottomY - 66;
             boolean highlighted = highlightToggles.contains(selectedResidentUuid);
             addDarkButton(cx - 78, actionY - 22, 156, 20, highlighted ? "Highlight: ON" : "Highlight: OFF", () -> toggleSelectedHighlight(), loaded);
-            addDarkButton(cx - 120, actionY, 56, 20, "Call", () -> sendResidentAction("call"), loaded);
-            addDarkButton(cx - 60, actionY, 56, 20, "Follow", () -> sendResidentAction("follow"), canResident);
-            addDarkButton(cx, actionY, 56, 20, "Stay", () -> sendResidentAction("stay"), canResident);
-            addDarkButton(cx + 60, actionY, 56, 20, "Mount", () -> sendResidentAction("mount"), canResident);
-            addDarkButton(cx - 78, actionY - 44, 156, 20, "Access Inventory", () -> sendResidentAction("inventory"), canLeader);
+            addDarkButton(cx - 120, actionY, 56, 20, "Call", () -> sendSelectedResidentAction("call"), loaded);
+            addDarkButton(cx - 60, actionY, 56, 20, "Follow", () -> sendSelectedResidentAction("follow"), canResident);
+            addDarkButton(cx, actionY, 56, 20, "Stay", () -> sendSelectedResidentAction("stay"), canResident);
+            addDarkButton(cx + 60, actionY, 56, 20, "Mount", () -> sendSelectedResidentAction("mount"), canResident);
+            addDarkButton(cx - 78, actionY - 44, 156, 20, "Access Inventory", () -> sendSelectedResidentAction("inventory"), canLeader);
         }
 
         if (orderedUuids.size() > VISIBLE_ROWS) {
@@ -164,17 +164,7 @@ public class TownHallScreen extends ExtendedScreen {
         }
     }
 
-    private void sendResidentAction(String action) {
-        if (selectedResidentUuid == null || selectedResidentUuid.isBlank()) {
-            return;
-        }
-        try {
-            NetworkHandler.sendToServer(new TownHallResidentActionPacket(blockPos, UUID.fromString(selectedResidentUuid), action));
-        } catch (IllegalArgumentException ignored) {
-        }
-    }
-
-    private void sendResidentAction(String action) {
+    private void sendSelectedResidentAction(String action) {
         if (selectedResidentUuid == null || selectedResidentUuid.isBlank()) {
             return;
         }
