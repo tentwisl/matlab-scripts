@@ -1,7 +1,6 @@
 package net.mca.entity.interaction.dynamicdialogue;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonParseException;
 import net.mca.MCA;
 
 import java.io.InputStream;
@@ -94,7 +93,7 @@ public final class DialogueJsonManager {
             }
             DialogueCategoryFile parsed = GSON.fromJson(new InputStreamReader(stream, StandardCharsets.UTF_8), DialogueCategoryFile.class);
             return Optional.ofNullable(parsed);
-        } catch (JsonParseException | RuntimeException ex) {
+        } catch (RuntimeException ex) {
             MCA.LOGGER.warn("Failed to parse nested dialogue json {}", path, ex);
             return Optional.empty();
         } catch (Exception ex) {
