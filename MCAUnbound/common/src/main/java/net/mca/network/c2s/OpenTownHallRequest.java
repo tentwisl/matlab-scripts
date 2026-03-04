@@ -7,6 +7,7 @@ import net.mca.entity.VillagerEntityMCA;
 import net.mca.entity.ai.Memories;
 import net.mca.network.s2c.TownHallDataResponse;
 import net.mca.server.world.data.GeopoliticalManager;
+import net.mca.server.world.data.GeopoliticalNation;
 import net.mca.server.world.data.GeopoliticalProfileManager;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
