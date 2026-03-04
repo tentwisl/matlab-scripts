@@ -174,6 +174,16 @@ public class TownHallScreen extends ExtendedScreen {
         }
     }
 
+    private void sendResidentAction(String action) {
+        if (selectedResidentUuid == null || selectedResidentUuid.isBlank()) {
+            return;
+        }
+        try {
+            NetworkHandler.sendToServer(new TownHallResidentActionPacket(blockPos, UUID.fromString(selectedResidentUuid), action));
+        } catch (IllegalArgumentException ignored) {
+        }
+    }
+
     // ── Rendering ─────────────────────────────────────────────────────────────
 
     @Override
