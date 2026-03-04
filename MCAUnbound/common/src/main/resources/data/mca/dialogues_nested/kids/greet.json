@@ -2,8 +2,28 @@
   "category": "greet",
   "subCategories": [
     {
+      "id": "baby_babble",
+      "label": "Baby Talk",
+      "age_group": "baby",
+      "playerOptions": [
+        "Who's a happy little one?",
+        "Hi baby!"
+      ],
+      "results": [
+        {
+          "baseChance": 7,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "goo goo gaa... baaa!",
+            "ba-ba... da-da... gaga!"
+          ]
+        }
+      ]
+    },
+    {
       "id": "friendly",
       "label": "Friendly",
+      "age_group": "child",
       "playerOptions": [
         "Hey kiddo!",
         "Are you behaving today?"
@@ -16,8 +36,9 @@
           ],
           "actions": { "positive": 1 },
           "npcResponses": [
-            "Goo goo gaga!",
-            "I want cookies!"
+            "Hi! Wanna play?",
+            "Can we get cookies?",
+            "Can we go somewhere?"
           ]
         },
         {
@@ -29,7 +50,10 @@
           "actions": { "negative": 1 },
           "npcResponses": [
             "Nooo!",
-            "I'm grumpy!"
+            "I'm grumpy!",
+            "Grrrrr",
+            "I'm bored of yoouuu",
+            "I wanna do something else"
           ]
         }
       ]

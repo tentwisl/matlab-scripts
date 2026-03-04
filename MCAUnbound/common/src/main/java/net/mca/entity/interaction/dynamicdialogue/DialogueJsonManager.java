@@ -1,6 +1,7 @@
 package net.mca.entity.interaction.dynamicdialogue;
 
 import com.google.gson.Gson;
+import net.mca.entity.ai.relationship.AgeState;
 import net.mca.MCA;
 
 import java.io.InputStream;
@@ -52,7 +53,7 @@ public final class DialogueJsonManager {
         }
     }
 
-    public List<PlayerOption> getPlayerOptions(String category, boolean isChild) {
+    public List<PlayerOption> getPlayerOptions(String category, boolean isChild, AgeState ageState) {
         DialogueCategoryFile file = getCategoryFile(category, isChild);
         if (file == null || file.subCategories == null) {
             return List.of();
@@ -60,7 +61,7 @@ public final class DialogueJsonManager {
 
         List<PlayerOption> options = new ArrayList<>();
         for (JsonSubCategory sc : file.subCategories) {
-            if (sc == null || sc.id == null || sc.playerOptions == null || sc.playerOptions.isEmpty()) {
+            if (sc == null || sc.id == null || sc.playerOptions == null || sc.playerOptions.isEmpty() || !matchesAgeGroup(sc.age_group, ageState)) {
                 continue;
             }
             String line = sc.playerOptions.get(RANDOM.nextInt(sc.playerOptions.size()));
@@ -69,7 +70,7 @@ public final class DialogueJsonManager {
         return options;
     }
 
-    public Optional<JsonSubCategory> getSubCategory(String category, String subCategoryId, boolean isChild) {
+    public Optional<JsonSubCategory> getSubCategory(String category, String subCategoryId, boolean isChild, AgeState ageState) {
         DialogueCategoryFile file = getCategoryFile(category, isChild);
         if (file == null || file.subCategories == null) {
             return Optional.empty();
@@ -77,6 +78,7 @@ public final class DialogueJsonManager {
         return file.subCategories.stream()
                 .filter(Objects::nonNull)
                 .filter(sc -> sc.id != null && sc.id.equalsIgnoreCase(subCategoryId))
+                .filter(sc -> matchesAgeGroup(sc.age_group, ageState))
                 .findFirst();
     }
 
@@ -88,6 +90,22 @@ public final class DialogueJsonManager {
         return "I need a break from talking right now.";
     }
 
+
+    private boolean matchesAgeGroup(String ageGroup, AgeState ageState) {
+        if (ageGroup == null || ageGroup.isBlank() || ageState == null) {
+            return true;
+        }
+
+        String normalized = ageGroup.toLowerCase(Locale.ENGLISH);
+        return switch (normalized) {
+            case "baby" -> ageState == AgeState.BABY;
+            case "toddler" -> ageState == AgeState.TODDLER;
+            case "child" -> ageState == AgeState.CHILD;
+            case "juvenile", "kids", "kid" -> ageState == AgeState.BABY || ageState == AgeState.TODDLER || ageState == AgeState.CHILD;
+            case "adult" -> ageState == AgeState.ADULT || ageState == AgeState.TEEN;
+            default -> true;
+        };
+    }
     private DialogueCategoryFile getCategoryFile(String category, boolean isChild) {
         DialogueCategoryFile file = isChild ? kidsCategoryFiles.get(category) : categoryFiles.get(category);
         if (file == null && isChild) {
@@ -127,6 +145,7 @@ public final class DialogueJsonManager {
     public static class JsonSubCategory {
         public String id;
         public String label;
+        public String age_group;
         public List<String> playerOptions;
         public List<JsonResult> results;
     }

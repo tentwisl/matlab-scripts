@@ -2,8 +2,28 @@
   "category": "rumors",
   "subCategories": [
     {
+      "id": "baby_babble_rumor",
+      "label": "Baby Babble",
+      "age_group": "baby",
+      "playerOptions": [
+        "Any baby news?",
+        "What did you hear today?"
+      ],
+      "results": [
+        {
+          "baseChance": 7,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "ga-ga... {npc1}... ba-ba!",
+            "da-da... {npc2}... gugu!"
+          ]
+        }
+      ]
+    },
+    {
       "id": "kid_rumor",
       "label": "Kid Rumor",
+      "age_group": "child",
       "playerOptions": [
         "Heard any playground rumors?",
         "Any secret kid news?"
@@ -13,8 +33,8 @@
           "baseChance": 6,
           "actions": { "positive": 1 },
           "npcResponses": [
-            "I saw a chicken steal seeds!",
-            "Shh... cookie stash behind the well!"
+            "{npc1} tripped chasing {npc2} by the well!",
+            "Shh... {npc3} hid cookies behind {npc1}'s house!"
           ]
         }
       ]

@@ -7,6 +7,7 @@ import net.mca.client.gui.widget.PaneEntries;
 import net.mca.client.gui.widget.PaneEntries.ButtonSpec;
 import net.mca.client.gui.widget.ScrollPane;
 import net.mca.client.gui.widget.TabPanel;
+import net.mca.entity.VillagerEntityMCA;
 import net.mca.entity.VillagerLike;
 import net.mca.entity.ai.Genetics;
 import net.mca.entity.ai.Memories;
@@ -37,6 +38,7 @@ import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.Box;
 import net.minecraft.village.VillagerProfession;
 import org.lwjgl.glfw.GLFW;
 
@@ -162,7 +164,9 @@ public class InteractScreen extends AbstractDynamicScreen {
         }
 
         talkButtons.add(ButtonSpec.of("Chat",    () -> openDialogueCategory(MainDialogueCategory.CHAT)));
-        talkButtons.add(ButtonSpec.of("Rumors",  () -> sendInteract("gui.button.location")));
+        talkButtons.add(isJuvenileVillager()
+                ? ButtonSpec.of("Rumors", () -> openDialogueCategory(MainDialogueCategory.RUMORS))
+                : ButtonSpec.of("Rumors", () -> sendInteract("gui.button.location")));
         talkButtons.add(ButtonSpec.of("Ask",     () -> {})); // placeholder
 
         pane.add(PaneEntries.buttonGrid(talkButtons, 2, 20));
@@ -326,7 +330,7 @@ public class InteractScreen extends AbstractDynamicScreen {
     private void openDialogueCategory(MainDialogueCategory category) {
         selectedTalkCategory = category;
         String categoryKey = category.name().toLowerCase(Locale.ENGLISH);
-        activeDialogueOptions = dialogueJsonManager.getPlayerOptions(categoryKey, isJuvenileVillager()).stream()
+        activeDialogueOptions = dialogueJsonManager.getPlayerOptions(categoryKey, isJuvenileVillager(), villager.getAgeState()).stream()
                 .map(option -> new DialogueOptionEntry(option.category(), option.subCategoryId(), option.playerLine()))
                 .toList();
         buildTabPanel();
@@ -336,7 +340,7 @@ public class InteractScreen extends AbstractDynamicScreen {
         Memories memory = villager.getVillagerBrain().getMemoriesForPlayer(player);
 
         DialogueJsonManager.JsonSubCategory subCategory = dialogueJsonManager
-                .getSubCategory(option.categoryKey(), option.subCategoryId(), isJuvenileVillager())
+                .getSubCategory(option.categoryKey(), option.subCategoryId(), isJuvenileVillager(), villager.getAgeState())
                 .orElse(null);
 
         DialogueCalculator.JsonEvaluationResult result = DialogueCalculator.calculateFromJson(
@@ -363,9 +367,39 @@ public class InteractScreen extends AbstractDynamicScreen {
         }
         memory.setLastUsedDialogueSubtype(interactionKey);
 
-        sendVillagerChat(result.npcResponse());
+        String response = result.npcResponse();
+        if (isJuvenileVillager() && option.categoryKey().equalsIgnoreCase("rumors")) {
+            response = applyKidRumorNameFormatting(response);
+        }
+
+        sendVillagerChat(response);
 
         openDialogueCategory(selectedTalkCategory);
+    }
+
+
+    private String applyKidRumorNameFormatting(String message) {
+        if (message == null || message.isBlank()) {
+            return message;
+        }
+
+        List<String> nearbyNames = villager.asEntity().getWorld()
+                .getEntitiesByClass(VillagerEntityMCA.class,
+                        new Box(villager.asEntity().getBlockPos()).expand(20),
+                        v -> !v.getUuid().equals(villager.asEntity().getUuid()))
+                .stream()
+                .map(v -> v.getName().getString())
+                .distinct()
+                .limit(3)
+                .toList();
+
+        String first = nearbyNames.size() > 0 ? nearbyNames.get(0) : "Alex";
+        String second = nearbyNames.size() > 1 ? nearbyNames.get(1) : "Sam";
+        String third = nearbyNames.size() > 2 ? nearbyNames.get(2) : "Jamie";
+
+        return message.replace("{npc1}", first)
+                .replace("{npc2}", second)
+                .replace("{npc3}", third);
     }
 
     private void sendVillagerChat(String message) {
