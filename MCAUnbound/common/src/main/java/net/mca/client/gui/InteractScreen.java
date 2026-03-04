@@ -160,8 +160,6 @@ public class InteractScreen extends AbstractDynamicScreen {
         talkButtons.add(ButtonSpec.of("Rumors",  () -> sendInteract("gui.button.location")));
         talkButtons.add(ButtonSpec.of("Ask",     () -> {})); // placeholder
 
-        talkButtons.add(ButtonSpec.of("Kiss ♥", () -> sendInteract("gui.button.kiss")));
-
         pane.add(PaneEntries.buttonGrid(talkButtons, 2, 20));
 
         if (selectedTalkCategory != null && !activeDialogueOptions.isEmpty()) {
@@ -170,6 +168,15 @@ public class InteractScreen extends AbstractDynamicScreen {
             for (DialogueOptionEntry option : activeDialogueOptions) {
                 pane.add(PaneEntries.buttonRow(option.optionText(), option.subCategoryId(),
                         () -> onDialogueSubButtonClicked(option)));
+            }
+
+            if (selectedTalkCategory == MainDialogueCategory.ROMANCE) {
+                pane.add(PaneEntries.spacer(4));
+                pane.add(PaneEntries.divider());
+                pane.add(PaneEntries.buttonRow("Hug", "Use default MCA hug dialogue logic",
+                        () -> sendInteract("gui.button.hug")));
+                pane.add(PaneEntries.buttonRow("Kiss ♥", "Use default MCA kiss dialogue logic",
+                        () -> sendInteract("gui.button.kiss")));
             }
         }
     }
