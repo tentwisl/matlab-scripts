@@ -11,9 +11,12 @@ import net.mca.entity.ai.MoveState;
 import net.mca.entity.ai.relationship.RelationshipState;
 import net.mca.item.ItemsMCA;
 import net.mca.mixin.MixinVillagerEntityInvoker;
+import net.mca.resources.Dialogues;
+import net.mca.resources.data.dialogue.Question;
 import net.mca.server.world.data.FamilyTree;
 import net.mca.server.world.data.FamilyTreeNode;
 import net.mca.server.world.data.PlayerSaveData;
+import net.mca.server.world.data.TownHallCallManager;
 import net.mca.util.WorldUtils;
 import net.minecraft.entity.Saddleable;
 import net.minecraft.entity.ai.FuzzyPositions;
@@ -44,6 +47,10 @@ public class VillagerCommandHandler extends EntityCommandHandler<VillagerEntityM
     @Override
     public boolean handle(ServerPlayerEntity player, String command) {
         Memories memory = entity.getVillagerBrain().getMemoriesForPlayer(player);
+
+        // If this villager is in Town Hall call-wait mode, interaction cancels waiting
+        // and returns it to default MCA autonomous pathing immediately.
+        TownHallCallManager.cancelWaitingOnInteract(entity);
 
         if (MoveState.byCommand(command).filter(state -> {
             entity.getVillagerBrain().setMoveState(state, player);
@@ -301,6 +308,14 @@ public class VillagerCommandHandler extends EntityCommandHandler<VillagerEntityM
                 entity.sendChatMessage(player, "interaction.ask");
                 return true;
             }
+            case "hug" -> {
+                triggerDialogueQuestion(player, "hug");
+                return true;
+            }
+            case "kiss" -> {
+                triggerDialogueQuestion(player, "kiss");
+                return true;
+            }
             case "joke" -> {
                 entity.getVillagerBrain().modifyMoodValue(1);
                 entity.sendChatMessage(player, "interaction.joke");
@@ -319,6 +334,15 @@ public class VillagerCommandHandler extends EntityCommandHandler<VillagerEntityM
         }
 
         return super.handle(player, command);
+    }
+
+    private void triggerDialogueQuestion(ServerPlayerEntity player, String questionId) {
+        Question question = Dialogues.getInstance().getQuestion(questionId);
+        if (question == null || question.getAnswers().isEmpty()) {
+            return;
+        }
+
+        Dialogues.getInstance().selectAnswer(entity, player, questionId, question.getRandomAnswer().getName());
     }
 
     private void payEmeralds(ServerPlayerEntity player, int emeralds) {

@@ -15,6 +15,7 @@ import net.mca.quilt.resources.*;
 import net.mca.server.ServerInteractionManager;
 import net.mca.server.command.AdminCommand;
 import net.mca.server.command.Command;
+import net.mca.server.command.NationDebugCommand;
 import net.mca.server.world.data.VillageManager;
 import net.minecraft.resource.ResourceType;
 import org.quiltmc.loader.api.ModContainer;
@@ -59,6 +60,7 @@ public final class MCAQuilt implements ModInitializer {
         CommandRegistrationCallback.EVENT.register((dispatcher, integrated, dedicated) -> {
             AdminCommand.register(dispatcher);
             Command.register(dispatcher);
+            NationDebugCommand.register(dispatcher);
         });
 
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(MCA::setServer);

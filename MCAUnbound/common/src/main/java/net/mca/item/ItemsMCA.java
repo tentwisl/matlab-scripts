@@ -183,7 +183,7 @@ public interface ItemsMCA {
     RegistrySupplier<Item> JEWELER_WORKBENCH = register("jeweler_workbench", () -> new BlockItem(BlocksMCA.JEWELER_WORKBENCH.get(), baseProps()));
 
     RegistrySupplier<Item> TOWN_HALL   = register("town_hall",   () -> new BlockItem(BlocksMCA.TOWN_HALL.get(), baseProps()));
-    RegistrySupplier<Item> NATION_BLOCK = register("nation_block", () -> new NationBlockItem(unstackableProps()));
+    RegistrySupplier<Item> NATION_BLOCK = register("nation_block", () -> new NationBlockItem(BlocksMCA.NATION_BLOCK.get(), unstackableProps()));
 
     RegistrySupplier<Item> GRAVELLING_HEADSTONE = register("gravelling_headstone", () -> new BlockItem(BlocksMCA.GRAVELLING_HEADSTONE.get(), baseProps()));
     RegistrySupplier<Item> UPRIGHT_HEADSTONE = register("upright_headstone", () -> new BlockItem(BlocksMCA.UPRIGHT_HEADSTONE.get(), baseProps()));

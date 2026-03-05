@@ -1,0 +1,23 @@
+{
+  "category": "story",
+  "subCategories": [
+    {
+      "id": "bedtime",
+      "label": "Bedtime",
+      "playerOptions": [
+        "Want to hear a bedtime story?",
+        "Once upon a time..."
+      ],
+      "results": [
+        {
+          "baseChance": 7,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "Tell me more!",
+            "And then what happened?"
+          ]
+        }
+      ]
+    }
+  ]
+}

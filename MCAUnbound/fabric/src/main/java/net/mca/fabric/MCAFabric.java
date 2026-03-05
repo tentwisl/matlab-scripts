@@ -26,6 +26,7 @@ import net.mca.network.MessagesMCA;
 import net.mca.server.ServerInteractionManager;
 import net.mca.server.command.AdminCommand;
 import net.mca.server.command.Command;
+import net.mca.server.command.NationDebugCommand;
 import net.mca.server.world.data.VillageManager;
 import net.minecraft.resource.ResourceType;
 
@@ -63,6 +64,7 @@ public final class MCAFabric implements ModInitializer {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             AdminCommand.register(dispatcher);
             Command.register(dispatcher);
+            NationDebugCommand.register(dispatcher);
         });
 
         ServerTickEvents.END_SERVER_TICK.register(MCA::setServer);
