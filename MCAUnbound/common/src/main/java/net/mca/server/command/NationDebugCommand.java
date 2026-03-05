@@ -10,6 +10,7 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3i;
 
 import java.util.*;
 
@@ -70,7 +71,7 @@ public final class NationDebugCommand {
             if (village.getTownHallPos() != null) {
                 toCheck.add(village.getTownHallPos());
             }
-            BlockPos c = village.getCenter();
+            Vec3i c = village.getCenter();
             int radius = 64;
             for (int x = -radius; x <= radius; x += 4) {
                 for (int z = -radius; z <= radius; z += 4) {
