@@ -128,6 +128,7 @@ public class VillagerEntityMCA extends VillagerEntity implements VillagerLike<Vi
     private long lastHit = 0;
     private int prevGrowthAmount;
     private boolean interactedWith;
+    private double villagerBankBalance;
 
     private static final int RECALCULATE_DIMENSIONS_EVERY_N_TICKS = 100;
 
@@ -1384,6 +1385,9 @@ public class VillagerEntityMCA extends VillagerEntity implements VillagerLike<Vi
         if (nbt.contains("InteractedWith")) {
             this.interactedWith = nbt.getBoolean("InteractedWith");
         }
+        if (nbt.contains("villager_bank_balance")) {
+            this.villagerBankBalance = nbt.getDouble("villager_bank_balance");
+        }
 
         if (nbt.contains("clothes")) {
             validateClothes();
@@ -1403,10 +1407,19 @@ public class VillagerEntityMCA extends VillagerEntity implements VillagerLike<Vi
         nbt.putInt("DespawnDelay", this.despawnDelay);
         nbt.putBoolean("InteractedWith", this.interactedWith);
         InventoryUtils.saveToNBT(inventory, nbt);
+        nbt.putDouble("villager_bank_balance", villagerBankBalance);
 
         if (interactedWith) {
             VillagerTrackerManager.update(this);
         }
+    }
+
+    public double getVillagerBankBalance() {
+        return villagerBankBalance;
+    }
+
+    public void setVillagerBankBalance(double villagerBankBalance) {
+        this.villagerBankBalance = Math.max(0.0D, villagerBankBalance);
     }
 
     @Override
