@@ -9,6 +9,7 @@ import net.mca.network.s2c.TownHallDataResponse;
 import net.mca.server.world.data.GeopoliticalManager;
 import net.mca.server.world.data.GeopoliticalNation;
 import net.mca.server.world.data.GeopoliticalProfileManager;
+import net.mca.server.world.data.TownHallHighlightManager;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
 import net.minecraft.block.entity.BlockEntity;
@@ -59,6 +60,7 @@ public class OpenTownHallRequest implements Message {
         Map<UUID, String> villagerJobs = new LinkedHashMap<>();
         Map<UUID, Boolean> villagerMarried = new LinkedHashMap<>();
         Map<UUID, Boolean> villagerLoaded = new LinkedHashMap<>();
+        Map<UUID, Boolean> villagerHighlighted = new LinkedHashMap<>();
 
         if (village.isPresent()) {
             Village v = village.get();
@@ -79,6 +81,7 @@ public class OpenTownHallRequest implements Message {
                 villagerJobs.put(villager.getUuid(), villager.getProfession().id());
                 villagerMarried.put(villager.getUuid(), villager.getRelationships().isMarried());
                 villagerLoaded.put(villager.getUuid(), true);
+                villagerHighlighted.put(villager.getUuid(), TownHallHighlightManager.isHighlighted(villager.getUuid()));
             }
 
             // Include residents not currently loaded (from residentNames map)
@@ -91,6 +94,7 @@ public class OpenTownHallRequest implements Message {
                     villagerJobs.putIfAbsent(entry.getKey(), "none");
                     villagerMarried.putIfAbsent(entry.getKey(), false);
                     villagerLoaded.putIfAbsent(entry.getKey(), false);
+                    villagerHighlighted.putIfAbsent(entry.getKey(), TownHallHighlightManager.isHighlighted(entry.getKey()));
                 }
             }
         }
@@ -109,6 +113,7 @@ public class OpenTownHallRequest implements Message {
                 villagerJobs,
                 villagerMarried,
                 villagerLoaded,
+                villagerHighlighted,
                 player.getUuid(),
                 convincedLeaderCount
         ), player);

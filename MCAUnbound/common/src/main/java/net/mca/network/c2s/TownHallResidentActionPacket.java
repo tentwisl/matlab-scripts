@@ -8,6 +8,7 @@ import net.mca.server.world.data.TownHallCallManager;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.entity.ai.pathing.Path;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
@@ -69,7 +70,16 @@ public class TownHallResidentActionPacket implements Message {
                     player.sendMessage(Text.literal("This resident is already responding to a call."), false);
                     return;
                 }
-                TownHallCallManager.startCall(villager, player.getUuid(), BlockPos.fromLong(townHallPos), world.getTime());
+
+                BlockPos hallPos = BlockPos.fromLong(townHallPos);
+                Path pathToPlayer = villager.getNavigation().findPathTo(player.getBlockPos(), 0);
+                Path pathToHall = villager.getNavigation().findPathTo(hallPos, 0);
+                if (pathToPlayer == null && pathToHall == null) {
+                    player.sendMessage(Text.literal("This resident cannot find a path to you or the Town Hall."), false);
+                    return;
+                }
+
+                TownHallCallManager.startCall(villager, player.getUuid(), hallPos, world.getTime());
                 player.sendMessage(Text.literal(villager.getName().getString() + " is on their way."), false);
             }
             case "follow" -> {

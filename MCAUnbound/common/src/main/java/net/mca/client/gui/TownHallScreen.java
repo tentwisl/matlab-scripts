@@ -400,6 +400,7 @@ public class TownHallScreen extends ExtendedScreen {
         villagerJobs.clear();
         villagerMarried.clear();
         villagerLoaded.clear();
+        highlightToggles.clear();
 
         if (root.contains("villagerHearts")) {
             NbtCompound hn = root.getCompound("villagerHearts");
@@ -424,6 +425,12 @@ public class TownHallScreen extends ExtendedScreen {
         if (root.contains("villagerLoaded")) {
             NbtCompound ln = root.getCompound("villagerLoaded");
             for (String k : ln.getKeys()) villagerLoaded.put(k, ln.getBoolean(k));
+        }
+        if (root.contains("villagerHighlighted")) {
+            NbtCompound hn = root.getCompound("villagerHighlighted");
+            for (String k : hn.getKeys()) {
+                if (hn.getBoolean(k)) highlightToggles.add(k);
+            }
         }
 
         hasLeader            = root.getBoolean("hasLeader");
