@@ -58,6 +58,7 @@ public interface MessagesMCA {
         NetworkHandler.registerMessage(OpenTownHallRequest.class);
         NetworkHandler.registerMessage(AttemptLeadershipRequest.class);
         NetworkHandler.registerMessage(HighlightVillagerRequest.class);
+        NetworkHandler.registerMessage(TownHallResidentActionPacket.class);
         NetworkHandler.registerMessage(TownHallDataResponse.class);
         // Help Village request system packets
         NetworkHandler.registerMessage(OpenHelpVillageRequest.class);

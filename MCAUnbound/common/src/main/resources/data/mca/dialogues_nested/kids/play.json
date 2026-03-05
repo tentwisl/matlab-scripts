@@ -1,0 +1,77 @@
+{
+  "category": "play",
+  "subCategories": [
+    {
+      "id": "hug",
+      "label": "Hug",
+      "playerOptions": [
+        "Want a big hug?",
+        "Come here, little one!"
+      ],
+      "results": [
+        {
+          "baseChance": 7,
+          "actions": { "positive": 2 },
+          "npcResponses": [
+            "Yay hugs!",
+            "Hehe!"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rock_paper_scissors",
+      "label": "Rock Paper Scissors",
+      "playerOptions": [
+        "Rock, paper, scissors?",
+        "Let's play RPS!"
+      ],
+      "results": [
+        {
+          "baseChance": 6,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "I pick rock!",
+            "Best out of three!"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tag",
+      "label": "Tag",
+      "playerOptions": [
+        "You're it!",
+        "Wanna play tag?"
+      ],
+      "results": [
+        {
+          "baseChance": 6,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "You can't catch me!",
+            "Tag! You're it!"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "peekaboo",
+      "label": "Peekaboo",
+      "playerOptions": [
+        "Peekaboo!",
+        "Where did I go?"
+      ],
+      "results": [
+        {
+          "baseChance": 7,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "Again! Again!",
+            "I see you!"
+          ]
+        }
+      ]
+    }
+  ]
+}

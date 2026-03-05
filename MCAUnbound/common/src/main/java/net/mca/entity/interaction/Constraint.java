@@ -95,15 +95,6 @@ public enum Constraint implements BiPredicate<VillagerLike<?>, ServerPlayerEntit
     HAS_VILLAGE("has_village", (villager, player) -> villager instanceof VillagerEntityMCA mcaVillager && mcaVillager.getResidency().getHomeVillage().isPresent()),
     NOT_HAS_VILLAGE("!has_village", (villager, player) -> villager instanceof VillagerEntityMCA mcaVillager && mcaVillager.getResidency().getHomeVillage().isEmpty()),
 
-    // MCAUnbound: Player has >= 100 hearts with this villager (gates kiss)
-    HEARTS_100("hearts_100", (villager, player) -> {
-        if (villager instanceof VillagerEntityMCA v && player != null) {
-            return v.getVillagerBrain().getMemoriesForPlayer(player).getHearts() >= 100;
-        }
-        return false;
-    }),
-    NOT_HEARTS_100("!hearts_100", (villager, player) -> !HEARTS_100.test(villager, player)),
-
     // MCAUnbound: This villager IS the NPC village leader of their home village
     NPC_VILLAGE_LEADER("npc_village_leader", (villager, player) -> {
         if (villager instanceof VillagerEntityMCA v) {

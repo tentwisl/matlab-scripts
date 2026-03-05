@@ -27,6 +27,9 @@ public class TownHallBlockEntity extends BlockEntity {
     public enum ElectionState { NONE, PENDING }
     private ElectionState electionState = ElectionState.NONE;
     private long electionStartTick = 0;
+    private UUID pendingCandidateUUID = null;
+    private String pendingCandidateName = "";
+    private double pendingSuccessChance = 0.0D;
 
     /** Available requests players can accept. */
     private final List<VillageRequest> openRequests   = new ArrayList<>();
@@ -49,6 +52,9 @@ public class TownHallBlockEntity extends BlockEntity {
         leaderIsPlayer = nbt.getBoolean("leaderIsPlayer");
         electionState = ElectionState.values()[Math.min(nbt.getInt("electionState"), ElectionState.values().length - 1)];
         electionStartTick = nbt.getLong("electionStartTick");
+        if (nbt.containsUuid("pendingCandidateUUID")) pendingCandidateUUID = nbt.getUuid("pendingCandidateUUID");
+        pendingCandidateName = nbt.getString("pendingCandidateName");
+        pendingSuccessChance = nbt.getDouble("pendingSuccessChance");
         nextRequestId = nbt.getInt("nextRequestId");
 
         openRequests.clear();
@@ -69,6 +75,9 @@ public class TownHallBlockEntity extends BlockEntity {
         nbt.putBoolean("leaderIsPlayer", leaderIsPlayer);
         nbt.putInt("electionState", electionState.ordinal());
         nbt.putLong("electionStartTick", electionStartTick);
+        if (pendingCandidateUUID != null) nbt.putUuid("pendingCandidateUUID", pendingCandidateUUID);
+        nbt.putString("pendingCandidateName", pendingCandidateName);
+        nbt.putDouble("pendingSuccessChance", pendingSuccessChance);
         nbt.putInt("nextRequestId", nextRequestId);
         nbt.put("openRequests",    NbtHelper.fromList(openRequests,    VillageRequest::save));
         nbt.put("pendingRequests", NbtHelper.fromList(pendingRequests, VillageRequest::save));
@@ -87,17 +96,17 @@ public class TownHallBlockEntity extends BlockEntity {
     public boolean hasLeader()      { return leaderUUID != null; }
 
     public void setPlayerLeader(UUID uuid, String name) {
-        leaderUUID = uuid; leaderName = name; leaderIsPlayer = true; electionState = ElectionState.NONE; markDirty();
+        leaderUUID = uuid; leaderName = name; leaderIsPlayer = true; clearElectionPendingData(); markDirty();
     }
 
     public void setNpcLeader(UUID uuid, String name) {
-        leaderUUID = uuid; leaderName = name; leaderIsPlayer = false; electionState = ElectionState.NONE;
+        leaderUUID = uuid; leaderName = name; leaderIsPlayer = false; clearElectionPendingData();
         generateOpenRequests();
         markDirty();
     }
 
     public void clearLeader() {
-        leaderUUID = null; leaderName = ""; leaderIsPlayer = false; electionState = ElectionState.NONE; markDirty();
+        leaderUUID = null; leaderName = ""; leaderIsPlayer = false; clearElectionPendingData(); markDirty();
     }
 
     // ── Election ──────────────────────────────────────────────────────────────
@@ -105,8 +114,26 @@ public class TownHallBlockEntity extends BlockEntity {
     public ElectionState getElectionState()  { return electionState; }
     public long getElectionStartTick()       { return electionStartTick; }
 
-    public void startElection(long tick) {
-        electionState = ElectionState.PENDING; electionStartTick = tick; markDirty();
+    public void startElection(long tick, UUID candidateUUID, String candidateName, double successChance) {
+        electionState = ElectionState.PENDING;
+        electionStartTick = tick;
+        pendingCandidateUUID = candidateUUID;
+        pendingCandidateName = candidateName == null ? "" : candidateName;
+        pendingSuccessChance = Math.max(0.0D, Math.min(1.0D, successChance));
+        markDirty();
+    }
+
+    public UUID getPendingCandidateUUID() { return pendingCandidateUUID; }
+    public String getPendingCandidateName() { return pendingCandidateName; }
+    public double getPendingSuccessChance() { return pendingSuccessChance; }
+
+    public void clearElectionPendingData() {
+        pendingCandidateUUID = null;
+        pendingCandidateName = "";
+        pendingSuccessChance = 0.0D;
+        electionState = ElectionState.NONE;
+        electionStartTick = 0;
+        markDirty();
     }
 
     // ── Requests ──────────────────────────────────────────────────────────────
