@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "mca:block/nation_block" }
+  }
+}
