@@ -1,0 +1,23 @@
+{
+  "category": "joke",
+  "subCategories": [
+    {
+      "id": "silly",
+      "label": "Silly",
+      "playerOptions": [
+        "Why did the chicken cross the road?",
+        "Knock knock!"
+      ],
+      "results": [
+        {
+          "baseChance": 7,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "Hehehe!",
+            "Again!"
+          ]
+        }
+      ]
+    }
+  ]
+}
