@@ -5,6 +5,7 @@ import net.mca.MCAClient;
 import net.mca.server.ServerInteractionManager;
 import net.mca.server.command.AdminCommand;
 import net.mca.server.command.Command;
+import net.mca.server.command.NationDebugCommand;
 import net.mca.server.world.data.VillageManager;
 import net.mca.util.recipes.CribRecipeProvider;
 import net.minecraft.client.MinecraftClient;
@@ -31,6 +32,7 @@ public class ForgeBusEvents {
     public static void onCommandRegister(RegisterCommandsEvent event) {
         AdminCommand.register(event.getDispatcher());
         Command.register(event.getDispatcher());
+        NationDebugCommand.register(event.getDispatcher());
     }
 
     @SubscribeEvent

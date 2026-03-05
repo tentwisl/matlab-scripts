@@ -96,6 +96,9 @@ public class ClientInteractionManagerImpl implements ClientInteractionManager {
             case VILLAGER_TRACKER:
                 client.setScreen(new VillagerTrackerSearchScreen());
                 break;
+            case NATION_MANAGEMENT:
+                client.setScreen(new NationManagementScreen());
+                break;
             default:
         }
     }
