@@ -58,7 +58,9 @@ public final class NationDebugCommand {
             manager.markDirty();
         }
 
-        ctx.getSource().sendFeedback(() -> Text.literal("[NationDebug] Merged villages=" + mergedCount + ", updated town halls=" + townHallsUpdated), true);
+        final int mergedVillageCount = mergedCount;
+        final int updatedTownHallCount = townHallsUpdated;
+        ctx.getSource().sendFeedback(() -> Text.literal("[NationDebug] Merged villages=" + mergedVillageCount + ", updated town halls=" + updatedTownHallCount), true);
         return 1;
     }
 
