@@ -1,6 +1,7 @@
 package net.mca.client.gui;
 
 import net.mca.MCA;
+import net.mca.MCAClient;
 import net.mca.ProfessionsMCA;
 import net.mca.cobalt.network.NetworkHandler;
 import net.mca.client.gui.widget.PaneEntries;
@@ -76,6 +77,7 @@ public class InteractScreen extends AbstractDynamicScreen {
     private static final int LOCKOUT_THRESHOLD = -15;
     private static final int BURNOUT_LOCKOUT_FATIGUE = 16;
     private static final long TALK_LOCKOUT_DURATION_TICKS = 12000L;
+    private static final long GREETING_COOLDOWN_TICKS = 200L; // ~10 seconds
 
     // ── Villager reference ─────────────────────────────────────────────────────
     private final VillagerLike<?> villager;
@@ -167,6 +169,22 @@ public class InteractScreen extends AbstractDynamicScreen {
         pane.add(PaneEntries.spacer(6));
 
         List<ButtonSpec> talkButtons = new ArrayList<>();
+
+        // Issue 5: Babies only get Play (babble-type interactions)
+        if (isBabyVillager()) {
+            talkButtons.add(ButtonSpec.of("Play", () -> openDialogueCategory(MainDialogueCategory.PLAY)));
+            pane.add(PaneEntries.buttonGrid(talkButtons, 2, 20));
+            if (selectedTalkCategory != null && !activeDialogueOptions.isEmpty()) {
+                pane.add(PaneEntries.spacer(8));
+                pane.add(PaneEntries.label("§f  " + selectedTalkCategory.name() + " options", 0xAA111111));
+                for (DialogueOptionEntry option : activeDialogueOptions) {
+                    pane.add(PaneEntries.buttonRow(option.label(), option.playerLine(),
+                            () -> onDialogueSubButtonClicked(option)));
+                }
+            }
+            return;
+        }
+
         talkButtons.add(ButtonSpec.of("Greet",   () -> openDialogueCategory(MainDialogueCategory.GREET)));
         talkButtons.add(ButtonSpec.of("Joke",    () -> openDialogueCategory(MainDialogueCategory.JOKE)));
         talkButtons.add(ButtonSpec.of("Story",   () -> openDialogueCategory(MainDialogueCategory.STORY)));
@@ -182,7 +200,11 @@ public class InteractScreen extends AbstractDynamicScreen {
 
         talkButtons.add(ButtonSpec.of("Chat",    () -> openDialogueCategory(MainDialogueCategory.CHAT)));
         talkButtons.add(ButtonSpec.of("Rumors",   () -> openDialogueCategory(MainDialogueCategory.RUMORS)));
-        talkButtons.add(ButtonSpec.of("Ask",      () -> openDialogueCategory(MainDialogueCategory.ASK)));
+
+        // Issue 8: Don't show ASK for juvenile villagers
+        if (!isJuvenileVillager()) {
+            talkButtons.add(ButtonSpec.of("Ask", () -> openDialogueCategory(MainDialogueCategory.ASK)));
+        }
 
         pane.add(PaneEntries.buttonGrid(talkButtons, 2, 20));
 
@@ -378,13 +400,41 @@ public class InteractScreen extends AbstractDynamicScreen {
     }
 
     private void triggerInitialGreeting(Memories memory) {
+        long worldTime = villager.asEntity().getWorld().getTime();
+        long lastGreeted = memory.getLastGreetedTime();
+        boolean recentReopen = lastGreeted > 0 && (worldTime - lastGreeted) < GREETING_COOLDOWN_TICKS;
+        memory.setLastGreetedTime(worldTime);
+
+        // Issue 1: If re-opened recently, show a brief return-visit line instead
+        if (recentReopen) {
+            String[] returnLines = {
+                    "Forget to tell me something, {player}?",
+                    "Back again so soon?",
+                    "Something else on your mind, {player}?",
+                    "Oh, you're back. What is it?"
+            };
+            sendVillagerChat(applyPlaceholders(returnLines[villager.asEntity().getRandom().nextInt(returnLines.length)]));
+            return;
+        }
+
         Set<Constraint> c = getConstraints();
         FamilyRelation relation = getFamilyRelation(c);
-        boolean firstMeeting = !memory.hasMet() || memory.getHearts() == 0;
+        boolean firstMeeting = !memory.hasMet(); // Issue 3: hasMet is sole determinant
+
+        // Issue 5: Babies only do gibberish greetings
+        if (isBabyVillager()) {
+            String greeting = buildBabyGreeting(relation);
+            sendVillagerChat(applyPlaceholders(greeting));
+            if (!memory.hasMet()) memory.setHasMet(true);
+            return;
+        }
 
         String greeting;
         if (relation != FamilyRelation.NONE && !firstMeeting) {
             greeting = buildFamilyGreeting(relation);
+        } else if (!firstMeeting) {
+            // Issue 2: Heart-tier greetings for non-family returning villagers
+            greeting = buildHeartTierGreeting(memory.getHearts());
         } else {
             greeting = buildFirstGreeting(firstMeeting);
         }
@@ -430,13 +480,90 @@ public class InteractScreen extends AbstractDynamicScreen {
         };
     }
 
+    private String buildBabyGreeting(FamilyRelation relation) {
+        boolean isParent = relation == FamilyRelation.MY_PARENT
+                || relation == FamilyRelation.SPOUSE; // spouse greeting a baby is still a parent
+        String parentWord = isParent ? "mama" : "{player}";
+        String[] babyLines = {
+                "goo goo... " + parentWord + "!",
+                "ba-ba... da-da!",
+                "*reaches tiny hands toward " + parentWord + "*",
+                "*coos and babbles happily*",
+                "gaa... gaa gaa!",
+                "*giggles at " + parentWord + "*"
+        };
+        return babyLines[villager.asEntity().getRandom().nextInt(babyLines.length)];
+    }
+
+    private String buildHeartTierGreeting(int hearts) {
+        NpcTrait trait = toNpcTrait(villager.getVillagerBrain().getPersonality());
+        NpcMood mood = toNpcMood(villager.getVillagerBrain().getMood().getName());
+        var rng = villager.asEntity().getRandom();
+
+        if (hearts >= 75) {
+            // Close friend / best friend tier
+            String[] lines = {
+                    "{player}! My favorite person! How are you?",
+                    "There you are, {player}! I was hoping you'd come by!",
+                    "Always a pleasure to see you, dear {player}.",
+                    "{player}! Come, come! I've been looking forward to your visit.",
+                    "Ah, my dear friend {player}! What a wonderful surprise!"
+            };
+            return lines[rng.nextInt(lines.length)];
+        } else if (hearts >= 50) {
+            // Friend tier
+            String[] lines = {
+                    "Hey {player}! Good to see a friendly face.",
+                    "Well if it isn't {player}! How've you been?",
+                    "{player}! Always welcome here, friend.",
+                    "Nice to see you again, {player}. What's new?"
+            };
+            return lines[rng.nextInt(lines.length)];
+        } else if (hearts >= 20) {
+            // Acquaintance tier
+            String[] lines = {
+                    "Oh, hello {player}. Nice to see you.",
+                    "Hey there, {player}. What brings you by?",
+                    "Ah, {player}. Good day to you."
+            };
+            return lines[rng.nextInt(lines.length)];
+        } else if (hearts >= 0) {
+            // Neutral
+            String[] lines = {
+                    "Hello, {player}.",
+                    "Oh. {player}. What can I do for you?",
+                    "Hmm? Oh, {player}. Hello."
+            };
+            return lines[rng.nextInt(lines.length)];
+        } else {
+            // Negative hearts — dislike
+            String[] lines = {
+                    "Oh. It's you, {player}.",
+                    "What do you want, {player}?",
+                    "*sighs* Yes, {player}?",
+                    "I was having a perfectly nice day until now."
+            };
+            return lines[rng.nextInt(lines.length)];
+        }
+    }
+
     private String buildFirstGreeting(boolean firstMeeting) {
         NpcTrait trait = toNpcTrait(villager.getVillagerBrain().getPersonality());
-        String playerName = player.getName().getString();
+        String playerName = getPlayerMCAName();
         String npcName = villager.asEntity().getName().getString();
 
         NpcJob npcJob = toNpcJob();
-        String jobDisplay = profession == null || profession.isBlank() ? "Jobless" : profession;
+        // Issue 4: Derive job display from NpcJob when server profession data hasn't arrived yet
+        String jobDisplay;
+        if (profession != null && !profession.isBlank()) {
+            jobDisplay = profession;
+        } else if (npcJob != NpcJob.NONE) {
+            // Convert enum name to title case (e.g. FLETCHER -> Fletcher)
+            String raw = npcJob.name();
+            jobDisplay = raw.charAt(0) + raw.substring(1).toLowerCase(Locale.ENGLISH).replace("_", " ");
+        } else {
+            jobDisplay = "Jobless";
+        }
         String jobKey = getIntroJobKey(npcJob);
 
         Optional<VillagerEntityMCA> rival = findRival(villager.asEntity().getWorld(), villager.asEntity().getBlockPos(), npcJob);
@@ -601,12 +728,22 @@ public class InteractScreen extends AbstractDynamicScreen {
     }
 
     /**
+     * Returns the player's MCA-chosen name, falling back to gamertag.
+     */
+    private String getPlayerMCAName() {
+        return MCAClient.getPlayerData(player.getUuid())
+                .map(d -> d.getTrackedValue(VillagerLike.VILLAGER_NAME))
+                .filter(n -> n != null && !n.isBlank())
+                .orElse(player.getName().getString());
+    }
+
+    /**
      * Replaces {player}, {npc}, and {village} placeholders in any string.
      */
     private String applyPlaceholders(String message) {
         if (message == null) return "";
         return message
-                .replace("{player}", player.getName().getString())
+                .replace("{player}", getPlayerMCAName())
                 .replace("{npc}", villager.asEntity().getName().getString())
                 .replace("{village}", villageName.isEmpty() ? "the village" : villageName);
     }
@@ -640,7 +777,7 @@ public class InteractScreen extends AbstractDynamicScreen {
      */
     private void sendPlayerChat(String message) {
         String resolved = applyPlaceholders(message);
-        MutableText name = Text.literal(player.getName().getString()).formatted(Formatting.AQUA);
+        MutableText name = Text.literal(getPlayerMCAName()).formatted(Formatting.AQUA);
         MutableText separator = Text.literal(": ").formatted(Formatting.GRAY);
         MutableText body = Text.literal(resolved).formatted(Formatting.WHITE);
         player.sendMessage(name.append(separator).append(body), false);

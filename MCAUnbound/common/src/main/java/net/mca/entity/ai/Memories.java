@@ -34,6 +34,8 @@ public class Memories {
 
     private boolean hasMet;
 
+    private long lastGreetedTime;
+
     private final VillagerBrain<?> brain;
 
     private long lastSeen;
@@ -162,6 +164,15 @@ public class Memories {
         brain.updateMemories(this);
     }
 
+    public long getLastGreetedTime() {
+        return lastGreetedTime;
+    }
+
+    public void setLastGreetedTime(long value) {
+        this.lastGreetedTime = value;
+        brain.updateMemories(this);
+    }
+
     public long getLastSeen() {
         return lastSeen;
     }
@@ -186,6 +197,7 @@ public class Memories {
         nbt.putInt("sessionHeartDelta", sessionHeartDelta);
         nbt.putLong("refusingToTalkUntil", refusingToTalkUntil);
         nbt.putBoolean("hasMet", hasMet);
+        nbt.putLong("lastGreetedTime", lastGreetedTime);
         nbt.putLong("lastSeen", lastSeen);
 
         return nbt;
@@ -209,6 +221,7 @@ public class Memories {
         memories.sessionHeartDelta = tag.getInt("sessionHeartDelta");
         memories.refusingToTalkUntil = tag.getLong("refusingToTalkUntil");
         memories.hasMet = tag.getBoolean("hasMet");
+        memories.lastGreetedTime = tag.getLong("lastGreetedTime");
         memories.lastSeen = tag.getLong("lastSeen");
 
         return memories;
