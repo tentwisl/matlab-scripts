@@ -1,9 +1,94 @@
 {
   "category": "rumors",
   "subCategories": [
-    {"id":"spooky","label":"Spooky","playerOptions":["Heard lights were seen in the old mine.","People heard whispers near the cemetery."],"results":[{"baseChance":4,"actions":{"positive":1},"npcResponses":["I've heard that too.","Let's avoid that place at night."]}]},
-    {"id":"drama","label":"Drama","playerOptions":["Two families are refusing trade.","The market had another argument today."],"results":[{"baseChance":4,"actions":{"positive":0},"npcResponses":["Village politics never ends.","I hope they settle it soon."]}]},
-    {"id":"treasure","label":"Treasure","playerOptions":["A map points to loot under the ruined tower.","A traveler mentioned gold by the river bend."],"results":[{"baseChance":4,"actions":{"positive":1},"npcResponses":["Now that is useful information.","Maybe we should investigate."]}]},
-    {"id":"warning","label":"Warning","playerOptions":["Scouts saw danger near the north path.","Hostile mobs are gathering after sunset."],"results":[{"baseChance":5,"conditions":[{"chance":2,"job":"GUARD"}],"actions":{"positive":2},"npcResponses":["Good warning. I'll stay alert.","Thanks for letting me know."]}]}
+    {
+      "id": "spooky",
+      "label": "Spooky",
+      "playerOptions": [
+        "Heard lights were seen in the old mine near {village}.",
+        "People heard whispers near the cemetery after dark."
+      ],
+      "results": [
+        {
+          "baseChance": 4,
+          "conditions": [
+            { "chance": 2, "job": "CLERIC" },
+            { "chance": 2, "job": "CULTIST" }
+          ],
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "I've heard that too, {player}. Stay away at night.",
+            "Let's avoid that place. {village} has enough trouble.",
+            "Spooky things happen when you least expect it, {player}."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "drama",
+      "label": "Drama",
+      "playerOptions": [
+        "Two families in {village} are refusing to trade with each other.",
+        "The market had another argument this morning."
+      ],
+      "results": [
+        {
+          "baseChance": 4,
+          "actions": { "positive": 0 },
+          "npcResponses": [
+            "{village} politics never ends, {player}.",
+            "I hope they settle it soon. It's bad for everyone.",
+            "Drama in {village}? That's nothing new."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "treasure",
+      "label": "Treasure",
+      "playerOptions": [
+        "A map fragment points to loot under the ruined tower near {village}.",
+        "A traveler mentioned gold hidden by the river bend."
+      ],
+      "results": [
+        {
+          "baseChance": 4,
+          "conditions": [
+            { "chance": 2, "job": "CARTOGRAPHER" },
+            { "chance": 2, "job": "ADVENTURER" },
+            { "chance": 1, "trait": "GREEDY" }
+          ],
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "Now that is useful information, {player}.",
+            "Maybe we should investigate together.",
+            "Treasure near {village}? Count me interested."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "warning",
+      "label": "Warning",
+      "playerOptions": [
+        "Scouts spotted danger near the north path of {village}.",
+        "Hostile mobs are gathering after sunset."
+      ],
+      "results": [
+        {
+          "baseChance": 5,
+          "conditions": [
+            { "chance": 2, "job": "GUARD" },
+            { "chance": 2, "job": "ARCHER" }
+          ],
+          "actions": { "positive": 2 },
+          "npcResponses": [
+            "Good warning, {player}. I'll stay alert.",
+            "Thanks for letting me know. {village} needs people like you.",
+            "I'll pass this along to the guards. Stay safe, {player}."
+          ]
+        }
+      ]
+    }
   ]
 }

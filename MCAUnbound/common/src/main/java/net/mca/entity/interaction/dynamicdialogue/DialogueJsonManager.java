@@ -34,7 +34,7 @@ import java.util.*;
  */
 public final class DialogueJsonManager {
     private static final Gson GSON = new Gson();
-    private static final List<String> CATEGORIES = List.of("common", "greet", "joke", "story", "romance", "play", "chat", "rumors");
+    private static final List<String> CATEGORIES = List.of("common", "greet", "joke", "story", "romance", "play", "chat", "rumors", "ask");
     private static final net.minecraft.util.math.random.Random RANDOM = net.minecraft.util.math.random.Random.create();
 
     private final Map<String, DialogueCategoryFile> categoryFiles = new HashMap<>();

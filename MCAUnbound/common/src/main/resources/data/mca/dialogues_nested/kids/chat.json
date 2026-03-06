@@ -5,7 +5,7 @@
       "id": "toys",
       "label": "Toys",
       "playerOptions": [
-        "Want to play with your toys?",
+        "Want to play with your toys, {npc}?",
         "What's your favorite toy?"
       ],
       "results": [
@@ -13,8 +13,9 @@
           "baseChance": 7,
           "actions": { "positive": 1 },
           "npcResponses": [
-            "Toy time!",
-            "I like blocks!"
+            "Toy time! Come play with me, {player}!",
+            "I like blocks! I'm building a castle!",
+            "My favorite is the wooden sword. I'm a knight!"
           ]
         }
       ]
@@ -23,7 +24,7 @@
       "id": "snacks",
       "label": "Snacks",
       "playerOptions": [
-        "Are you hungry?",
+        "Are you hungry, {npc}?",
         "Want a little snack?"
       ],
       "results": [
@@ -31,8 +32,60 @@
           "baseChance": 6,
           "actions": { "positive": 1 },
           "npcResponses": [
-            "Cookies please!",
-            "Yummy!"
+            "Cookies please, {player}!",
+            "Yummy! Can I have extra?",
+            "I'm ALWAYS hungry!"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "friends",
+      "label": "Friends",
+      "age_group": "child",
+      "playerOptions": [
+        "Made any new friends lately, {npc}?",
+        "Who do you play with in {village}?"
+      ],
+      "results": [
+        {
+          "baseChance": 6,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "{npc1} is my best friend! We do everything together!",
+            "Everyone in {village} is nice! Except sometimes {npc2} is mean.",
+            "I play with {npc1} and {npc3} after chores!"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "feelings",
+      "label": "Feelings",
+      "playerOptions": [
+        "How are you feeling today, {npc}?",
+        "Is everything okay, little one?"
+      ],
+      "results": [
+        {
+          "baseChance": 6,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "I'm happy, {player}!",
+            "I'm okay! Just a little tired.",
+            "I'm good! Can we do something fun?"
+          ]
+        },
+        {
+          "baseChance": 3,
+          "conditions": [
+            { "chance": 3, "mood": "SAD" }
+          ],
+          "actions": { "positive": 2 },
+          "npcResponses": [
+            "I'm sad, {player}... can you stay with me?",
+            "I miss you when you're gone, {player}.",
+            "I had a bad dream last night..."
           ]
         }
       ]

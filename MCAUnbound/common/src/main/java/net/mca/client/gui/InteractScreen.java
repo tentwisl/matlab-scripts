@@ -126,8 +126,9 @@ public class InteractScreen extends AbstractDynamicScreen {
     public void init() {
         Memories memory = villager.getVillagerBrain().getMemoriesForPlayer(player);
         if (isTalkLockedOut(memory)) {
-            sendVillagerChat(dialogueJsonManager.getEscalatedResponse(memory.getSessionHeartDelta(), true)
-                    .orElse("I have nothing to say to you right now."));
+            sendVillagerChat(applyPlaceholders(
+                    dialogueJsonManager.getEscalatedResponse(memory.getSessionHeartDelta(), true)
+                            .orElse("I have nothing to say to you right now.")));
             close();
             return;
         }
@@ -180,10 +181,8 @@ public class InteractScreen extends AbstractDynamicScreen {
         }
 
         talkButtons.add(ButtonSpec.of("Chat",    () -> openDialogueCategory(MainDialogueCategory.CHAT)));
-        talkButtons.add(isJuvenileVillager()
-                ? ButtonSpec.of("Rumors", () -> openDialogueCategory(MainDialogueCategory.RUMORS))
-                : ButtonSpec.of("Rumors", () -> sendInteract("gui.button.location")));
-        talkButtons.add(ButtonSpec.of("Ask",     () -> {})); // placeholder
+        talkButtons.add(ButtonSpec.of("Rumors",   () -> openDialogueCategory(MainDialogueCategory.RUMORS)));
+        talkButtons.add(ButtonSpec.of("Ask",      () -> openDialogueCategory(MainDialogueCategory.ASK)));
 
         pane.add(PaneEntries.buttonGrid(talkButtons, 2, 20));
 
@@ -191,7 +190,9 @@ public class InteractScreen extends AbstractDynamicScreen {
             pane.add(PaneEntries.spacer(8));
             pane.add(PaneEntries.label("§f  " + selectedTalkCategory.name() + " options", 0xAA111111));
             for (DialogueOptionEntry option : activeDialogueOptions) {
-                pane.add(PaneEntries.buttonRow(option.optionText(), option.subCategoryId(),
+                // Button label = subcategory label (e.g. "Friendly", "Heroic")
+                // Tooltip = player's spoken line (flavor text preview)
+                pane.add(PaneEntries.buttonRow(option.label(), option.playerLine(),
                         () -> onDialogueSubButtonClicked(option)));
             }
 
@@ -200,7 +201,7 @@ public class InteractScreen extends AbstractDynamicScreen {
                 pane.add(PaneEntries.divider());
                 pane.add(PaneEntries.buttonRow("Hug", "Use default MCA hug dialogue logic",
                         () -> sendInteract("gui.button.hug")));
-                pane.add(PaneEntries.buttonRow("Kiss ♥", "Use default MCA kiss dialogue logic",
+                pane.add(PaneEntries.buttonRow("Kiss", "Use default MCA kiss dialogue logic",
                         () -> sendInteract("gui.button.kiss")));
             }
         }
@@ -259,20 +260,20 @@ public class InteractScreen extends AbstractDynamicScreen {
         pane.add(PaneEntries.divider());
 
         // Nation alliance proposal — shown only when the NPC is a village leader,
-        // the player has 100 ♥ with them, and the player is already a village leader.
+        // the player has 100 hearts with them, and the player is already a village leader.
         if (isNpcLeader && playerIsOwnVillageLeader) {
             if (leaderConvinced) {
-                pane.add(PaneEntries.buttonRow("Alliance Proposed ✓",
+                pane.add(PaneEntries.buttonRow("Alliance Proposed",
                         "This leader has agreed to join your nation",
                         () -> {}, true));
             } else if (hearts >= 100) {
                 pane.add(PaneEntries.buttonRow("Propose Nation Alliance",
-                        "Ask this leader to join your nation (requires 100 ♥)",
+                        "Ask this leader to join your nation (requires 100 hearts)",
                         () -> NetworkHandler.sendToServer(
                                 new ConvinceLeaderPacket(villager.asEntity().getUuid()))));
             } else {
                 pane.add(PaneEntries.buttonRow("Propose Nation Alliance",
-                        "Requires 100 ♥ with this leader",
+                        "Requires 100 hearts with this leader",
                         () -> {}, true));
             }
         }
@@ -305,12 +306,18 @@ public class InteractScreen extends AbstractDynamicScreen {
         }
         pane.add(PaneEntries.infoRow("Trait", traitStr, 0x55FFFF));
 
+        // Relationship context
+        String relationCtx = getRelationshipContext(c);
+        if (!relationCtx.isEmpty()) {
+            pane.add(PaneEntries.infoRow("Relation", relationCtx, 0xFFAA55));
+        }
+
         String profDisplay = profession.isEmpty() ? "Jobless" : profession;
         int profColor = isNpcLeader ? 0xFFD700 : 0xFFFFFF;
         pane.add(PaneEntries.infoRow("Job",     profDisplay, profColor));
 
         int hc = hearts < 0 ? 0xFF5555 : hearts >= 100 ? 0xFFD700 : 0xFF6666;
-        pane.add(PaneEntries.infoRow("Hearts",  hearts + " ♥", hc));
+        pane.add(PaneEntries.infoRow("Hearts",  hearts + " hearts", hc));
         int lastDelta = memory.getLastInteractionDelta();
         String deltaLabel = lastDelta > 0 ? "+" + lastDelta : Integer.toString(lastDelta);
         int deltaColor = lastDelta > 0 ? 0x77FF77 : (lastDelta < 0 ? 0xFF7777 : 0xBBBBBB);
@@ -347,14 +354,80 @@ public class InteractScreen extends AbstractDynamicScreen {
                 new InteractionVillagerMessage(buttonId, villager.asEntity().getUuid()));
     }
 
+    /**
+     * Returns a human-readable relationship label for the Profile tab.
+     */
+    private String getRelationshipContext(Set<Constraint> c) {
+        if (c.contains(Constraint.SPOUSE)) return "Your Spouse";
+        if (c.contains(Constraint.ENGAGED)) return "Your Fiance";
+        if (c.contains(Constraint.PARENT)) return "Your Child";
+        if (c.contains(Constraint.KIDS)) return "Your Parent";
+        if (c.contains(Constraint.FAMILY)) return "Family";
+        return "";
+    }
+
+    /**
+     * Determines the family relationship type for dialogue context.
+     */
+    private FamilyRelation getFamilyRelation(Set<Constraint> c) {
+        if (c.contains(Constraint.SPOUSE) || c.contains(Constraint.ENGAGED)) return FamilyRelation.SPOUSE;
+        if (c.contains(Constraint.PARENT)) return FamilyRelation.MY_CHILD;
+        if (c.contains(Constraint.KIDS)) return FamilyRelation.MY_PARENT;
+        if (c.contains(Constraint.FAMILY)) return FamilyRelation.FAMILY;
+        return FamilyRelation.NONE;
+    }
 
     private void triggerInitialGreeting(Memories memory) {
+        Set<Constraint> c = getConstraints();
+        FamilyRelation relation = getFamilyRelation(c);
         boolean firstMeeting = !memory.hasMet() || memory.getHearts() == 0;
-        String greeting = buildFirstGreeting(firstMeeting);
-        sendVillagerChat(greeting);
+
+        String greeting;
+        if (relation != FamilyRelation.NONE && !firstMeeting) {
+            greeting = buildFamilyGreeting(relation);
+        } else {
+            greeting = buildFirstGreeting(firstMeeting);
+        }
+        sendVillagerChat(applyPlaceholders(greeting));
         if (!memory.hasMet()) {
             memory.setHasMet(true);
         }
+    }
+
+    private String buildFamilyGreeting(FamilyRelation relation) {
+        String npcName = villager.asEntity().getName().getString();
+        NpcTrait trait = toNpcTrait(villager.getVillagerBrain().getPersonality());
+        NpcMood mood = toNpcMood(villager.getVillagerBrain().getMood().getName());
+
+        return switch (relation) {
+            case SPOUSE -> switch (mood) {
+                case HAPPY -> switch (trait) {
+                    case FLIRTATIOUS -> "There's my favorite person. Come here, {player}.";
+                    case SHY -> "Oh, {player}... I'm glad you're home.";
+                    default -> "Welcome back, love. I missed you, {player}.";
+                };
+                case SAD -> "I've been thinking about things, {player}... can we talk?";
+                case ANGRY -> "We need to talk, {player}. I'm not happy right now.";
+                default -> "Hey there, {player}. Good to see you.";
+            };
+            case MY_CHILD -> switch (mood) {
+                case HAPPY -> isJuvenileVillager()
+                        ? "Mama! Papa! You're here! {player}!"
+                        : "Hey, {player}! Glad you stopped by.";
+                case SAD -> isJuvenileVillager()
+                        ? "I missed you, {player}... where were you?"
+                        : "Hi {player}... I've been having a rough day.";
+                case ANGRY -> isJuvenileVillager()
+                        ? "Hmph! I'm still mad, {player}!"
+                        : "Not now, {player}. I need some space.";
+                default -> isJuvenileVillager()
+                        ? "Hi {player}! What are we doing today?"
+                        : "Oh, hey {player}. What's up?";
+            };
+            case MY_PARENT -> "Good to see you. How are you feeling today, {player}?";
+            case FAMILY -> "Family is always welcome. Hello, {player}.";
+            case NONE -> "Hello, {player}.";
+        };
     }
 
     private String buildFirstGreeting(boolean firstMeeting) {
@@ -379,7 +452,7 @@ public class InteractScreen extends AbstractDynamicScreen {
         if (npcJob == NpcJob.VILLAGE_LEADER) {
             return "village_leader";
         }
-        if (npcJob == NpcJob.GUARD) {
+        if (npcJob == NpcJob.GUARD || npcJob == NpcJob.ARCHER) {
             return "guard";
         }
         if (profession != null && !profession.isBlank()) {
@@ -389,7 +462,7 @@ public class InteractScreen extends AbstractDynamicScreen {
     }
 
     private Optional<VillagerEntityMCA> findRival(World world, BlockPos pos, NpcJob job) {
-        if (job == NpcJob.NONE || job == NpcJob.GUARD || job == NpcJob.VILLAGE_LEADER) {
+        if (job == NpcJob.NONE || job == NpcJob.GUARD || job == NpcJob.ARCHER || job == NpcJob.VILLAGE_LEADER) {
             return Optional.empty();
         }
 
@@ -404,8 +477,9 @@ public class InteractScreen extends AbstractDynamicScreen {
     private void openDialogueCategory(MainDialogueCategory category) {
         Memories memory = villager.getVillagerBrain().getMemoriesForPlayer(player);
         if (isTalkLockedOut(memory)) {
-            sendVillagerChat(dialogueJsonManager.getEscalatedResponse(memory.getSessionHeartDelta(), true)
-                    .orElse("I have nothing to say to you right now."));
+            sendVillagerChat(applyPlaceholders(
+                    dialogueJsonManager.getEscalatedResponse(memory.getSessionHeartDelta(), true)
+                            .orElse("I have nothing to say to you right now.")));
             close();
             return;
         }
@@ -413,7 +487,8 @@ public class InteractScreen extends AbstractDynamicScreen {
         selectedTalkCategory = category;
         String categoryKey = category.name().toLowerCase(Locale.ENGLISH);
         activeDialogueOptions = dialogueJsonManager.getPlayerOptions(categoryKey, isJuvenileVillager(), villager.getAgeState()).stream()
-                .map(option -> new DialogueOptionEntry(option.category(), option.subCategoryId(), option.playerLine()))
+                .map(option -> new DialogueOptionEntry(
+                        option.category(), option.subCategoryId(), option.label(), option.playerLine()))
                 .toList();
         buildTabPanel();
     }
@@ -421,11 +496,15 @@ public class InteractScreen extends AbstractDynamicScreen {
     private void onDialogueSubButtonClicked(DialogueOptionEntry option) {
         Memories memory = villager.getVillagerBrain().getMemoriesForPlayer(player);
         if (isTalkLockedOut(memory)) {
-            sendVillagerChat(dialogueJsonManager.getEscalatedResponse(memory.getSessionHeartDelta(), true)
-                    .orElse("I have nothing to say to you right now."));
+            sendVillagerChat(applyPlaceholders(
+                    dialogueJsonManager.getEscalatedResponse(memory.getSessionHeartDelta(), true)
+                            .orElse("I have nothing to say to you right now.")));
             close();
             return;
         }
+
+        // Player speaks their line in chat (two-sided conversation)
+        sendPlayerChat(option.playerLine());
 
         DialogueJsonManager.JsonSubCategory subCategory = dialogueJsonManager
                 .getSubCategory(option.categoryKey(), option.subCategoryId(), isJuvenileVillager(), villager.getAgeState())
@@ -449,9 +528,8 @@ public class InteractScreen extends AbstractDynamicScreen {
         memory.modInteractionFatigue(1);
         memory.setLastInteractionDelta(result.relationshipPointChange());
 
-        if (result.relationshipPointChange() < 0) {
-            memory.modSessionHeartDelta(result.relationshipPointChange());
-        }
+        // Bidirectional session tracking: positive interactions offset annoyance
+        memory.modSessionHeartDelta(result.relationshipPointChange());
 
         if (result.relationshipPointChange() > 0) {
             villager.getVillagerBrain().modifyMoodValue(1);
@@ -489,6 +567,9 @@ public class InteractScreen extends AbstractDynamicScreen {
                 .getEscalatedResponse(memory.getSessionHeartDelta(), false)
                 .orElse(result.npcResponse());
 
+        // Apply placeholders to all NPC responses
+        response = applyPlaceholders(response);
+
         if (isJuvenileVillager() && option.categoryKey().equalsIgnoreCase("rumors") && memory.getSessionHeartDelta() > ANNOYED_THRESHOLD) {
             response = applyKidRumorNameFormatting(response);
         }
@@ -519,6 +600,16 @@ public class InteractScreen extends AbstractDynamicScreen {
         return false;
     }
 
+    /**
+     * Replaces {player}, {npc}, and {village} placeholders in any string.
+     */
+    private String applyPlaceholders(String message) {
+        if (message == null) return "";
+        return message
+                .replace("{player}", player.getName().getString())
+                .replace("{npc}", villager.asEntity().getName().getString())
+                .replace("{village}", villageName.isEmpty() ? "the village" : villageName);
+    }
 
     private String applyKidRumorNameFormatting(String message) {
         if (message == null || message.isBlank()) {
@@ -544,6 +635,17 @@ public class InteractScreen extends AbstractDynamicScreen {
                 .replace("{npc3}", third);
     }
 
+    /**
+     * Sends the player's spoken dialogue line to chat (two-sided conversation feel).
+     */
+    private void sendPlayerChat(String message) {
+        String resolved = applyPlaceholders(message);
+        MutableText name = Text.literal(player.getName().getString()).formatted(Formatting.AQUA);
+        MutableText separator = Text.literal(": ").formatted(Formatting.GRAY);
+        MutableText body = Text.literal(resolved).formatted(Formatting.WHITE);
+        player.sendMessage(name.append(separator).append(body), false);
+    }
+
     private void sendVillagerChat(String message) {
         MutableText name = Text.literal(villager.asEntity().getName().getString()).formatted(Formatting.GOLD);
         MutableText separator = Text.literal(": ").formatted(Formatting.GRAY);
@@ -560,31 +662,58 @@ public class InteractScreen extends AbstractDynamicScreen {
         return villager.getAgeState() == AgeState.BABY;
     }
 
+    /**
+     * Maps all MCA and vanilla professions to NpcJob.
+     */
     private NpcJob toNpcJob() {
         if (isNpcLeader) {
             return NpcJob.VILLAGE_LEADER;
         }
 
         VillagerProfession job = villager.getVillagerData().getProfession();
-        if (job == VillagerProfession.LEATHERWORKER) {
-            return NpcJob.LEATHERWORKER;
-        }
-        if (job == VillagerProfession.FARMER) {
-            return NpcJob.FARMER;
-        }
-        if (job == ProfessionsMCA.GUARD.get()) {
-            return NpcJob.GUARD;
-        }
+
+        // MCA custom professions
+        if (job == ProfessionsMCA.GUARD.get()) return NpcJob.GUARD;
+        if (job == ProfessionsMCA.ARCHER.get()) return NpcJob.ARCHER;
+        if (job == ProfessionsMCA.ADVENTURER.get()) return NpcJob.ADVENTURER;
+        if (job == ProfessionsMCA.MERCENARY.get()) return NpcJob.MERCENARY;
+        if (job == ProfessionsMCA.OUTLAW.get()) return NpcJob.OUTLAW;
+        if (job == ProfessionsMCA.CULTIST.get()) return NpcJob.CULTIST;
+
+        // Vanilla professions
+        if (job == VillagerProfession.FARMER) return NpcJob.FARMER;
+        if (job == VillagerProfession.LIBRARIAN) return NpcJob.LIBRARIAN;
+        if (job == VillagerProfession.CLERIC) return NpcJob.CLERIC;
+        if (job == VillagerProfession.ARMORER) return NpcJob.ARMORER;
+        if (job == VillagerProfession.WEAPONSMITH) return NpcJob.WEAPONSMITH;
+        if (job == VillagerProfession.TOOLSMITH) return NpcJob.TOOLSMITH;
+        if (job == VillagerProfession.BUTCHER) return NpcJob.BUTCHER;
+        if (job == VillagerProfession.LEATHERWORKER) return NpcJob.LEATHERWORKER;
+        if (job == VillagerProfession.MASON) return NpcJob.MASON;
+        if (job == VillagerProfession.SHEPHERD) return NpcJob.SHEPHERD;
+        if (job == VillagerProfession.FISHERMAN) return NpcJob.FISHERMAN;
+        if (job == VillagerProfession.FLETCHER) return NpcJob.FLETCHER;
+        if (job == VillagerProfession.CARTOGRAPHER) return NpcJob.CARTOGRAPHER;
+        if (job == VillagerProfession.NITWIT) return NpcJob.NITWIT;
+
         return NpcJob.NONE;
     }
 
+    /**
+     * Maps MCA Personality to NpcTrait with correct 1:1 semantics.
+     * No more lumping ODD/LAZY/GREEDY into SERIOUS.
+     */
     private NpcTrait toNpcTrait(Personality personality) {
         return switch (personality) {
-            case WITTY, PEPPY, FRIENDLY -> NpcTrait.JOVIAL;
+            case WITTY, FRIENDLY -> NpcTrait.JOVIAL;
+            case PEPPY, ATHLETIC -> NpcTrait.PEPPY;
             case GRUMPY, GLOOMY -> NpcTrait.GRUMPY;
             case FLIRTY -> NpcTrait.FLIRTATIOUS;
             case SHY, SENSITIVE -> NpcTrait.SHY;
-            case CONFIDENT, ATHLETIC, GREEDY, ODD, LAZY -> NpcTrait.SERIOUS;
+            case CONFIDENT -> NpcTrait.SERIOUS;
+            case ODD -> NpcTrait.ODD;
+            case LAZY -> NpcTrait.LAZY;
+            case GREEDY -> NpcTrait.GREEDY;
             case UNASSIGNED -> NpcTrait.NORMAL;
         };
     }
@@ -603,7 +732,18 @@ public class InteractScreen extends AbstractDynamicScreen {
         return NpcMood.NEUTRAL;
     }
 
-    private record DialogueOptionEntry(String categoryKey, String subCategoryId, String optionText) {
+    /**
+     * DialogueOptionEntry now carries 4 fields:
+     *   categoryKey  – the dialogue category (e.g. "greet")
+     *   subCategoryId – the sub-category id (e.g. "friendly")
+     *   label         – display label for the button (e.g. "Friendly")
+     *   playerLine    – the player's spoken line (shown as tooltip, echoed to chat)
+     */
+    private record DialogueOptionEntry(String categoryKey, String subCategoryId, String label, String playerLine) {
+    }
+
+    private enum FamilyRelation {
+        SPOUSE, MY_CHILD, MY_PARENT, FAMILY, NONE
     }
 
     // ── Rendering ─────────────────────────────────────────────────────────────
@@ -658,7 +798,7 @@ public class InteractScreen extends AbstractDynamicScreen {
 
         int hc = hearts < 0 ? 0xFF5555 : hearts >= 100 ? 0xFFD700 : 0xFF6666;
         context.drawTextWithShadow(textRenderer,
-                Text.literal("♥ ").styled(s -> s.withColor(hc))
+                Text.literal("Hearts: ").formatted(Formatting.GRAY)
                         .append(Text.literal(String.valueOf(hearts)).styled(s -> s.withColor(hc))),
                 tx, ty + lh * 3, 0xFFFFFF);
 

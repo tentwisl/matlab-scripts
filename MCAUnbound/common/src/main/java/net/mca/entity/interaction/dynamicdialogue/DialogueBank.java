@@ -54,6 +54,11 @@ public final class DialogueBank {
         PLAYER_OPTION_POOLS.put(DialogueSubtype.RUMORS_TREASURE, List.of("A map fragment points to loot under the ruined tower.", "A traveler swore there's gold hidden by the river bend."));
         PLAYER_OPTION_POOLS.put(DialogueSubtype.RUMORS_WARNING, List.of("Scouts spotted danger near the northern path.", "I heard hostile mobs are gathering after sunset."));
 
+        PLAYER_OPTION_POOLS.put(DialogueSubtype.ASK_MONEY, List.of("Could you spare a few emeralds?", "I'm a bit short on coin—can you help?"));
+        PLAYER_OPTION_POOLS.put(DialogueSubtype.ASK_FAVOR, List.of("I need a political favor. Will you hear me out?", "I could use your support on something important."));
+        PLAYER_OPTION_POOLS.put(DialogueSubtype.ASK_TASK, List.of("Could you handle a task for me?", "I have a job that needs doing—interested?"));
+        PLAYER_OPTION_POOLS.put(DialogueSubtype.ASK_DIRECTIONS, List.of("Do you know where I can find...?", "Which way to the nearest village?"));
+
         for (MainDialogueCategory category : MainDialogueCategory.values()) {
             NPC_RESPONSE_POOLS.put(ResponsePool.of(category, ReactionType.POSITIVE), List.of("That was lovely to hear.", "You always know what to say."));
             NPC_RESPONSE_POOLS.put(ResponsePool.of(category, ReactionType.NEUTRAL), List.of("Hmm... I see.", "Alright, noted."));
@@ -61,10 +66,33 @@ public final class DialogueBank {
             NPC_RESPONSE_POOLS.put(ResponsePool.of(category, ReactionType.REPETITIVE), REPETITIVE_RESPONSES);
         }
 
+        // Override ASK-specific response pools
+        NPC_RESPONSE_POOLS.put(ResponsePool.of(MainDialogueCategory.ASK, ReactionType.POSITIVE), List.of("Of course, {player}. Anything for you.", "You've earned it. Here you go."));
+        NPC_RESPONSE_POOLS.put(ResponsePool.of(MainDialogueCategory.ASK, ReactionType.NEUTRAL), List.of("I'll think about it.", "Maybe. Let me consider."));
+        NPC_RESPONSE_POOLS.put(ResponsePool.of(MainDialogueCategory.ASK, ReactionType.NEGATIVE), List.of("That's a big ask. No.", "I don't think so, {player}."));
+
+        // Expanded job flavor pools for all professions
         JOB_FLAVOR_POOLS.put(NpcJob.VILLAGE_LEADER, List.of("Keep it concise—we have village matters to settle.", "If this concerns the town, speak clearly."));
         JOB_FLAVOR_POOLS.put(NpcJob.GUARD, List.of("Stay alert. The roads aren't safe after dusk.", "We can talk, but keep your eyes on the gates."));
+        JOB_FLAVOR_POOLS.put(NpcJob.ARCHER, List.of("I keep my bow close. You should too.", "Eyes on the perimeter. Talk while we walk."));
         JOB_FLAVOR_POOLS.put(NpcJob.FARMER, List.of("The soil's good today. Rain might help tomorrow.", "Harvest season decides everything around here."));
         JOB_FLAVOR_POOLS.put(NpcJob.LEATHERWORKER, List.of("Fine leather takes patience and steady hands.", "I've been working hides since dawn."));
+        JOB_FLAVOR_POOLS.put(NpcJob.LIBRARIAN, List.of("Knowledge is the real currency, {player}.", "I found an interesting passage last night..."));
+        JOB_FLAVOR_POOLS.put(NpcJob.CLERIC, List.of("The spirits are restless today.", "May your path be blessed, {player}."));
+        JOB_FLAVOR_POOLS.put(NpcJob.ARMORER, List.of("This chestplate could save your life. Consider it.", "Iron and fire—that's my world."));
+        JOB_FLAVOR_POOLS.put(NpcJob.WEAPONSMITH, List.of("A good blade speaks louder than words.", "I've sharpened more swords than I can count."));
+        JOB_FLAVOR_POOLS.put(NpcJob.TOOLSMITH, List.of("The right tool makes all the difference.", "I can fix that pickaxe if you bring it by."));
+        JOB_FLAVOR_POOLS.put(NpcJob.BUTCHER, List.of("Pork's fresh today. Just saying.", "Business has been good—folks gotta eat."));
+        JOB_FLAVOR_POOLS.put(NpcJob.MASON, List.of("Stone doesn't lie. Neither do I.", "I built half the walls in this village."));
+        JOB_FLAVOR_POOLS.put(NpcJob.SHEPHERD, List.of("The flock is calm today. Good sign.", "Wool prices are up. Fine by me."));
+        JOB_FLAVOR_POOLS.put(NpcJob.FISHERMAN, List.of("The river's been generous this week.", "Early morning bites are the best."));
+        JOB_FLAVOR_POOLS.put(NpcJob.FLETCHER, List.of("Arrows don't make themselves, you know.", "Feathers and flint—simple but deadly."));
+        JOB_FLAVOR_POOLS.put(NpcJob.CARTOGRAPHER, List.of("I've mapped lands most people only dream of.", "There's always one more blank spot on the map."));
+        JOB_FLAVOR_POOLS.put(NpcJob.ADVENTURER, List.of("I've seen things out there that'd make your head spin.", "Every road leads somewhere worth going."));
+        JOB_FLAVOR_POOLS.put(NpcJob.MERCENARY, List.of("Talk is cheap. Emeralds aren't.", "I don't work for free. But we can negotiate."));
+        JOB_FLAVOR_POOLS.put(NpcJob.OUTLAW, List.of("Keep your voice down. Walls have ears.", "I didn't choose this life... well, maybe I did."));
+        JOB_FLAVOR_POOLS.put(NpcJob.CULTIST, List.of("The old ones whisper if you listen closely.", "There are truths beyond what you see, {player}."));
+        JOB_FLAVOR_POOLS.put(NpcJob.NITWIT, List.of("I saw a chicken today! It was nice.", "Do you like clouds? I like clouds."));
         JOB_FLAVOR_POOLS.put(NpcJob.NONE, List.of("I'm just trying to get through the day.", "Work comes and goes. People matter more."));
     }
 
@@ -95,30 +123,14 @@ public final class DialogueBank {
     }
 
     public enum ResponsePool {
-        GREET_POSITIVE,
-        GREET_NEUTRAL,
-        GREET_NEGATIVE,
-        GREET_REPETITIVE,
-        JOKE_POSITIVE,
-        JOKE_NEUTRAL,
-        JOKE_NEGATIVE,
-        JOKE_REPETITIVE,
-        STORY_POSITIVE,
-        STORY_NEUTRAL,
-        STORY_NEGATIVE,
-        STORY_REPETITIVE,
-        ROMANCE_POSITIVE,
-        ROMANCE_NEUTRAL,
-        ROMANCE_NEGATIVE,
-        ROMANCE_REPETITIVE,
-        CHAT_POSITIVE,
-        CHAT_NEUTRAL,
-        CHAT_NEGATIVE,
-        CHAT_REPETITIVE,
-        RUMORS_POSITIVE,
-        RUMORS_NEUTRAL,
-        RUMORS_NEGATIVE,
-        RUMORS_REPETITIVE;
+        GREET_POSITIVE, GREET_NEUTRAL, GREET_NEGATIVE, GREET_REPETITIVE,
+        JOKE_POSITIVE, JOKE_NEUTRAL, JOKE_NEGATIVE, JOKE_REPETITIVE,
+        STORY_POSITIVE, STORY_NEUTRAL, STORY_NEGATIVE, STORY_REPETITIVE,
+        ROMANCE_POSITIVE, ROMANCE_NEUTRAL, ROMANCE_NEGATIVE, ROMANCE_REPETITIVE,
+        PLAY_POSITIVE, PLAY_NEUTRAL, PLAY_NEGATIVE, PLAY_REPETITIVE,
+        CHAT_POSITIVE, CHAT_NEUTRAL, CHAT_NEGATIVE, CHAT_REPETITIVE,
+        RUMORS_POSITIVE, RUMORS_NEUTRAL, RUMORS_NEGATIVE, RUMORS_REPETITIVE,
+        ASK_POSITIVE, ASK_NEUTRAL, ASK_NEGATIVE, ASK_REPETITIVE;
 
         public static ResponsePool of(MainDialogueCategory category, ReactionType reactionType) {
             return valueOf(category.name() + "_" + reactionType.name());

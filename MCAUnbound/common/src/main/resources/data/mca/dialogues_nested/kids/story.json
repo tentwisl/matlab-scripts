@@ -5,16 +5,57 @@
       "id": "bedtime",
       "label": "Bedtime",
       "playerOptions": [
-        "Want to hear a bedtime story?",
-        "Once upon a time..."
+        "Want to hear a bedtime story, {npc}?",
+        "Once upon a time, in a land far away..."
       ],
       "results": [
         {
           "baseChance": 7,
           "actions": { "positive": 1 },
           "npcResponses": [
-            "Tell me more!",
-            "And then what happened?"
+            "Tell me more, {player}!",
+            "And then what happened?!",
+            "Was there a dragon? I hope there was a dragon!"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "adventure",
+      "label": "Adventure",
+      "age_group": "child",
+      "playerOptions": [
+        "Want to hear about one of my adventures, {npc}?",
+        "I once explored a cave full of monsters!"
+      ],
+      "results": [
+        {
+          "baseChance": 6,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "Whoa! Were you scared, {player}?",
+            "I wanna go on an adventure too someday!",
+            "You're so brave, {player}! Teach me to fight!"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lullaby",
+      "label": "Lullaby",
+      "age_group": "baby",
+      "playerOptions": [
+        "*hums a gentle lullaby to {npc}*",
+        "Hush little baby, don't say a word..."
+      ],
+      "results": [
+        {
+          "baseChance": 7,
+          "actions": { "positive": 2 },
+          "npcResponses": [
+            "*yawns and snuggles closer*",
+            "mmm... *eyes getting heavy*",
+            "*coos softly*"
           ]
         }
       ]
