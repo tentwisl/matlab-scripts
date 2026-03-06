@@ -405,7 +405,48 @@ public class InteractScreen extends AbstractDynamicScreen {
         boolean recentReopen = lastGreeted > 0 && (worldTime - lastGreeted) < GREETING_COOLDOWN_TICKS;
         memory.setLastGreetedTime(worldTime);
 
-        // Issue 1: If re-opened recently, show a brief return-visit line instead
+        // --- LEGACY MIGRATION ---
+        // Villagers met before hasMet was introduced have hearts > 0 but hasMet = false.
+        // Treat hearts >= 5 as implicitly met to prevent stale first-meeting intros.
+        if (!memory.hasMet() && memory.getHearts() >= 5) {
+            memory.setHasMet(true);
+        }
+
+        // --- BABIES: always babble, never speak English ---
+        if (isBabyVillager()) {
+            Set<Constraint> bc = getConstraints();
+            FamilyRelation bRelation = getFamilyRelation(bc);
+            // Babies don't care about cooldown — every open gets a babble
+            String greeting = buildBabyGreeting(bRelation);
+            sendVillagerChat(applyPlaceholders(greeting));
+            if (!memory.hasMet()) memory.setHasMet(true);
+            return;
+        }
+
+        // --- CHILDREN: age-appropriate return-visit, never adult phrases ---
+        if (isJuvenileVillager()) {
+            if (recentReopen) {
+                String[] kidReturnLines = {
+                        "You're back already! Wanna play some more?",
+                        "Hehe, you forgot something?",
+                        "You didn't leave! Are we still playing?",
+                        "Did you miss me already?"
+                };
+                sendVillagerChat(kidReturnLines[villager.asEntity().getRandom().nextInt(kidReturnLines.length)]);
+                return;
+            }
+            Set<Constraint> kc = getConstraints();
+            FamilyRelation kRelation = getFamilyRelation(kc);
+            boolean kFirstMeeting = !memory.hasMet();
+            String greeting = buildChildGreeting(kRelation, kFirstMeeting);
+            sendVillagerChat(applyPlaceholders(greeting));
+            if (!memory.hasMet()) memory.setHasMet(true);
+            return;
+        }
+
+        // --- ADULTS ---
+
+        // Return-visit cooldown
         if (recentReopen) {
             String[] returnLines = {
                     "Forget to tell me something, {player}?",
@@ -419,29 +460,18 @@ public class InteractScreen extends AbstractDynamicScreen {
 
         Set<Constraint> c = getConstraints();
         FamilyRelation relation = getFamilyRelation(c);
-        boolean firstMeeting = !memory.hasMet(); // Issue 3: hasMet is sole determinant
-
-        // Issue 5: Babies only do gibberish greetings
-        if (isBabyVillager()) {
-            String greeting = buildBabyGreeting(relation);
-            sendVillagerChat(applyPlaceholders(greeting));
-            if (!memory.hasMet()) memory.setHasMet(true);
-            return;
-        }
+        boolean firstMeeting = !memory.hasMet();
 
         String greeting;
         if (relation != FamilyRelation.NONE && !firstMeeting) {
             greeting = buildFamilyGreeting(relation);
         } else if (!firstMeeting) {
-            // Issue 2: Heart-tier greetings for non-family returning villagers
             greeting = buildHeartTierGreeting(memory.getHearts());
         } else {
             greeting = buildFirstGreeting(firstMeeting);
         }
         sendVillagerChat(applyPlaceholders(greeting));
-        if (!memory.hasMet()) {
-            memory.setHasMet(true);
-        }
+        if (!memory.hasMet()) memory.setHasMet(true);
     }
 
     private String buildFamilyGreeting(FamilyRelation relation) {
@@ -493,6 +523,46 @@ public class InteractScreen extends AbstractDynamicScreen {
                 "*giggles at " + parentWord + "*"
         };
         return babyLines[villager.asEntity().getRandom().nextInt(babyLines.length)];
+    }
+
+    private String buildChildGreeting(FamilyRelation relation, boolean firstMeeting) {
+        var rng = villager.asEntity().getRandom();
+        if (firstMeeting) {
+            String[] intro = {
+                    "Hi! I'm {npc}. Are you new here?",
+                    "Oh! Hello! I've never seen you before. I'm {npc}!",
+                    "Whoa, a stranger! Hi! My name is {npc}."
+            };
+            return intro[rng.nextInt(intro.length)];
+        }
+        return switch (relation) {
+            case MY_PARENT, SPOUSE -> {
+                String[] lines = {
+                        "{player}! You're here!",
+                        "Mama! Papa! {player}!",
+                        "I've been waiting for you, {player}!",
+                        "You came back! Can we do something fun?"
+                };
+                yield lines[rng.nextInt(lines.length)];
+            }
+            case FAMILY -> {
+                String[] lines = {
+                        "Hey {player}! Are you staying for a while?",
+                        "Oh hi, {player}! I was just playing.",
+                        "{player}! Wanna see what I made?"
+                };
+                yield lines[rng.nextInt(lines.length)];
+            }
+            default -> {
+                String[] lines = {
+                        "Hey {player}! What do you wanna do?",
+                        "Oh! {player} is here! Yay!",
+                        "Hi {player}! I just learned something cool.",
+                        "Hi! Wanna play, {player}?"
+                };
+                yield lines[rng.nextInt(lines.length)];
+            }
+        };
     }
 
     private String buildHeartTierGreeting(int hearts) {

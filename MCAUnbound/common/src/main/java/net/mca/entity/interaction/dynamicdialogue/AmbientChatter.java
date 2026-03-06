@@ -28,12 +28,19 @@ public final class AmbientChatter {
     /**
      * Attempt to generate ambient chatter between this villager and a nearby one.
      * Returns true if chatter occurred (caller should set cooldown).
+     * Sleeping villagers are silenced; night dramatically reduces chatter chance.
      */
     public static boolean tryChatter(VillagerEntityMCA speaker, ServerWorld world) {
+        // A sleeping villager never initiates chatter
+        if (speaker.isSleeping()) {
+            return false;
+        }
+
         List<VillagerEntityMCA> nearby = world.getEntitiesByClass(
                 VillagerEntityMCA.class,
                 new Box(speaker.getBlockPos()).expand(CHATTER_RANGE),
-                v -> !v.getUuid().equals(speaker.getUuid()) && v.isAlive() && !v.isBaby());
+                // Also exclude sleeping listeners — they can't hold a conversation
+                v -> !v.getUuid().equals(speaker.getUuid()) && v.isAlive() && !v.isBaby() && !v.isSleeping());
 
         if (nearby.isEmpty()) {
             return false;

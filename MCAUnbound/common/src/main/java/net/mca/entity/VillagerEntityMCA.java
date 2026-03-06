@@ -853,11 +853,21 @@ public class VillagerEntityMCA extends VillagerEntity implements VillagerLike<Vi
             }
 
             // Ambient villager-to-villager chatter
+            // - Sleeping villagers are silenced (AmbientChatter also checks, but early-out here is cheaper)
+            // - Night suppresses chatter to ~10% of daytime rate (realistic: most sleep, few guard types stay up)
             if (ambientChatterCooldown > 0) {
                 ambientChatterCooldown--;
-            } else if (this.age % 200 == 0 && random.nextInt(30) == 0 && !isBaby()) {
-                if (AmbientChatter.tryChatter(this, (net.minecraft.server.world.ServerWorld) getWorld())) {
-                    ambientChatterCooldown = 2400 + random.nextInt(2400); // 2-4 minutes cooldown
+            } else if (!isSleeping() && !isBaby() && this.age % 200 == 0) {
+                boolean isNight = getWorld().isNight();
+                // Daytime: 1/30 chance per poll (~every 10s). Night: 1/300 (guards/insomniacs only).
+                int chatterChance = isNight ? 300 : 30;
+                if (random.nextInt(chatterChance) == 0) {
+                    if (AmbientChatter.tryChatter(this, (net.minecraft.server.world.ServerWorld) getWorld())) {
+                        // Night chatter gets a shorter cooldown — fewer nocturnal encounters
+                        ambientChatterCooldown = isNight
+                                ? 4800 + random.nextInt(4800)  // 4-8 min at night
+                                : 2400 + random.nextInt(2400); // 2-4 min during day
+                    }
                 }
             }
 
