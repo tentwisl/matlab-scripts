@@ -1,0 +1,19 @@
+{
+  "annoyed": [
+    "You're pushing it, {player}.",
+    "I don't like where this is going.",
+    "Watch your tone with me.",
+    "I'm losing patience, {player}."
+  ],
+  "severe_dismissive": [
+    "Enough, {player}. We're done talking.",
+    "I said leave me alone.",
+    "Not another word. I mean it.",
+    "Walk away, {player}. Now."
+  ],
+  "lockout": [
+    "I have nothing to say to you right now, {player}.",
+    "Come back later. Much later.",
+    "Don't talk to me for a while, {player}."
+  ]
+}

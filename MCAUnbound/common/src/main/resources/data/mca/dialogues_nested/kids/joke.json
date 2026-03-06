@@ -1,0 +1,44 @@
+{
+  "category": "joke",
+  "subCategories": [
+    {
+      "id": "silly",
+      "label": "Silly",
+      "playerOptions": [
+        "Why did the chicken cross the road, {npc}?",
+        "Knock knock!"
+      ],
+      "results": [
+        {
+          "baseChance": 7,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "Hehehe! Tell me another one, {player}!",
+            "Again! Again!",
+            "That's SO funny! Wait till I tell {npc1}!"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "funny_face",
+      "label": "Funny Face",
+      "age_group": "baby",
+      "playerOptions": [
+        "*makes a silly face at {npc}*",
+        "Boop! Got your nose!"
+      ],
+      "results": [
+        {
+          "baseChance": 7,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "*laughs hysterically*",
+            "Gaa-hahaha!",
+            "*claps hands*"
+          ]
+        }
+      ]
+    }
+  ]
+}

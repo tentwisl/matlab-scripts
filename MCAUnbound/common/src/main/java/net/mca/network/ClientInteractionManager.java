@@ -45,9 +45,6 @@ public interface ClientInteractionManager {
 
     void handleCivilRegistryResponse(CivilRegistryResponse response);
 
-    void handleDiplomacyTableResponse(net.mca.network.s2c.DiplomacyTableDataResponse response);
     void handleTownHallResponse(net.mca.network.s2c.TownHallDataResponse response);
-    void handleNationsDebugResponse(net.mca.network.s2c.NationsDebugResponse response);
-    void handleNearbyVillagersResponse(net.mca.network.s2c.NearbyVillagersResponse response);
     void handleHelpVillageResponse(net.mca.network.s2c.HelpVillageDataResponse response);
 }

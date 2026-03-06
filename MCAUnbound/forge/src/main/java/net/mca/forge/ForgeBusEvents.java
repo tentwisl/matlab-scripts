@@ -2,11 +2,10 @@ package net.mca.forge;
 
 import net.mca.MCA;
 import net.mca.MCAClient;
-import net.mca.nation.NationManager;
-import net.mca.nation.NationSpawner;
 import net.mca.server.ServerInteractionManager;
 import net.mca.server.command.AdminCommand;
 import net.mca.server.command.Command;
+import net.mca.server.command.NationDebugCommand;
 import net.mca.server.world.data.VillageManager;
 import net.mca.util.recipes.CribRecipeProvider;
 import net.minecraft.client.MinecraftClient;
@@ -33,7 +32,7 @@ public class ForgeBusEvents {
     public static void onCommandRegister(RegisterCommandsEvent event) {
         AdminCommand.register(event.getDispatcher());
         Command.register(event.getDispatcher());
-        net.mca.server.command.NationCommand.register(event.getDispatcher());
+        NationDebugCommand.register(event.getDispatcher());
     }
 
     @SubscribeEvent
@@ -41,8 +40,6 @@ public class ForgeBusEvents {
         if (!event.level.isClient && event.side == LogicalSide.SERVER && event.phase == TickEvent.Phase.END) {
             ServerWorld serverWorld = (ServerWorld) event.level;
             VillageManager.get(serverWorld).tick();
-            NationManager nationManager = NationManager.get(serverWorld);
-            nationManager.tick();
         }
     }
 

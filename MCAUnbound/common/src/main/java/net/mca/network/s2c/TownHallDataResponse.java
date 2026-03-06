@@ -26,14 +26,24 @@ public class TownHallDataResponse extends NbtDataMessage {
     public TownHallDataResponse(Village village, TownHallBlockEntity townHall,
                                  Map<UUID, Integer> villagerHearts,
                                  Map<UUID, String> villagerNames,
-                                 UUID playerId) {
-        super(buildNbt(village, townHall, villagerHearts, villagerNames, playerId));
+                                 Map<UUID, String> villagerMoods,
+                                 Map<UUID, String> villagerJobs,
+                                 Map<UUID, Boolean> villagerMarried,
+                                 Map<UUID, Boolean> villagerLoaded,
+                                 Map<UUID, Boolean> villagerHighlighted,
+                                 UUID playerId, int convincedLeaderCount) {
+        super(buildNbt(village, townHall, villagerHearts, villagerNames, villagerMoods, villagerJobs, villagerMarried, villagerLoaded, villagerHighlighted, playerId, convincedLeaderCount));
     }
 
     private static NbtCompound buildNbt(Village village, TownHallBlockEntity townHall,
                                          Map<UUID, Integer> villagerHearts,
                                          Map<UUID, String> villagerNames,
-                                         UUID playerId) {
+                                         Map<UUID, String> villagerMoods,
+                                         Map<UUID, String> villagerJobs,
+                                         Map<UUID, Boolean> villagerMarried,
+                                         Map<UUID, Boolean> villagerLoaded,
+                                         Map<UUID, Boolean> villagerHighlighted,
+                                         UUID playerId, int convincedLeaderCount) {
         NbtCompound root = new NbtCompound();
 
         if (village != null) {
@@ -57,6 +67,36 @@ public class TownHallDataResponse extends NbtDataMessage {
         }
         root.put("villagerNames", namesNbt);
 
+        NbtCompound moodsNbt = new NbtCompound();
+        for (Map.Entry<UUID, String> entry : villagerMoods.entrySet()) {
+            moodsNbt.putString(entry.getKey().toString(), entry.getValue());
+        }
+        root.put("villagerMoods", moodsNbt);
+
+        NbtCompound jobsNbt = new NbtCompound();
+        for (Map.Entry<UUID, String> entry : villagerJobs.entrySet()) {
+            jobsNbt.putString(entry.getKey().toString(), entry.getValue());
+        }
+        root.put("villagerJobs", jobsNbt);
+
+        NbtCompound marriedNbt = new NbtCompound();
+        for (Map.Entry<UUID, Boolean> entry : villagerMarried.entrySet()) {
+            marriedNbt.putBoolean(entry.getKey().toString(), entry.getValue());
+        }
+        root.put("villagerMarried", marriedNbt);
+
+        NbtCompound loadedNbt = new NbtCompound();
+        for (Map.Entry<UUID, Boolean> entry : villagerLoaded.entrySet()) {
+            loadedNbt.putBoolean(entry.getKey().toString(), entry.getValue());
+        }
+        root.put("villagerLoaded", loadedNbt);
+
+        NbtCompound highlightedNbt = new NbtCompound();
+        for (Map.Entry<UUID, Boolean> entry : villagerHighlighted.entrySet()) {
+            highlightedNbt.putBoolean(entry.getKey().toString(), entry.getValue());
+        }
+        root.put("villagerHighlighted", highlightedNbt);
+
         // Leadership data
         root.putBoolean("hasLeader", townHall.hasLeader());
         if (townHall.hasLeader()) {
@@ -71,8 +111,11 @@ public class TownHallDataResponse extends NbtDataMessage {
                 && townHall.isLeaderPlayer()
                 && townHall.getLeaderUUID().equals(playerId));
 
-        // Block position so the screen can send AttemptLeadershipRequest back
+        // Block position so the screen can send AttemptLeadershipRequest / FormNationPacket back
         root.putLong("blockPos", townHall.getPos().asLong());
+
+        // Nation formation: how many other village leaders the player has convinced
+        root.putInt("convincedLeaderCount", convincedLeaderCount);
 
         // Pending requests for display in the Town Hall screen
         NbtList pendingList = new NbtList();

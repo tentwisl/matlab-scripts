@@ -1,0 +1,111 @@
+{
+  "category": "romance",
+  "subCategories": [
+    {
+      "id": "sweet",
+      "label": "Sweet",
+      "playerOptions": [
+        "You make {village} feel warmer, {npc}.",
+        "I feel calmer whenever I'm around you."
+      ],
+      "results": [
+        {
+          "baseChance": 5,
+          "conditions": [
+            { "chance": 2, "hearts_min": 30 }
+          ],
+          "actions": { "positive": 2 },
+          "npcResponses": [
+            "That means a lot to me, {player}.",
+            "You're sweet. Don't ever change.",
+            "{player}... you really know how to make someone's day."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cheesy",
+      "label": "Cheesy",
+      "playerOptions": [
+        "If hearts were emeralds, you'd be the richest person in {village}.",
+        "Even a beacon isn't as bright as your smile, {npc}."
+      ],
+      "results": [
+        {
+          "baseChance": 4,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "That was adorable, {player}.",
+            "Cheesy... but cute. I'll allow it.",
+            "Oh stop it, {player}. ...Actually, keep going."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bold",
+      "label": "Bold",
+      "playerOptions": [
+        "Come closer, {npc}.",
+        "Let's skip the small talk."
+      ],
+      "results": [
+        {
+          "baseChance": 3,
+          "conditions": [
+            { "chance": 3, "hearts_min": 75 }
+          ],
+          "actions": { "positive": 3 },
+          "npcResponses": [
+            "You're bold today, {player}.",
+            "You surprise me. I like that.",
+            "Well then, {player}... you have my attention."
+          ]
+        },
+        {
+          "baseChance": 2,
+          "conditions": [
+            { "chance": 4, "hearts_max": 25 }
+          ],
+          "actions": { "negative": 2 },
+          "npcResponses": [
+            "Too fast, {player}.",
+            "Not comfortable with that. We barely know each other."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "suggestive_action",
+      "label": "Suggestive",
+      "playerOptions": [
+        "[Wink playfully at {npc}]",
+        "[Gently brush {npc}'s shoulder]"
+      ],
+      "results": [
+        {
+          "baseChance": 2,
+          "conditions": [
+            { "chance": 3, "hearts_min": 80 }
+          ],
+          "actions": { "positive": 2 },
+          "npcResponses": [
+            "Well... that got my attention, {player}.",
+            "You're confident. I like that about you."
+          ]
+        },
+        {
+          "baseChance": 3,
+          "conditions": [
+            { "chance": 3, "hearts_max": 40 }
+          ],
+          "actions": { "negative": 2 },
+          "npcResponses": [
+            "Please don't, {player}.",
+            "That's too much right now. Back off."
+          ]
+        }
+      ]
+    }
+  ]
+}

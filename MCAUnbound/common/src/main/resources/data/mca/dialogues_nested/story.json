@@ -1,0 +1,89 @@
+{
+  "category": "story",
+  "subCategories": [
+    {
+      "id": "heroic",
+      "label": "Heroic",
+      "playerOptions": [
+        "I defended the gate of {village} all night.",
+        "I once rescued a trader from a ravine."
+      ],
+      "results": [
+        {
+          "baseChance": 5,
+          "conditions": [
+            { "chance": 2, "job": "GUARD" },
+            { "chance": 1, "job": "ARCHER" }
+          ],
+          "actions": { "positive": 2 },
+          "npcResponses": [
+            "That's genuinely impressive, {player}.",
+            "You have real courage. {village} is lucky to have you.",
+            "A hero's tale! I'll remember that one, {player}."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tragic",
+      "label": "Tragic",
+      "playerOptions": [
+        "I lost my first home in a raid.",
+        "I rebuilt everything from nothing."
+      ],
+      "results": [
+        {
+          "baseChance": 4,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "I'm sorry you went through that, {player}.",
+            "Thank you for sharing that with me. It means something.",
+            "We've all lost something. But you're still here, {player}."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "humorous",
+      "label": "Humorous",
+      "playerOptions": [
+        "I fought a skeleton with a fish and somehow won.",
+        "I tried taming a wolf and got adopted by three cats."
+      ],
+      "results": [
+        {
+          "baseChance": 5,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "Now that's a story, {player}!",
+            "I needed that laugh. Tell it again sometime.",
+            "Only you could pull that off, {player}."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mysterious",
+      "label": "Mysterious",
+      "playerOptions": [
+        "I heard bells in an empty cave near {village}.",
+        "I found tracks in the snow that ended at a stone wall."
+      ],
+      "results": [
+        {
+          "baseChance": 4,
+          "conditions": [
+            { "chance": 2, "job": "CLERIC" },
+            { "chance": 2, "job": "CULTIST" }
+          ],
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "That's unsettling, {player}...",
+            "Tell me more when you learn something. I'm curious now.",
+            "Strange things happen near {village}. Be careful out there."
+          ]
+        }
+      ]
+    }
+  ]
+}

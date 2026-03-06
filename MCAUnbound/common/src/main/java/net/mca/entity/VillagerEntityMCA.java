@@ -11,6 +11,7 @@ import net.mca.entity.ai.brain.VillagerTasksMCA;
 import net.mca.entity.ai.pathfinder.VillagerNavigation;
 import net.mca.entity.ai.relationship.*;
 import net.mca.entity.interaction.VillagerCommandHandler;
+import net.mca.entity.interaction.dynamicdialogue.AmbientChatter;
 import net.mca.item.ItemsMCA;
 import net.mca.network.c2s.InteractionVillagerMessage;
 import net.mca.resources.Names;
@@ -127,7 +128,9 @@ public class VillagerEntityMCA extends VillagerEntity implements VillagerLike<Vi
     private int burned;
     private long lastHit = 0;
     private int prevGrowthAmount;
+    private int ambientChatterCooldown;
     private boolean interactedWith;
+    private double villagerBankBalance;
 
     private static final int RECALCULATE_DIMENSIONS_EVERY_N_TICKS = 100;
 
@@ -469,7 +472,7 @@ public class VillagerEntityMCA extends VillagerEntity implements VillagerLike<Vi
                                                 + ", my name is " + getName().getString()
                                                 + ", I am the village's leader."),
                                         serverPlayer);
-                                serverPlayer.addScoreboardTag(key);
+                                serverPlayer.addCommandTag(key);
                                 PlayerSaveData.get(serverPlayer).markDirty();
                             }
                         }
@@ -847,6 +850,15 @@ public class VillagerEntityMCA extends VillagerEntity implements VillagerLike<Vi
                 int level = this.getVillagerData().getLevel() - 1;
                 instance.removeModifier(EXTRA_HEALTH_EFFECT_ID);
                 instance.addTemporaryModifier(new EntityAttributeModifier(EXTRA_HEALTH_EFFECT_ID, "level health boost", Config.getInstance().villagerHealthBonusPerLevel * level, EntityAttributeModifier.Operation.ADDITION));
+            }
+
+            // Ambient villager-to-villager chatter
+            if (ambientChatterCooldown > 0) {
+                ambientChatterCooldown--;
+            } else if (this.age % 200 == 0 && random.nextInt(30) == 0 && !isBaby()) {
+                if (AmbientChatter.tryChatter(this, (net.minecraft.server.world.ServerWorld) getWorld())) {
+                    ambientChatterCooldown = 2400 + random.nextInt(2400); // 2-4 minutes cooldown
+                }
             }
 
             //twice a day, randomize the mood a bit
@@ -1384,6 +1396,9 @@ public class VillagerEntityMCA extends VillagerEntity implements VillagerLike<Vi
         if (nbt.contains("InteractedWith")) {
             this.interactedWith = nbt.getBoolean("InteractedWith");
         }
+        if (nbt.contains("villager_bank_balance")) {
+            this.villagerBankBalance = nbt.getDouble("villager_bank_balance");
+        }
 
         if (nbt.contains("clothes")) {
             validateClothes();
@@ -1403,10 +1418,19 @@ public class VillagerEntityMCA extends VillagerEntity implements VillagerLike<Vi
         nbt.putInt("DespawnDelay", this.despawnDelay);
         nbt.putBoolean("InteractedWith", this.interactedWith);
         InventoryUtils.saveToNBT(inventory, nbt);
+        nbt.putDouble("villager_bank_balance", villagerBankBalance);
 
         if (interactedWith) {
             VillagerTrackerManager.update(this);
         }
+    }
+
+    public double getVillagerBankBalance() {
+        return villagerBankBalance;
+    }
+
+    public void setVillagerBankBalance(double villagerBankBalance) {
+        this.villagerBankBalance = Math.max(0.0D, villagerBankBalance);
     }
 
     @Override

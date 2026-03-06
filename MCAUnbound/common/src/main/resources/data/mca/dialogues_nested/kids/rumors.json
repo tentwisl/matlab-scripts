@@ -1,0 +1,46 @@
+{
+  "category": "rumors",
+  "subCategories": [
+    {
+      "id": "baby_babble_rumor",
+      "label": "Baby Babble",
+      "age_group": "baby",
+      "playerOptions": [
+        "Any baby news, {npc}?",
+        "What did you hear today?"
+      ],
+      "results": [
+        {
+          "baseChance": 7,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "ga-ga... {npc1}... ba-ba!",
+            "da-da... {npc2}... gugu!",
+            "*points excitedly at {npc1}*"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kid_rumor",
+      "label": "Kid Rumor",
+      "age_group": "juvenile",
+      "playerOptions": [
+        "Heard any playground rumors, {npc}?",
+        "Any secret kid news?"
+      ],
+      "results": [
+        {
+          "baseChance": 6,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "{npc1} tripped chasing {npc2} by the well!",
+            "Shh... {npc3} hid cookies behind {npc1}'s house!",
+            "I heard {npc2} has a secret hideout near {village}!",
+            "{npc1} said they saw a monster but I think they were lying."
+          ]
+        }
+      ]
+    }
+  ]
+}

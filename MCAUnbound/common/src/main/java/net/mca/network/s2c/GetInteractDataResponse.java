@@ -23,10 +23,15 @@ public class GetInteractDataResponse implements Message {
     public final String villageName;
     /** True if this villager is the NPC leader of their village. */
     public final boolean isNpcLeader;
+    /** True if this leader's village has already been convinced by this player. */
+    public final boolean leaderConvinced;
+    /** True if the requesting player is the player-leader of their own (different) village. */
+    public final boolean playerIsOwnVillageLeader;
 
     public GetInteractDataResponse(Set<Constraint> constraints, String father, String mother,
                                    String spouse, RelationshipState marriageState,
-                                   String profession, String villageName, boolean isNpcLeader) {
+                                   String profession, String villageName, boolean isNpcLeader,
+                                   boolean leaderConvinced, boolean playerIsOwnVillageLeader) {
         this.constraints = constraints;
         this.father = father;
         this.mother = mother;
@@ -35,6 +40,8 @@ public class GetInteractDataResponse implements Message {
         this.profession = profession;
         this.villageName = villageName;
         this.isNpcLeader = isNpcLeader;
+        this.leaderConvinced = leaderConvinced;
+        this.playerIsOwnVillageLeader = playerIsOwnVillageLeader;
     }
 
     @Override

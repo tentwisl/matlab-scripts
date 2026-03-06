@@ -1,0 +1,61 @@
+{
+  "category": "greet",
+  "subCategories": [
+    {
+      "id": "baby_babble",
+      "label": "Baby Talk",
+      "age_group": "baby",
+      "playerOptions": [
+        "Who's a happy little one, {npc}?",
+        "Hiiiii {npc}!"
+      ],
+      "results": [
+        {
+          "baseChance": 7,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "goo goo gaa... baaa!",
+            "ba-ba... da-da... gaga!",
+            "*reaches for {player}*"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "friendly",
+      "label": "Friendly",
+      "age_group": "juvenile",
+      "playerOptions": [
+        "Hey {npc}, kiddo!",
+        "Are you behaving today, {npc}?"
+      ],
+      "results": [
+        {
+          "baseChance": 6,
+          "conditions": [
+            { "chance": 3, "mood": "HAPPY" }
+          ],
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "Hi {player}! Wanna play?",
+            "Can we get cookies, {player}?",
+            "{player}! {player}! Look what I found!"
+          ]
+        },
+        {
+          "baseChance": 4,
+          "applyFatigue": true,
+          "conditions": [
+            { "chance": 3, "mood": "ANGRY" }
+          ],
+          "actions": { "negative": 1 },
+          "npcResponses": [
+            "Nooo! Go away!",
+            "I'm grumpy, {player}!",
+            "Leave me alone!"
+          ]
+        }
+      ]
+    }
+  ]
+}

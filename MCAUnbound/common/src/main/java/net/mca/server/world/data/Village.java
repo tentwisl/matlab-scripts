@@ -65,6 +65,11 @@ public class Village implements Iterable<Building> {
     private UUID npcLeaderUUID = null;
     /** Block position of the Town Hall, so packets can look it up directly. */
     private BlockPos townHallPos = null;
+    /**
+     * If non-null, this village's NPC leader has been convinced by this player
+     * to join a nation being formed by that player.
+     */
+    private UUID convincedByPlayerUUID = null;
 
     private BlockBoxExtended box = new BlockBoxExtended(0, 0, 0, 0, 0, 0);
 
@@ -109,6 +114,7 @@ public class Village implements Iterable<Building> {
         townHallPlaced = v.getBoolean("townHallPlaced");
         if (v.containsUuid("npcLeaderUUID")) npcLeaderUUID = v.getUuid("npcLeaderUUID");
         if (v.contains("townHallPos")) townHallPos = BlockPos.fromLong(v.getLong("townHallPos"));
+        if (v.containsUuid("convincedByPlayerUUID")) convincedByPlayerUUID = v.getUuid("convincedByPlayerUUID");
 
         NbtList b = v.getList("buildings", NbtElement.COMPOUND_TYPE);
         for (int i = 0; i < b.size(); i++) {
@@ -382,6 +388,9 @@ public class Village implements Iterable<Building> {
     public void setNpcLeaderUUID(UUID uuid)         { this.npcLeaderUUID = uuid; markDirty(); }
     public BlockPos getTownHallPos()                { return townHallPos; }
     public void setTownHallPos(BlockPos pos)        { this.townHallPos = pos; markDirty(); }
+    public UUID getConvincedByPlayerUUID()          { return convincedByPlayerUUID; }
+    public void setConvincedByPlayerUUID(UUID uuid) { this.convincedByPlayerUUID = uuid; markDirty(); }
+    public void clearConvincedByPlayer()            { this.convincedByPlayerUUID = null; markDirty(); }
 
     public void markDirty() {
         VillageManager.get(world).markDirty();
@@ -489,6 +498,7 @@ public class Village implements Iterable<Building> {
         v.putBoolean("townHallPlaced", townHallPlaced);
         if (npcLeaderUUID != null) v.putUuid("npcLeaderUUID", npcLeaderUUID);
         if (townHallPos != null)   v.putLong("townHallPos", townHallPos.asLong());
+        if (convincedByPlayerUUID != null) v.putUuid("convincedByPlayerUUID", convincedByPlayerUUID);
         return v;
     }
 

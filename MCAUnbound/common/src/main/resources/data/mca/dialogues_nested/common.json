@@ -1,0 +1,9 @@
+{
+  "category": "common",
+  "burnoutResponses": [
+    "I've talked enough for now, {player}. Let's chat later.",
+    "I need a break from talking right now.",
+    "My throat's getting dry, {player}. Give me a moment.",
+    "Let's pick this up another time."
+  ]
+}

@@ -4,8 +4,7 @@ import net.mca.block.TownHallBlockEntity;
 import net.mca.cobalt.network.Message;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.entity.ai.Memories;
-import net.mca.nation.MCAUnboundConfig;
-import net.mca.server.world.data.PlayerSaveData;
+import net.mca.MCAUnboundConfig;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
 import net.minecraft.block.entity.BlockEntity;
@@ -86,26 +85,15 @@ public class AttemptLeadershipRequest implements Message {
             return;
         }
 
-        // Start election! Set to PENDING, then resolve after wait period
-        townHall.startElection(world.getTime());
+        // Dynamic success chance = total current hearts / max potential hearts.
+        int totalCurrentHearts = residents.stream()
+                .map(v -> v.getVillagerBrain().getMemoriesForPlayer(player).getHearts())
+                .reduce(0, Integer::sum);
+        int maxPotentialHearts = Math.max(1, residents.size() * 100);
+        double successChance = Math.max(0.0D, Math.min(1.0D, totalCurrentHearts / (double) maxPotentialHearts));
 
-        // Calculate result immediately but deliver via mail after wait
-        boolean success = world.random.nextInt(100) >= config.leaderElectionBaseFailChance;
-
-        // Schedule the result via a simple approach: store result in block entity
-        // and resolve when the time comes. For now, resolve immediately with mail.
-        PlayerSaveData psd = PlayerSaveData.get(player);
-
-        if (success) {
-            townHall.setPlayerLeader(player.getUuid(), player.getName().getString());
-            psd.sendLetter(List.of("Congratulations! The villagers of " + village.getName()
-                    + " have chosen you as their leader. Visit the Town Hall to see your new role."));
-            player.sendMessage(Text.translatable("townhall.election.started_success"), false);
-        } else {
-            townHall.clearLeader();
-            psd.sendLetter(List.of("Unfortunately, the villagers of " + village.getName()
-                    + " have not chosen you as their leader this time. Try building more trust."));
-            player.sendMessage(Text.translatable("townhall.election.started_failure"), false);
-        }
+        // Start election; resolution is deferred and processed from VillageManager tick.
+        townHall.startElection(world.getTime(), player.getUuid(), player.getName().getString(), successChance);
+        player.sendMessage(Text.literal("Election petition submitted. Results will arrive by mail in about 1 Minecraft day."), false);
     }
 }

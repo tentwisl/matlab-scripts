@@ -9,14 +9,13 @@ import net.mca.advancement.criterion.CriterionMCA;
 import net.mca.block.BlocksMCA;
 import net.mca.entity.EntitiesMCA;
 import net.mca.item.ItemsMCA;
-import net.mca.nation.NationManager;
-import net.mca.nation.NationSpawner;
 import net.mca.network.MessagesMCA;
 import net.mca.quilt.cobalt.network.NetworkHandlerImpl;
 import net.mca.quilt.resources.*;
 import net.mca.server.ServerInteractionManager;
 import net.mca.server.command.AdminCommand;
 import net.mca.server.command.Command;
+import net.mca.server.command.NationDebugCommand;
 import net.mca.server.world.data.VillageManager;
 import net.minecraft.resource.ResourceType;
 import org.quiltmc.loader.api.ModContainer;
@@ -51,10 +50,7 @@ public final class MCAQuilt implements ModInitializer {
         ResourceLoader.get(ResourceType.SERVER_DATA).registerReloader(new QuiltNames());
         ResourceLoader.get(ResourceType.SERVER_DATA).registerReloader(new QuiltBuildingTypes());
 
-        ServerWorldTickEvents.END.register((s, w) -> {
-            VillageManager.get(w).tick();
-            NationManager.get(w).tick();
-        });
+        ServerWorldTickEvents.END.register((s, w) -> VillageManager.get(w).tick());
         ServerTickEvents.END.register(s -> ServerInteractionManager.getInstance().tick());
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
@@ -64,7 +60,7 @@ public final class MCAQuilt implements ModInitializer {
         CommandRegistrationCallback.EVENT.register((dispatcher, integrated, dedicated) -> {
             AdminCommand.register(dispatcher);
             Command.register(dispatcher);
-            net.mca.server.command.NationCommand.register(dispatcher);
+            NationDebugCommand.register(dispatcher);
         });
 
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(MCA::setServer);

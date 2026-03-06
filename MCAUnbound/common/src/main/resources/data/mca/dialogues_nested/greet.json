@@ -1,0 +1,119 @@
+{
+  "category": "greet",
+  "subCategories": [
+    {
+      "id": "friendly",
+      "label": "Friendly",
+      "playerOptions": [
+        "Hey {npc}! It's great to see you.",
+        "Good morning, {npc}. How's the day treating you?"
+      ],
+      "results": [
+        {
+          "baseChance": 5,
+          "conditions": [
+            { "chance": 2, "hearts_min": 10 },
+            { "chance": 2, "mood": "HAPPY" }
+          ],
+          "actions": { "positive": 2 },
+          "npcResponses": [
+            "You always brighten my day, {player}.",
+            "It's good seeing you too! {village} feels livelier when you're around.",
+            "{player}! Perfect timing."
+          ]
+        },
+        {
+          "baseChance": 2,
+          "conditions": [
+            { "chance": 3, "mood": "ANGRY" }
+          ],
+          "actions": { "negative": 1 },
+          "npcResponses": [
+            "Not now, {player}... I'm in a bad mood.",
+            "Let's keep this short."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "formal",
+      "label": "Formal",
+      "playerOptions": [
+        "Good day to you, {npc}.",
+        "Greetings, {npc}. I trust your duties are progressing well."
+      ],
+      "results": [
+        {
+          "baseChance": 4,
+          "conditions": [
+            { "chance": 4, "job": "VILLAGE_LEADER" },
+            { "chance": 2, "hearts_min": 25 }
+          ],
+          "actions": { "positive": 3 },
+          "npcResponses": [
+            "A respectful greeting is always welcome, {player}.",
+            "You carry yourself well. {village} is better for people like you.",
+            "Well met, {player}. What brings you to me today?"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "casual",
+      "label": "Casual",
+      "playerOptions": [
+        "Yo {npc}, how's it going?",
+        "Hey there, {npc}!"
+      ],
+      "results": [
+        {
+          "baseChance": 5,
+          "conditions": [
+            { "chance": 1, "hearts_min": 0 },
+            { "chance": -2, "job": "VILLAGE_LEADER" }
+          ],
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "Doing alright, {player}.",
+            "Not bad, thanks for asking.",
+            "Same old, same old. You know how it is in {village}."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bold",
+      "label": "Bold",
+      "playerOptions": [
+        "There you are, {npc}. I've been looking for you.",
+        "Step aside, my favorite villager is here."
+      ],
+      "results": [
+        {
+          "baseChance": 3,
+          "conditions": [
+            { "chance": 3, "hearts_min": 60 },
+            { "chance": 2, "trait": "FLIRTATIOUS" }
+          ],
+          "actions": { "positive": 2 },
+          "npcResponses": [
+            "Confident today, aren't you, {player}?",
+            "You certainly know how to make an entrance.",
+            "{player}, you flatter me."
+          ]
+        },
+        {
+          "baseChance": 2,
+          "conditions": [
+            { "chance": 4, "hearts_max": 20 }
+          ],
+          "actions": { "negative": 2 },
+          "npcResponses": [
+            "That was a bit much, {player}.",
+            "Let's keep things polite. We barely know each other."
+          ]
+        }
+      ]
+    }
+  ]
+}

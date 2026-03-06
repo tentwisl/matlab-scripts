@@ -1136,5 +1136,8 @@
   "nation.appoint_congress.decline":"Congress is not for me, but I thank you for asking.",
   "nation.allegiance.sworn":        "I swear my allegiance to %s! Long may it stand!",
   "nation.allegiance.refused":      "I serve no nation but my own conscience.",
-  "nation.nevermind":               "Very well. Let me know if you need anything else."
+  "nation.nevermind":               "Very well. Let me know if you need anything else.",
+
+  "item.mca.nation_block":          "Nation Block",
+  "item.mca.nation_block.tooltip":  "The founding charter of your nation. More to come."
 }

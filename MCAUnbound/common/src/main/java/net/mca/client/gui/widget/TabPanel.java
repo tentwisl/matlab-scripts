@@ -39,6 +39,14 @@ public class TabPanel implements Drawable {
     /** Consumer registered so we can add child widgets to the parent screen. */
     private Consumer<ClickableWidget> adder;
 
+    /**
+     * Called when the user clicks a tab header.  The parent screen should
+     * capture {@link #getActiveTab()}, call {@code clearChildren()}, and then
+     * re-initialise this panel — which is the only way to cleanly remove the
+     * previous tab's ClickableWidgets from the parent screen.
+     */
+    private Runnable onTabSwitch = () -> {};
+
     /** ScrollPane for the active tab's content. */
     private ScrollPane contentPane;
 
@@ -60,7 +68,17 @@ public class TabPanel implements Drawable {
 
     /** Must be called after addTab() calls; pass screen's addDrawableChild method. */
     public void init(Consumer<ClickableWidget> widgetAdder) {
-        this.adder = widgetAdder;
+        init(widgetAdder, () -> {});
+    }
+
+    /**
+     * Like {@link #init(Consumer)} but also registers {@code onTabSwitch} so
+     * the parent screen can do a full {@code clearChildren()} + reinit when a
+     * tab header is clicked, preventing content from different tabs stacking.
+     */
+    public void init(Consumer<ClickableWidget> widgetAdder, Runnable onTabSwitch) {
+        this.adder       = widgetAdder;
+        this.onTabSwitch = onTabSwitch;
         rebuild();
     }
 
@@ -77,7 +95,9 @@ public class TabPanel implements Drawable {
 
             ClickableWidget btn = ButtonWidget.builder(Text.literal(tab.label()), b -> {
                 activeTab = idx;
-                rebuildContent();
+                // Delegate to the parent screen so it can clearChildren() + reinit,
+                // which is the only reliable way to remove the old tab's widgets.
+                onTabSwitch.run();
             }).dimensions(x + i * tabW, y, tabW - 1, tabH).build();
 
             tabButtons.add(btn);
@@ -133,10 +153,11 @@ public class TabPanel implements Drawable {
         return false;
     }
 
+    public int  getActiveTab() { return activeTab; }
+
     public void setActiveTab(int idx) {
         if (idx >= 0 && idx < tabs.size()) {
             activeTab = idx;
-            rebuildContent();
         }
     }
 

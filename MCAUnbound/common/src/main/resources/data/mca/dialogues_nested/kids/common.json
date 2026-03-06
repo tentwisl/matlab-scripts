@@ -1,0 +1,9 @@
+{
+  "category": "common",
+  "burnoutResponses": [
+    "I'm sleepy, {player}... can we play later?",
+    "No more talking right now!",
+    "My head hurts from all this talking!",
+    "I wanna go play by myself for a bit."
+  ]
+}
