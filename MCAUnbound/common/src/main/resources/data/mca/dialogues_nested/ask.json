@@ -1,0 +1,166 @@
+{
+  "category": "ask",
+  "subCategories": [
+    {
+      "id": "money",
+      "label": "Money",
+      "playerOptions": [
+        "Could you spare a few emeralds, {npc}?",
+        "I'm running low on coin. Can you help me out?"
+      ],
+      "results": [
+        {
+          "baseChance": 3,
+          "conditions": [
+            { "chance": 3, "hearts_min": 60 },
+            { "chance": 2, "trait": "JOVIAL" }
+          ],
+          "actions": { "positive": 1, "command": "gift_emerald" },
+          "npcResponses": [
+            "For you, {player}? Of course. Here, take these.",
+            "You've done plenty for {village}. It's the least I can do."
+          ]
+        },
+        {
+          "baseChance": 4,
+          "conditions": [
+            { "chance": 3, "hearts_max": 30 },
+            { "chance": 2, "trait": "GREEDY" }
+          ],
+          "actions": { "negative": 2 },
+          "npcResponses": [
+            "Emeralds don't grow on trees, {player}.",
+            "I work hard for my coin. Ask someone else.",
+            "You barely know me and you're already asking for money?"
+          ]
+        },
+        {
+          "baseChance": 3,
+          "conditions": [
+            { "chance": 2, "mood": "HAPPY" }
+          ],
+          "actions": { "positive": 0 },
+          "npcResponses": [
+            "Hmm... I'll think about it. Come back later.",
+            "Maybe if you help me with something first."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "favor",
+      "label": "Political Favor",
+      "playerOptions": [
+        "I need your support on something important for {village}.",
+        "As a leader, I could use your backing on a matter."
+      ],
+      "results": [
+        {
+          "baseChance": 3,
+          "conditions": [
+            { "chance": 4, "hearts_min": 80 },
+            { "chance": 3, "job": "VILLAGE_LEADER" }
+          ],
+          "actions": { "positive": 2 },
+          "npcResponses": [
+            "You have my support, {player}. What do you need?",
+            "For the good of {village}, I'll do what I can.",
+            "A leader who asks rather than demands earns my respect."
+          ]
+        },
+        {
+          "baseChance": 4,
+          "conditions": [
+            { "chance": 3, "hearts_max": 40 }
+          ],
+          "actions": { "negative": 2 },
+          "npcResponses": [
+            "Political favors require trust, {player}. We're not there yet.",
+            "I don't make promises to people I barely know.",
+            "Earn your place in {village} first. Then we'll talk."
+          ]
+        },
+        {
+          "baseChance": 3,
+          "conditions": [
+            { "chance": 2, "trait": "GREEDY" }
+          ],
+          "actions": { "negative": 1 },
+          "npcResponses": [
+            "And what's in it for me, exactly?",
+            "Favors aren't free, {player}. What are you offering?"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "task",
+      "label": "Task",
+      "playerOptions": [
+        "I have a job that needs doing. Interested?",
+        "Could you handle something for me, {npc}?"
+      ],
+      "results": [
+        {
+          "baseChance": 5,
+          "conditions": [
+            { "chance": 2, "hearts_min": 30 },
+            { "chance": 2, "job": "ADVENTURER" },
+            { "chance": 1, "job": "GUARD" }
+          ],
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "I'm listening. What do you need done?",
+            "Depends on the task. Tell me more, {player}.",
+            "If it helps {village}, count me in."
+          ]
+        },
+        {
+          "baseChance": 3,
+          "conditions": [
+            { "chance": 3, "trait": "LAZY" }
+          ],
+          "actions": { "negative": 1 },
+          "npcResponses": [
+            "Ugh, more work? Can't someone else do it?",
+            "I'm already exhausted from doing... well, nothing. But still."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "directions",
+      "label": "Directions",
+      "playerOptions": [
+        "Do you know where I can find anything interesting nearby?",
+        "Which way to the nearest point of interest?"
+      ],
+      "results": [
+        {
+          "baseChance": 6,
+          "conditions": [
+            { "chance": 2, "job": "CARTOGRAPHER" },
+            { "chance": 1, "job": "ADVENTURER" }
+          ],
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "Head past the old well and keep north. You'll find something.",
+            "I've heard there's something worth seeing east of {village}.",
+            "Talk to the cartographer if you want real directions. But I'd say head south."
+          ]
+        },
+        {
+          "baseChance": 3,
+          "conditions": [
+            { "chance": 2, "trait": "ODD" }
+          ],
+          "actions": { "positive": 0 },
+          "npcResponses": [
+            "Directions? Follow the clouds. They always know where to go.",
+            "I once walked in a circle for three days. Found my way eventually."
+          ]
+        }
+      ]
+    }
+  ]
+}

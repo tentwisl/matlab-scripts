@@ -1,9 +1,93 @@
 {
   "category": "joke",
   "subCategories": [
-    {"id":"cheesy","label":"Cheesy","playerOptions":["Are you redstone? You power my day.","I burned bread again; the wheat was offended."],"results":[{"baseChance":5,"actions":{"positive":2},"npcResponses":["Ha! That's actually funny.","You got a laugh out of me."]}]},
-    {"id":"dark","label":"Dark","playerOptions":["At least only my plans exploded today.","The void might start charging me rent."],"results":[{"baseChance":3,"conditions":[{"chance":3,"trait":"GRUMPY"}],"actions":{"negative":1},"npcResponses":["That's... not very comforting.","Let's keep jokes lighter."]}]},
-    {"id":"self_deprecating","label":"Self-Deprecating","playerOptions":["I got lost in my own house.","I missed a zombie at point-blank range."],"results":[{"baseChance":4,"actions":{"positive":1},"npcResponses":["We've all had days like that.","At least you can laugh about it."]}]},
-    {"id":"meta","label":"Meta","playerOptions":["Feels like someone is clicking our dialogue options.","Do you feel like this world is code sometimes?"],"results":[{"baseChance":4,"actions":{"positive":1},"npcResponses":["That is... oddly specific.","You think too much, but I like it."]}]}
+    {
+      "id": "cheesy",
+      "label": "Cheesy",
+      "playerOptions": [
+        "Are you redstone, {npc}? You power my day.",
+        "I burned bread again. The wheat was offended."
+      ],
+      "results": [
+        {
+          "baseChance": 5,
+          "actions": { "positive": 2 },
+          "npcResponses": [
+            "Ha! That's actually funny, {player}.",
+            "You got a laugh out of me. Don't let it go to your head.",
+            "Oh {player}, that was terrible. ...I loved it."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dark",
+      "label": "Dark",
+      "playerOptions": [
+        "At least only my plans exploded today.",
+        "The void might start charging me rent."
+      ],
+      "results": [
+        {
+          "baseChance": 3,
+          "conditions": [
+            { "chance": 3, "trait": "GRUMPY" }
+          ],
+          "actions": { "negative": 1 },
+          "npcResponses": [
+            "That's... not very comforting, {player}.",
+            "Let's keep jokes lighter. {village} has enough problems."
+          ]
+        },
+        {
+          "baseChance": 4,
+          "conditions": [
+            { "chance": 2, "trait": "ODD" }
+          ],
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "Hah! Now that's my kind of humor.",
+            "Dark... but honest. I respect that, {player}."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "self_deprecating",
+      "label": "Self-Deprecating",
+      "playerOptions": [
+        "I got lost in my own house again.",
+        "I missed a zombie with a bow at point-blank range."
+      ],
+      "results": [
+        {
+          "baseChance": 4,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "We've all had days like that, {player}.",
+            "At least you can laugh about it. That takes courage."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "meta",
+      "label": "Meta",
+      "playerOptions": [
+        "Feels like someone is clicking our dialogue options.",
+        "Do you ever feel like this world is code, {npc}?"
+      ],
+      "results": [
+        {
+          "baseChance": 4,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "That is... oddly specific, {player}.",
+            "You think too much, but I like it.",
+            "Sometimes I feel like my whole life follows a script. Weird, right?"
+          ]
+        }
+      ]
+    }
   ]
 }

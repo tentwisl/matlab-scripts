@@ -5,8 +5,8 @@
       "id": "friendly",
       "label": "Friendly",
       "playerOptions": [
-        "Hey! It's great to see you.",
-        "Good morning, friend."
+        "Hey {npc}! It's great to see you.",
+        "Good morning, {npc}. How's the day treating you?"
       ],
       "results": [
         {
@@ -17,8 +17,9 @@
           ],
           "actions": { "positive": 2 },
           "npcResponses": [
-            "You always brighten my day.",
-            "It's good seeing you too."
+            "You always brighten my day, {player}.",
+            "It's good seeing you too! {village} feels livelier when you're around.",
+            "{player}! Perfect timing."
           ]
         },
         {
@@ -28,7 +29,7 @@
           ],
           "actions": { "negative": 1 },
           "npcResponses": [
-            "Not now... I'm in a bad mood.",
+            "Not now, {player}... I'm in a bad mood.",
             "Let's keep this short."
           ]
         }
@@ -38,8 +39,8 @@
       "id": "formal",
       "label": "Formal",
       "playerOptions": [
-        "Good day to you.",
-        "Greetings. I trust your duties are progressing well."
+        "Good day to you, {npc}.",
+        "Greetings, {npc}. I trust your duties are progressing well."
       ],
       "results": [
         {
@@ -50,8 +51,9 @@
           ],
           "actions": { "positive": 3 },
           "npcResponses": [
-            "A respectful greeting is always welcome.",
-            "You carry yourself well."
+            "A respectful greeting is always welcome, {player}.",
+            "You carry yourself well. {village} is better for people like you.",
+            "Well met, {player}. What brings you to me today?"
           ]
         }
       ]
@@ -60,8 +62,8 @@
       "id": "casual",
       "label": "Casual",
       "playerOptions": [
-        "Yo, how's it going?",
-        "Hey there!"
+        "Yo {npc}, how's it going?",
+        "Hey there, {npc}!"
       ],
       "results": [
         {
@@ -72,8 +74,9 @@
           ],
           "actions": { "positive": 1 },
           "npcResponses": [
-            "Doing alright.",
-            "Not bad, thanks."
+            "Doing alright, {player}.",
+            "Not bad, thanks for asking.",
+            "Same old, same old. You know how it is in {village}."
           ]
         }
       ]
@@ -82,7 +85,7 @@
       "id": "bold",
       "label": "Bold",
       "playerOptions": [
-        "There you are. I've been looking for you.",
+        "There you are, {npc}. I've been looking for you.",
         "Step aside, my favorite villager is here."
       ],
       "results": [
@@ -94,8 +97,9 @@
           ],
           "actions": { "positive": 2 },
           "npcResponses": [
-            "Confident today, aren't you?",
-            "You certainly know how to make an entrance."
+            "Confident today, aren't you, {player}?",
+            "You certainly know how to make an entrance.",
+            "{player}, you flatter me."
           ]
         },
         {
@@ -105,8 +109,8 @@
           ],
           "actions": { "negative": 2 },
           "npcResponses": [
-            "That was a bit much.",
-            "Let's keep things polite."
+            "That was a bit much, {player}.",
+            "Let's keep things polite. We barely know each other."
           ]
         }
       ]

@@ -3,19 +3,42 @@
     "jovial": "Hi {player}! I'm {npc}, so great to finally meet you!",
     "grumpy": "Ugh, another one? Name's {npc}. Make it quick.",
     "serious": "Greetings, {player}. I am {npc}. I hope your stay is productive.",
-    "normal": "Hello {player}, I'm {npc}. Nice to meet you."
+    "flirtatious": "Well, hello there, {player}. I'm {npc}. Aren't you a sight for sore eyes?",
+    "shy": "Oh... h-hello, {player}. I'm {npc}. Sorry, I'm not used to meeting new people.",
+    "odd": "You... you can see me? Fascinating. I'm {npc}. Yes, that's my real name.",
+    "lazy": "Mmm? Oh. Name's {npc}. You woke me up from a perfectly good nap, {player}.",
+    "peppy": "HEY HI HELLO! I'm {npc}! You're new here, right?! Welcome to {village}!",
+    "greedy": "Welcome to {village}, {player}. I'm {npc}. Everything's for sale... for the right price.",
+    "normal": "Hello {player}, I'm {npc}. Welcome to {village}."
   },
   "standard_tone_variants": {
     "jovial": "Hey again, {player}! {npc} here—always good to see you.",
     "grumpy": "You again, {player}? {npc}. Keep it short.",
     "serious": "Welcome back, {player}. {npc} at your service.",
+    "flirtatious": "Back so soon, {player}? I knew you couldn't stay away from me.",
+    "shy": "Oh, {player}... hi again. It's nice to see you.",
+    "odd": "Ah, {player}. I was just talking to a chicken about you. Don't ask.",
+    "lazy": "*yawn* ...Oh, {player}. You again. Pull up a chair, I guess.",
+    "peppy": "{player}!! You're back! I have SO much to tell you!",
+    "greedy": "{player}! Good timing. I just got some new... opportunities.",
     "normal": "Good to see you again, {player}. I'm {npc}."
   },
   "service_description": {
-    "blacksmith": "repairs and tools",
     "farmer": "fresh crops",
-    "alchemist": "brews and potions",
-    "leatherworker": "sturdy leather gear"
+    "librarian": "books and enchantments",
+    "cleric": "potions and blessings",
+    "armorer": "armor repairs and upgrades",
+    "weaponsmith": "sharp blades and fine weapons",
+    "toolsmith": "tools for every trade",
+    "butcher": "fresh meat and provisions",
+    "leatherworker": "sturdy leather gear",
+    "mason": "stonework and building materials",
+    "shepherd": "wool and warm clothing",
+    "fisherman": "the freshest catch",
+    "fletcher": "arrows and bows",
+    "cartographer": "maps and exploration routes",
+    "adventurer": "knowledge of the wilds",
+    "mercenary": "muscle and protection"
   },
   "job_intro_template": "I'm the {job} around here. Let me know if you need {service}.",
   "rivalry_template": "...and don't listen to {rival}, their {service} isn't nearly as good as mine."

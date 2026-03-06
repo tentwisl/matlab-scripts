@@ -33,7 +33,12 @@ public enum DialogueSubtype {
     RUMORS_SPOOKY(MainDialogueCategory.RUMORS, "Spooky", 0),
     RUMORS_DRAMA(MainDialogueCategory.RUMORS, "Drama", -1),
     RUMORS_TREASURE(MainDialogueCategory.RUMORS, "Treasure", 1),
-    RUMORS_WARNING(MainDialogueCategory.RUMORS, "Warning", 0);
+    RUMORS_WARNING(MainDialogueCategory.RUMORS, "Warning", 0),
+
+    ASK_MONEY(MainDialogueCategory.ASK, "Money", -1),
+    ASK_FAVOR(MainDialogueCategory.ASK, "Favor", -1),
+    ASK_TASK(MainDialogueCategory.ASK, "Task", 0),
+    ASK_DIRECTIONS(MainDialogueCategory.ASK, "Directions", 0);
 
     private final MainDialogueCategory category;
     private final String displayName;

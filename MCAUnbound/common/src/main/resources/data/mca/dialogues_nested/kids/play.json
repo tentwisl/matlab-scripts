@@ -5,7 +5,7 @@
       "id": "hug",
       "label": "Hug",
       "playerOptions": [
-        "Want a big hug?",
+        "Want a big hug, {npc}?",
         "Come here, little one!"
       ],
       "results": [
@@ -14,7 +14,8 @@
           "actions": { "positive": 2 },
           "npcResponses": [
             "Yay hugs!",
-            "Hehe!"
+            "Hehe! You're warm, {player}!",
+            "*squeezes tight*"
           ]
         }
       ]
@@ -23,7 +24,7 @@
       "id": "rock_paper_scissors",
       "label": "Rock Paper Scissors",
       "playerOptions": [
-        "Rock, paper, scissors?",
+        "Rock, paper, scissors, {npc}?",
         "Let's play RPS!"
       ],
       "results": [
@@ -31,8 +32,9 @@
           "baseChance": 6,
           "actions": { "positive": 1 },
           "npcResponses": [
-            "I pick rock!",
-            "Best out of three!"
+            "I pick rock! Ha!",
+            "Best out of three, {player}!",
+            "No fair, you always win!"
           ]
         }
       ]
@@ -41,7 +43,7 @@
       "id": "tag",
       "label": "Tag",
       "playerOptions": [
-        "You're it!",
+        "You're it, {npc}!",
         "Wanna play tag?"
       ],
       "results": [
@@ -49,8 +51,9 @@
           "baseChance": 6,
           "actions": { "positive": 1 },
           "npcResponses": [
-            "You can't catch me!",
-            "Tag! You're it!"
+            "You can't catch me, {player}!",
+            "Tag! You're it!",
+            "I'm the fastest kid in {village}!"
           ]
         }
       ]
@@ -58,8 +61,9 @@
     {
       "id": "peekaboo",
       "label": "Peekaboo",
+      "age_group": "baby",
       "playerOptions": [
-        "Peekaboo!",
+        "Peekaboo, {npc}!",
         "Where did I go?"
       ],
       "results": [
@@ -68,7 +72,48 @@
           "actions": { "positive": 1 },
           "npcResponses": [
             "Again! Again!",
-            "I see you!"
+            "I see you, {player}!",
+            "*giggles uncontrollably*"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tickle",
+      "label": "Tickle",
+      "age_group": "baby",
+      "playerOptions": [
+        "Tickle tickle, {npc}!",
+        "Gonna get you!"
+      ],
+      "results": [
+        {
+          "baseChance": 7,
+          "actions": { "positive": 2 },
+          "npcResponses": [
+            "Ahahaha! Stop! No, don't stop!",
+            "*squirms and laughs*",
+            "Heeheehee!"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hide_and_seek",
+      "label": "Hide & Seek",
+      "age_group": "child",
+      "playerOptions": [
+        "Let's play hide and seek!",
+        "I bet I can find you, {npc}."
+      ],
+      "results": [
+        {
+          "baseChance": 6,
+          "actions": { "positive": 1 },
+          "npcResponses": [
+            "Count to ten, {player}! No peeking!",
+            "You'll never find me!",
+            "I know the BEST hiding spots in {village}!"
           ]
         }
       ]

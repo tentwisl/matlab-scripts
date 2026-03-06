@@ -6,8 +6,8 @@
       "label": "Baby Talk",
       "age_group": "baby",
       "playerOptions": [
-        "Who's a happy little one?",
-        "Hiiiii baby!"
+        "Who's a happy little one, {npc}?",
+        "Hiiiii {npc}!"
       ],
       "results": [
         {
@@ -15,7 +15,8 @@
           "actions": { "positive": 1 },
           "npcResponses": [
             "goo goo gaa... baaa!",
-            "ba-ba... da-da... gaga!"
+            "ba-ba... da-da... gaga!",
+            "*reaches for {player}*"
           ]
         }
       ]
@@ -25,8 +26,8 @@
       "label": "Friendly",
       "age_group": "juvenile",
       "playerOptions": [
-        "Hey kiddo!",
-        "Are you behaving today?"
+        "Hey {npc}, kiddo!",
+        "Are you behaving today, {npc}?"
       ],
       "results": [
         {
@@ -36,8 +37,9 @@
           ],
           "actions": { "positive": 1 },
           "npcResponses": [
-            "Hi! Wanna play?",
-            "Can we get cookies?"
+            "Hi {player}! Wanna play?",
+            "Can we get cookies, {player}?",
+            "{player}! {player}! Look what I found!"
           ]
         },
         {
@@ -48,8 +50,9 @@
           ],
           "actions": { "negative": 1 },
           "npcResponses": [
-            "Nooo!",
-            "I'm grumpy!"
+            "Nooo! Go away!",
+            "I'm grumpy, {player}!",
+            "Leave me alone!"
           ]
         }
       ]

@@ -11,6 +11,7 @@ import net.mca.entity.ai.brain.VillagerTasksMCA;
 import net.mca.entity.ai.pathfinder.VillagerNavigation;
 import net.mca.entity.ai.relationship.*;
 import net.mca.entity.interaction.VillagerCommandHandler;
+import net.mca.entity.interaction.dynamicdialogue.AmbientChatter;
 import net.mca.item.ItemsMCA;
 import net.mca.network.c2s.InteractionVillagerMessage;
 import net.mca.resources.Names;
@@ -127,6 +128,7 @@ public class VillagerEntityMCA extends VillagerEntity implements VillagerLike<Vi
     private int burned;
     private long lastHit = 0;
     private int prevGrowthAmount;
+    private int ambientChatterCooldown;
     private boolean interactedWith;
     private double villagerBankBalance;
 
@@ -848,6 +850,15 @@ public class VillagerEntityMCA extends VillagerEntity implements VillagerLike<Vi
                 int level = this.getVillagerData().getLevel() - 1;
                 instance.removeModifier(EXTRA_HEALTH_EFFECT_ID);
                 instance.addTemporaryModifier(new EntityAttributeModifier(EXTRA_HEALTH_EFFECT_ID, "level health boost", Config.getInstance().villagerHealthBonusPerLevel * level, EntityAttributeModifier.Operation.ADDITION));
+            }
+
+            // Ambient villager-to-villager chatter
+            if (ambientChatterCooldown > 0) {
+                ambientChatterCooldown--;
+            } else if (this.age % 200 == 0 && random.nextInt(30) == 0 && !isBaby()) {
+                if (AmbientChatter.tryChatter(this, (net.minecraft.server.world.ServerWorld) getWorld())) {
+                    ambientChatterCooldown = 2400 + random.nextInt(2400); // 2-4 minutes cooldown
+                }
             }
 
             //twice a day, randomize the mood a bit
