@@ -11,6 +11,7 @@ public class KeyBindings {
     public static final List<KeyBinding> list = new LinkedList<>();
 
     public static final KeyBinding SKIN_LIBRARY = newKey("skin_library", GLFW.GLFW_KEY_U);
+    public static final KeyBinding AW2_DEBUG_TOGGLE = newKey("aw2_debug_toggle", GLFW.GLFW_KEY_O);
 
     private static KeyBinding newKey(String name, int code) {
         KeyBinding key = new KeyBinding(

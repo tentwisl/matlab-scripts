@@ -1,5 +1,6 @@
 package net.mca.aw2.block;
 
+import net.mca.aw2.AW2BlockEntityTypes;
 import net.mca.aw2.torque.TorqueGeneratorBlockEntity;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntity;
@@ -50,7 +51,12 @@ public class TorqueGeneratorBlock extends BlockWithEntity {
     @Nullable
     @Override
     public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
-        return null; // Overridden by specific block registrations
+        return switch (generatorType) {
+            case HAND_CRANK -> AW2BlockEntityTypes.HAND_CRANK.get().instantiate(pos, state);
+            case WINDMILL -> AW2BlockEntityTypes.WINDMILL.get().instantiate(pos, state);
+            case WATERWHEEL -> AW2BlockEntityTypes.WATERWHEEL.get().instantiate(pos, state);
+            case STIRLING -> AW2BlockEntityTypes.STIRLING_GENERATOR.get().instantiate(pos, state);
+        };
     }
 
     @Nullable

@@ -1,5 +1,6 @@
 package net.mca.aw2.block;
 
+import net.mca.aw2.AW2BlockEntityTypes;
 import net.mca.aw2.research.ResearchTableBlockEntity;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntity;
@@ -53,7 +54,7 @@ public class ResearchTableBlock extends BlockWithEntity {
     @Nullable
     @Override
     public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
-        return null; // Set by block entity type registration
+        return AW2BlockEntityTypes.RESEARCH_TABLE.get().instantiate(pos, state);
     }
 
     @Nullable

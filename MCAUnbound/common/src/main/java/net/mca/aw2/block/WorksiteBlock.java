@@ -1,5 +1,7 @@
 package net.mca.aw2.block;
 
+import net.mca.aw2.AW2BlockEntityTypes;
+import net.mca.aw2.AW2ColonyManager;
 import net.mca.aw2.WorksiteProductionTracker;
 import net.mca.aw2.worksite.WorksiteBlockEntity;
 import net.mca.aw2.worksite.WorksiteType;
@@ -67,8 +69,15 @@ public class WorksiteBlock extends BlockWithEntity {
     @Nullable
     @Override
     public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
-        // Subclasses override this
-        return null;
+        return switch (worksiteType) {
+            case CROP_FARM -> AW2BlockEntityTypes.CROP_FARM.get().instantiate(pos, state);
+            case ANIMAL_FARM -> AW2BlockEntityTypes.ANIMAL_FARM.get().instantiate(pos, state);
+            case TREE_FARM -> AW2BlockEntityTypes.TREE_FARM.get().instantiate(pos, state);
+            case QUARRY -> AW2BlockEntityTypes.QUARRY.get().instantiate(pos, state);
+            case FISH_FARM -> AW2BlockEntityTypes.FISH_FARM.get().instantiate(pos, state);
+            case AUTO_CRAFTING -> AW2BlockEntityTypes.AUTO_CRAFTING.get().instantiate(pos, state);
+            case ORE_PROCESSOR -> AW2BlockEntityTypes.AUTO_CRAFTING.get().instantiate(pos, state);
+        };
     }
 
     @Nullable
@@ -101,11 +110,28 @@ public class WorksiteBlock extends BlockWithEntity {
             double torque = worksite.getTorqueStored(Direction.UP);
             double maxTorque = worksite.getMaxTorque(Direction.UP);
 
+            double structureMult = worksite.getCurrentStructureTierMultiplier();
+            int villageFood = 0;
+            int starvingWorkers = 0;
+            if (world instanceof ServerWorld serverWorld) {
+                AW2ColonyManager colony = AW2ColonyManager.get(serverWorld);
+                var villageOpt = VillageManager.get(serverWorld).findNearestVillage(pos, Village.BORDER_MARGIN);
+                if (villageOpt.isPresent()) {
+                    villageFood = colony.getVillageFoodPoints(villageOpt.get().getVillageUuid());
+                }
+                for (var assignment : worksite.getAssignedWorkers()) {
+                    var status = colony.getWorkerStatus(assignment.getVillagerUuid());
+                    if (status.isPresent() && status.get().state() == AW2ColonyManager.WorkerState.STARVING) {
+                        starvingWorkers++;
+                    }
+                }
+            }
+
             player.sendMessage(Text.literal(String.format(
-                    "§6[%s]§r Workers: %d/%d | Active: %s | Torque: %.0f/%.0f | Work Done: %d",
+                    "§6[%s]§r Workers: %d/%d | Active: %s | Torque: %.0f/%.0f | Work Done: %d | Struct x%.2f | Food: %d | Starving: %d",
                     worksiteType.getDisplayName(), workers, maxWorkers,
                     active ? "§a✓§r" : "§c✗§r",
-                    torque, maxTorque, worksite.getTotalWorkDone()
+                    torque, maxTorque, worksite.getTotalWorkDone(), structureMult, villageFood, starvingWorkers
             )), true);
         }
 
