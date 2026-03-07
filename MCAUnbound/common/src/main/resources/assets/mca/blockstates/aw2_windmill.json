@@ -1,0 +1,8 @@
+{
+	"variants": {
+		"facing=east":  { "y": 90,  "model": "mca:block/aw2_windmill" },
+		"facing=north": {            "model": "mca:block/aw2_windmill" },
+		"facing=south": { "y": 180, "model": "mca:block/aw2_windmill" },
+		"facing=west":  { "y": 270, "model": "mca:block/aw2_windmill" }
+	}
+}

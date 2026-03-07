@@ -1,0 +1,12 @@
+{
+	"variants": {
+		"facing=east,has_book=false":  { "y": 90,  "model": "mca:block/aw2_research_table" },
+		"facing=north,has_book=false": {            "model": "mca:block/aw2_research_table" },
+		"facing=south,has_book=false": { "y": 180, "model": "mca:block/aw2_research_table" },
+		"facing=west,has_book=false":  { "y": 270, "model": "mca:block/aw2_research_table" },
+		"facing=east,has_book=true":   { "y": 90,  "model": "mca:block/aw2_research_table_with_book" },
+		"facing=north,has_book=true":  {            "model": "mca:block/aw2_research_table_with_book" },
+		"facing=south,has_book=true":  { "y": 180, "model": "mca:block/aw2_research_table_with_book" },
+		"facing=west,has_book=true":   { "y": 270, "model": "mca:block/aw2_research_table_with_book" }
+	}
+}

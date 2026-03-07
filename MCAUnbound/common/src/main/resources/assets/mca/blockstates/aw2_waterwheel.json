@@ -1,0 +1,8 @@
+{
+	"variants": {
+		"facing=east":  { "y": 90,  "model": "mca:block/aw2_waterwheel" },
+		"facing=north": {            "model": "mca:block/aw2_waterwheel" },
+		"facing=south": { "y": 180, "model": "mca:block/aw2_waterwheel" },
+		"facing=west":  { "y": 270, "model": "mca:block/aw2_waterwheel" }
+	}
+}
