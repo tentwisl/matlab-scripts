@@ -3,6 +3,7 @@ package net.mca.server.world.data;
 import net.mca.Config;
 import net.mca.MCA;
 import net.mca.advancement.criterion.CriterionMCA;
+import net.mca.aw2.worker.WorkerManager;
 import net.mca.resources.BuildingTypes;
 import net.mca.resources.data.BuildingType;
 import net.mca.server.ReaperSpawner;
@@ -151,6 +152,11 @@ public class VillageManager extends PersistentState implements Iterable<Village>
         }
 
         long time = world.getTime();
+
+        // Periodically prune assignments whose worksites no longer exist.
+        if (time % 200 == 0) {
+            WorkerManager.get(world).pruneInvalidAssignments(world);
+        }
 
         for (Village v : this) {
             v.tick(world, time);

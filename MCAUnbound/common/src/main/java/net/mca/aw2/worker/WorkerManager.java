@@ -1,5 +1,6 @@
 package net.mca.aw2.worker;
 
+import net.mca.aw2.AW2ColonyManager;
 import net.mca.aw2.AW2Integration;
 import net.mca.aw2.worksite.WorksiteBlockEntity;
 import net.minecraft.nbt.NbtCompound;
@@ -69,6 +70,7 @@ public class WorkerManager extends PersistentState {
         if (oldPos != null && world.getBlockEntity(oldPos) instanceof WorksiteBlockEntity worksite) {
             worksite.removeWorker(villagerUuid);
         }
+        AW2ColonyManager.get(world).clearWorkerStatus(villagerUuid);
         markDirty();
     }
 
@@ -96,6 +98,10 @@ public class WorkerManager extends PersistentState {
     /**
      * Gets all villager UUIDs assigned to a specific worksite.
      */
+    public int getAssignmentCount() {
+        return villagerAssignments.size();
+    }
+
     public List<UUID> getWorkersAt(BlockPos worksitePos) {
         List<UUID> result = new ArrayList<>();
         for (Map.Entry<UUID, BlockPos> entry : villagerAssignments.entrySet()) {
@@ -104,6 +110,30 @@ public class WorkerManager extends PersistentState {
             }
         }
         return result;
+    }
+
+    public int pruneInvalidAssignments(ServerWorld world) {
+        List<UUID> invalid = new ArrayList<>();
+        for (Map.Entry<UUID, BlockPos> entry : villagerAssignments.entrySet()) {
+            if (!(world.getBlockEntity(entry.getValue()) instanceof WorksiteBlockEntity)) {
+                invalid.add(entry.getKey());
+            }
+        }
+
+        for (UUID uuid : invalid) {
+            villagerAssignments.remove(uuid);
+            villagerRoles.remove(uuid);
+            AW2ColonyManager.get(world).setWorkerStatus(uuid,
+                    AW2ColonyManager.WorkerState.BLOCKED,
+                    AW2ColonyManager.WorkerBlockedReason.WORKSITE_MISSING,
+                    null,
+                    world.getTime());
+        }
+
+        if (!invalid.isEmpty()) {
+            markDirty();
+        }
+        return invalid.size();
     }
 
     // ==================== SERIALIZATION ====================

@@ -1,5 +1,7 @@
 package net.mca;
 
+import net.mca.aw2.worksite.WorksiteBlockEntity;
+import net.mca.aw2.warehouse.WarehouseBlockEntity;
 import net.mca.client.gui.SkinLibraryScreen;
 import net.mca.client.tts.SpeechManager;
 import net.mca.cobalt.network.NetworkHandler;
@@ -8,6 +10,8 @@ import net.mca.entity.VillagerLike;
 import net.mca.network.c2s.ConfigRequest;
 import net.mca.network.c2s.PlayerDataRequest;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.text.Text;
+import net.minecraft.util.hit.BlockHitResult;
 
 import java.util.*;
 
@@ -17,6 +21,7 @@ public class MCAClient {
     public static final Set<UUID> playerDataRequests = new HashSet<>();
 
     private static final DestinyManager destinyManager = new DestinyManager();
+    private static boolean aw2DebugFeedbackEnabled = false;
 
     public static DestinyManager getDestinyManager() {
         return destinyManager;
@@ -68,6 +73,33 @@ public class MCAClient {
 
         if (KeyBindings.SKIN_LIBRARY.wasPressed()) {
             MinecraftClient.getInstance().setScreen(new SkinLibraryScreen());
+        }
+
+        if (KeyBindings.AW2_DEBUG_TOGGLE.wasPressed()) {
+            aw2DebugFeedbackEnabled = !aw2DebugFeedbackEnabled;
+            if (client.player != null) {
+                client.player.sendMessage(Text.literal(
+                        "[MCA/AW2] Debug feedback " + (aw2DebugFeedbackEnabled ? "enabled" : "disabled") + " (hotkey: O)"), true);
+            }
+        }
+
+        if (aw2DebugFeedbackEnabled && client.player != null && client.world != null && client.player.age % 20 == 0) {
+            if (client.crosshairTarget instanceof BlockHitResult bhr) {
+                var be = client.world.getBlockEntity(bhr.getBlockPos());
+                if (be instanceof WorksiteBlockEntity ws) {
+                    client.player.sendMessage(Text.literal(String.format(
+                            "[AW2 Debug] Worksite %s | Workers: %d | Active: %s | WorkDone: %d",
+                            ws.getWorksiteType().name(), ws.getWorkerCount(), ws.isActive(), ws.getTotalWorkDone()
+                    )), true);
+                } else if (be instanceof WarehouseBlockEntity wh) {
+                    client.player.sendMessage(Text.literal(String.format(
+                            "[AW2 Debug] Warehouse | Hauled: %d | Supplied: %d | TrackedStockTypes: %d",
+                            wh.getLastItemsHauledFromWorksites(),
+                            wh.getLastItemsSuppliedToWorksites(),
+                            wh.getStockLevels().size()
+                    )), true);
+                }
+            }
         }
 
         SpeechManager.INSTANCE.tick(client);

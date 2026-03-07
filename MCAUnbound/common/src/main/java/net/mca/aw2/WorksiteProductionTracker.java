@@ -96,6 +96,14 @@ public class WorksiteProductionTracker extends PersistentState {
         return result;
     }
 
+    public int getRegisteredWorksiteCount() {
+        return registeredWorksites.size();
+    }
+
+    public Map<BlockPos, String> getRegisteredWorksitesSnapshot() {
+        return Collections.unmodifiableMap(new HashMap<>(registeredWorksites));
+    }
+
     /**
      * Gets the count of active worksites for a city, by type.
      */

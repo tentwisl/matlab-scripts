@@ -88,3 +88,11 @@ A player can:
 4. Sustain workers and troops through food/supply.
 5. Command troops reliably.
 6. Progress colony capabilities through structures without broken/janky loops.
+
+## Initial implementation status (this branch)
+- ✅ Phase 0 started: runtime stabilization hooks are now wired through real block entities and persistent colony runtime state.
+- ✅ Phase 1 started: worker state diagnostics now track `ASSIGNED/TRAVELING/WORKING/BLOCKED/STARVING` with reasons.
+- ✅ Phase 2 started: worksite worker contribution now scales by nearby village completed-building tier.
+- ✅ Phase 3 started: village food points are derived from worksite production and consumed as worker rations.
+
+This is the first interconnected foundation pass. Next iterations should refine balancing constants, improve food-source classification, and add in-game UI/commands for richer observability.

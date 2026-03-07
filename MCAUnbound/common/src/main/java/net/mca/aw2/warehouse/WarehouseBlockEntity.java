@@ -1,5 +1,7 @@
 package net.mca.aw2.warehouse;
 
+import net.mca.aw2.worksite.WorksiteBlockEntity;
+import net.mca.aw2.worksite.WorksiteType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
@@ -9,13 +11,16 @@ import net.minecraft.inventory.Inventories;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.screen.GenericContainerScreenHandler;
 import net.minecraft.screen.NamedScreenHandlerFactory;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.text.Text;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -41,6 +46,12 @@ public class WarehouseBlockEntity extends BlockEntity implements NamedScreenHand
     // Stock tracking for nation economy
     private final Map<String, Integer> stockLevels = new HashMap<>();
     private long lastStockUpdate = 0;
+
+    private static final int LOGISTICS_INTERVAL_TICKS = 100;
+    private static final int LOGISTICS_RANGE = 24;
+    private long lastLogisticsTick = 0;
+    private int lastItemsHauledFromWorksites = 0;
+    private int lastItemsSuppliedToWorksites = 0;
 
     public WarehouseBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -184,6 +195,109 @@ public class WarehouseBlockEntity extends BlockEntity implements NamedScreenHand
 
     public Inventory getInventory() { return inventory; }
 
+    // ==================== LOGISTICS ====================
+
+    public static void tick(net.minecraft.world.World world, BlockPos pos, BlockState state, WarehouseBlockEntity be) {
+        if (!(world instanceof ServerWorld serverWorld)) return;
+        if (serverWorld.getTime() - be.lastLogisticsTick < LOGISTICS_INTERVAL_TICKS) return;
+
+        be.lastLogisticsTick = serverWorld.getTime();
+        int hauled = 0;
+        int supplied = 0;
+
+        Box scanBox = Box.from(pos.toCenterPos()).expand(LOGISTICS_RANGE);
+        for (BlockPos checkPos : BlockPos.iterate(
+                (int) scanBox.minX, (int) scanBox.minY, (int) scanBox.minZ,
+                (int) scanBox.maxX, (int) scanBox.maxY, (int) scanBox.maxZ)) {
+            if (!(serverWorld.getBlockEntity(checkPos) instanceof WorksiteBlockEntity worksite)) continue;
+
+            hauled += be.haulOutputsFromWorksite(worksite);
+            supplied += be.supplyInputsToWorksite(worksite);
+        }
+
+        be.lastItemsHauledFromWorksites = hauled;
+        be.lastItemsSuppliedToWorksites = supplied;
+        if (hauled > 0 || supplied > 0) {
+            be.updateStockLevels();
+            be.markDirty();
+        }
+    }
+
+    private int haulOutputsFromWorksite(WorksiteBlockEntity worksite) {
+        int moved = 0;
+        var output = worksite.getOutputInventory();
+        for (int i = 0; i < output.size(); i++) {
+            ItemStack stack = output.getStack(i);
+            if (stack.isEmpty()) continue;
+
+            int before = stack.getCount();
+            ItemStack remaining = insertItem(stack.copy());
+            int transferred = before - remaining.getCount();
+            if (transferred > 0) {
+                stack.decrement(transferred);
+                moved += transferred;
+            }
+        }
+        return moved;
+    }
+
+    private int supplyInputsToWorksite(WorksiteBlockEntity worksite) {
+        int moved = 0;
+        var input = worksite.getInputInventory();
+
+        // top-up existing input stacks (keeps recipes/worker feed stable)
+        for (int i = 0; i < input.size(); i++) {
+            ItemStack current = input.getStack(i);
+            if (current.isEmpty()) continue;
+            int targetCount = Math.min(current.getMaxCount(), 16);
+            int need = targetCount - current.getCount();
+            if (need <= 0) continue;
+
+            ItemStack extracted = extractItem(current, need);
+            if (!extracted.isEmpty()) {
+                current.increment(extracted.getCount());
+                moved += extracted.getCount();
+            }
+        }
+
+        // seed empty inputs for common worksite consumables
+        for (int i = 0; i < input.size(); i++) {
+            if (!input.getStack(i).isEmpty()) continue;
+            ItemStack template = getDefaultSupplyFor(worksite.getWorksiteType(), i);
+            if (template.isEmpty()) continue;
+
+            ItemStack extracted = extractItem(template, Math.min(8, template.getMaxCount()));
+            if (!extracted.isEmpty()) {
+                input.setStack(i, extracted);
+                moved += extracted.getCount();
+            }
+        }
+
+        return moved;
+    }
+
+    private ItemStack getDefaultSupplyFor(WorksiteType type, int slot) {
+        return switch (type) {
+            case CROP_FARM -> switch (slot % 4) {
+                case 0 -> new ItemStack(Items.WHEAT_SEEDS, 1);
+                case 1 -> new ItemStack(Items.CARROT, 1);
+                case 2 -> new ItemStack(Items.POTATO, 1);
+                default -> new ItemStack(Items.BEETROOT_SEEDS, 1);
+            };
+            case ANIMAL_FARM -> (slot % 2 == 0) ? new ItemStack(Items.WHEAT, 1) : new ItemStack(Items.CARROT, 1);
+            case TREE_FARM -> new ItemStack(Items.OAK_SAPLING, 1);
+            default -> ItemStack.EMPTY;
+        };
+    }
+
+    public int getLastItemsHauledFromWorksites() {
+        return lastItemsHauledFromWorksites;
+    }
+
+    public int getLastItemsSuppliedToWorksites() {
+        return lastItemsSuppliedToWorksites;
+    }
+
     // ==================== NBT ====================
 
     @Override
@@ -200,6 +314,9 @@ public class WarehouseBlockEntity extends BlockEntity implements NamedScreenHand
             stacks.set(i, inventory.getStack(i));
         }
         Inventories.writeNbt(nbt, stacks);
+
+        nbt.putInt("LastHauled", lastItemsHauledFromWorksites);
+        nbt.putInt("LastSupplied", lastItemsSuppliedToWorksites);
 
         NbtCompound filterNbt = new NbtCompound();
         for (Map.Entry<Integer, String> entry : slotFilters.entrySet()) {
@@ -222,6 +339,9 @@ public class WarehouseBlockEntity extends BlockEntity implements NamedScreenHand
         for (int i = 0; i < INVENTORY_SIZE; i++) {
             inventory.setStack(i, stacks.get(i));
         }
+
+        lastItemsHauledFromWorksites = nbt.getInt("LastHauled");
+        lastItemsSuppliedToWorksites = nbt.getInt("LastSupplied");
 
         slotFilters.clear();
         if (nbt.contains("Filters")) {

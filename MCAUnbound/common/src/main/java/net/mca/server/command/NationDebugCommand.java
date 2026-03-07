@@ -2,6 +2,11 @@ package net.mca.server.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
+import net.mca.aw2.AW2ColonyManager;
+import net.mca.aw2.WorksiteProductionTracker;
+import net.mca.aw2.warehouse.WarehouseBlockEntity;
+import net.mca.aw2.worker.WorkerManager;
+import net.mca.aw2.worksite.WorksiteBlockEntity;
 import net.mca.block.TownHallBlockEntity;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
@@ -23,7 +28,89 @@ public final class NationDebugCommand {
                 .requires(src -> src.hasPermissionLevel(2) || src.getServer().isSingleplayer())
                 .then(CommandManager.literal("debug")
                         .then(CommandManager.literal("merge_villages")
-                                .executes(NationDebugCommand::mergeVillages))));
+                                .executes(NationDebugCommand::mergeVillages))
+                        .then(CommandManager.literal("aw2")
+                                .then(CommandManager.literal("summary")
+                                        .executes(NationDebugCommand::aw2Summary))
+                                .then(CommandManager.literal("nearby")
+                                        .executes(NationDebugCommand::aw2Nearby)))));
+    }
+
+    private static int aw2Summary(CommandContext<ServerCommandSource> ctx) {
+        ServerWorld world = ctx.getSource().getWorld();
+        BlockPos sourcePos = BlockPos.ofFloored(ctx.getSource().getPosition());
+
+        WorksiteProductionTracker production = WorksiteProductionTracker.get(world);
+        WorkerManager workers = WorkerManager.get(world);
+        AW2ColonyManager colony = AW2ColonyManager.get(world);
+        VillageManager villageManager = VillageManager.get(world);
+
+        int registeredWorksites = production.getRegisteredWorksiteCount();
+        int assignments = workers.getAssignmentCount();
+        int trackedStatuses = colony.getTrackedWorkerStatusCount();
+
+        int nearestVillageFood = 0;
+        String nearestVillageName = "none";
+        var nearestVillage = villageManager.findNearestVillage(sourcePos, Village.BORDER_MARGIN * 2);
+        if (nearestVillage.isPresent()) {
+            nearestVillageFood = colony.getVillageFoodPoints(nearestVillage.get().getVillageUuid());
+            nearestVillageName = nearestVillage.get().getName();
+        }
+
+        ctx.getSource().sendFeedback(() -> Text.literal(String.format(
+                "[AW2 Debug] worksites=%d, assignments=%d, workerStatuses=%d, nearestVillage=%s, villageFood=%d",
+                registeredWorksites, assignments, trackedStatuses, nearestVillageName, nearestVillageFood
+        )), false);
+
+        return 1;
+    }
+
+    private static int aw2Nearby(CommandContext<ServerCommandSource> ctx) {
+        ServerWorld world = ctx.getSource().getWorld();
+        BlockPos center = BlockPos.ofFloored(ctx.getSource().getPosition());
+        int radius = 24;
+
+        int worksites = 0;
+        int warehouses = 0;
+
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dy = -8; dy <= 8; dy++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    BlockPos pos = center.add(dx, dy, dz);
+                    var be = world.getBlockEntity(pos);
+                    if (be instanceof WorksiteBlockEntity worksite) {
+                        worksites++;
+                        if (worksites <= 8) {
+                            ctx.getSource().sendFeedback(() -> Text.literal(String.format(
+                                    "[AW2 Nearby] Worksite %s @ %s | workers=%d | active=%s | workDone=%d",
+                                    worksite.getWorksiteType().name(), pos,
+                                    worksite.getWorkerCount(), worksite.isActive(), worksite.getTotalWorkDone()
+                            )), false);
+                        }
+                    } else if (be instanceof WarehouseBlockEntity warehouse) {
+                        warehouses++;
+                        if (warehouses <= 4) {
+                            ctx.getSource().sendFeedback(() -> Text.literal(String.format(
+                                    "[AW2 Nearby] Warehouse @ %s | hauled=%d | supplied=%d | stockTypes=%d",
+                                    pos,
+                                    warehouse.getLastItemsHauledFromWorksites(),
+                                    warehouse.getLastItemsSuppliedToWorksites(),
+                                    warehouse.getStockLevels().size()
+                            )), false);
+                        }
+                    }
+                }
+            }
+        }
+
+        int finalWorksites = worksites;
+        int finalWarehouses = warehouses;
+        ctx.getSource().sendFeedback(() -> Text.literal(String.format(
+                "[AW2 Nearby] scanned radius=%d -> worksites=%d, warehouses=%d",
+                radius, finalWorksites, finalWarehouses
+        )), false);
+
+        return 1;
     }
 
     private static int mergeVillages(CommandContext<ServerCommandSource> ctx) {
