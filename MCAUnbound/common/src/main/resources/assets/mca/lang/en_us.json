@@ -1169,5 +1169,6 @@
   "interaction.worksite.assigned":   "%s has been assigned to the %s.",
   "interaction.worksite.full":       "The %s is already at maximum capacity.",
   "interaction.worksite.none_nearby":"No AW2 worksite found nearby.",
-  "interaction.worksite.unassigned": "Worksite assignment removed."
+  "interaction.worksite.unassigned": "Worksite assignment removed.",
+  "key.mca.aw2_debug_toggle": "Toggle AW2 Debug Feedback"
 }

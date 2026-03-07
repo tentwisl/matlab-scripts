@@ -322,6 +322,7 @@ public class Village implements Iterable<Building> {
 
         if (time % 24000 == 0) {
             cleanReputation();
+            net.mca.aw2.AW2ColonyManager.get(world).tickDailyMaintenance(time);
         }
 
         // AW2 Integration: collect worksite production into the village economy every 6000 ticks (~5 min)
@@ -352,10 +353,13 @@ public class Village implements Iterable<Building> {
         // Scan all worksites registered to this village and collect their production logs
         for (BlockPos wsPos : tracker.getWorksitesForCity(villageUuid)) {
             if (world.getBlockEntity(wsPos) instanceof net.mca.aw2.worksite.WorksiteBlockEntity worksite) {
-                Map<String, Integer> prodLog = worksite.getProductionLog();
+                Map<String, Integer> prodLog = worksite.consumeProductionLogSnapshot();
                 if (!prodLog.isEmpty()) {
                     tracker.recordProduction(wsPos, prodLog);
+                    net.mca.aw2.AW2ColonyManager.get(world).registerVillageProduction(villageUuid, prodLog);
                 }
+            } else {
+                tracker.unregisterWorksite(wsPos);
             }
         }
     }

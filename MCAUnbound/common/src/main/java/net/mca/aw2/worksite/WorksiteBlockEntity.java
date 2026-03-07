@@ -1,5 +1,6 @@
 package net.mca.aw2.worksite;
 
+import net.mca.aw2.AW2ColonyManager;
 import net.mca.aw2.AW2Integration;
 import net.mca.aw2.torque.ITorqueProvider;
 import net.mca.aw2.torque.TorqueCell;
@@ -18,6 +19,7 @@ import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
+import net.mca.server.world.data.VillageManager;
 
 import java.util.*;
 
@@ -219,8 +221,22 @@ public abstract class WorksiteBlockEntity extends BlockEntity implements ITorque
      * Provides a manual-labor torque boost equivalent to partial generator output.
      */
     public void onWorkerTick(UUID workerUuid) {
-        double workerContribution = worksiteType.getTorqueCostPerWork() * 0.5;
+        onWorkerTick(workerUuid, true);
+    }
+
+    public void onWorkerTick(UUID workerUuid, boolean isFed) {
+        double foodMultiplier = isFed ? 1.0 : 0.35;
+        double structureMultiplier = getStructureTierMultiplier();
+        double workerContribution = worksiteType.getTorqueCostPerWork() * 0.5 * foodMultiplier * structureMultiplier;
         torqueCell.addEnergy(workerContribution);
+
+        if (!isFed && world instanceof net.minecraft.server.world.ServerWorld serverWorld) {
+            AW2ColonyManager.get(serverWorld).setWorkerStatus(workerUuid,
+                    AW2ColonyManager.WorkerState.STARVING,
+                    AW2ColonyManager.WorkerBlockedReason.NO_VILLAGE_FOOD,
+                    pos,
+                    serverWorld.getTime());
+        }
     }
 
     // ==================== UPGRADE MANAGEMENT ====================
@@ -258,6 +274,27 @@ public abstract class WorksiteBlockEntity extends BlockEntity implements ITorque
         return mult;
     }
 
+
+    protected double getStructureTierMultiplier() {
+        if (!(world instanceof net.minecraft.server.world.ServerWorld serverWorld)) return 1.0;
+
+        var nearestVillage = VillageManager.get(serverWorld).findNearestVillage(pos, 128);
+        if (nearestVillage.isEmpty()) return 1.0;
+
+        long completedBuildings = nearestVillage.get().getBuildings().values().stream()
+                .filter(b -> b.isComplete())
+                .count();
+
+        if (completedBuildings >= 12) return 1.30;
+        if (completedBuildings >= 8) return 1.20;
+        if (completedBuildings >= 4) return 1.10;
+        return 1.0;
+    }
+
+    public double getCurrentStructureTierMultiplier() {
+        return getStructureTierMultiplier();
+    }
+
     // ==================== PRODUCTION LOGGING ====================
 
     protected void logProduction(String itemId, int count) {
@@ -266,6 +303,21 @@ public abstract class WorksiteBlockEntity extends BlockEntity implements ITorque
 
     public Map<String, Integer> getProductionLog() {
         return Collections.unmodifiableMap(productionLog);
+    }
+
+    /**
+     * Returns a snapshot of production since the last collection and clears it.
+     * This avoids repeatedly counting the same output between village collection ticks.
+     */
+    public Map<String, Integer> consumeProductionLogSnapshot() {
+        if (productionLog.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<String, Integer> snapshot = new HashMap<>(productionLog);
+        productionLog.clear();
+        markDirty();
+        return snapshot;
     }
 
     // ==================== INVENTORY HELPERS ====================

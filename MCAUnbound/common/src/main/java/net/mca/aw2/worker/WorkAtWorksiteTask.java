@@ -1,8 +1,10 @@
 package net.mca.aw2.worker;
 
 import com.google.common.collect.ImmutableMap;
+import net.mca.aw2.AW2ColonyManager;
 import net.mca.aw2.worksite.WorksiteBlockEntity;
 import net.mca.entity.VillagerEntityMCA;
+import net.mca.server.world.data.VillageManager;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.MultiTickTask;
@@ -11,30 +13,26 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * AI task that makes MCA villagers path to their assigned AW2 worksite
  * and perform work ticks. This is the core behavioral bridge between
  * MCA's villager AI system and AW2's worksite automation.
- *
- * Integrated into VillagerTasksMCA's WORK and CHORE activity packages.
- * When a villager has an active worksite assignment (via WorkerManager),
- * this task will:
- * 1. Path the villager to the worksite block
- * 2. Once in range, call onWorkerTick() on the worksite each tick
- * 3. Swing arm periodically for visual feedback
- * 4. Continue working until max duration or assignment removed
  */
 public class WorkAtWorksiteTask extends MultiTickTask<VillagerEntityMCA> {
     private static final int WORK_RANGE_SQ = 9; // 3 blocks squared
     private static final int MAX_WORK_DURATION = 2400; // 2 minutes before taking a break
     private static final int PATH_RETRY_COOLDOWN = 40;
     private static final int ARM_SWING_INTERVAL = 10;
+    private static final int RATION_CONSUMPTION_INTERVAL = 200;
 
     private BlockPos targetWorksite;
     private int workTicksRemaining;
     private int pathRetryCooldown;
     private int armSwingTimer;
+    private int rationTimer;
+    private boolean cachedFedState = true;
 
     public WorkAtWorksiteTask() {
         super(ImmutableMap.of(
@@ -45,15 +43,23 @@ public class WorkAtWorksiteTask extends MultiTickTask<VillagerEntityMCA> {
     @Override
     protected boolean shouldRun(ServerWorld world, VillagerEntityMCA villager) {
         WorkerManager manager = WorkerManager.get(world);
+        AW2ColonyManager colony = AW2ColonyManager.get(world);
         Optional<BlockPos> assignment = manager.getAssignment(villager.getUuid());
 
-        if (assignment.isEmpty()) return false;
+        if (assignment.isEmpty()) {
+            colony.setWorkerStatus(villager.getUuid(), AW2ColonyManager.WorkerState.IDLE,
+                    AW2ColonyManager.WorkerBlockedReason.NO_ASSIGNMENT, null, world.getTime());
+            return false;
+        }
 
         targetWorksite = assignment.get();
+        colony.setWorkerStatus(villager.getUuid(), AW2ColonyManager.WorkerState.ASSIGNED,
+                AW2ColonyManager.WorkerBlockedReason.NONE, targetWorksite, world.getTime());
 
-        // Validate the worksite still exists
         if (!(world.getBlockEntity(targetWorksite) instanceof WorksiteBlockEntity)) {
             manager.unassignVillager(villager.getUuid(), world);
+            colony.setWorkerStatus(villager.getUuid(), AW2ColonyManager.WorkerState.BLOCKED,
+                    AW2ColonyManager.WorkerBlockedReason.WORKSITE_MISSING, targetWorksite, world.getTime());
             return false;
         }
 
@@ -65,45 +71,63 @@ public class WorkAtWorksiteTask extends MultiTickTask<VillagerEntityMCA> {
         workTicksRemaining = MAX_WORK_DURATION;
         pathRetryCooldown = 0;
         armSwingTimer = 0;
+        rationTimer = 0;
+        cachedFedState = true;
+        AW2ColonyManager.get(world).setWorkerStatus(villager.getUuid(), AW2ColonyManager.WorkerState.TRAVELING,
+                AW2ColonyManager.WorkerBlockedReason.OUT_OF_RANGE, targetWorksite, time);
     }
 
     @Override
     protected void keepRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
         if (targetWorksite == null) return;
 
+        AW2ColonyManager colony = AW2ColonyManager.get(world);
         double distanceSq = villager.getBlockPos().getSquaredDistance(targetWorksite);
 
         if (distanceSq <= WORK_RANGE_SQ) {
-            // In range - perform work
             if (world.getBlockEntity(targetWorksite) instanceof WorksiteBlockEntity worksite) {
-                worksite.onWorkerTick(villager.getUuid());
+                if (rationTimer <= 0) {
+                    cachedFedState = tryConsumeRation(world, villager.getUuid(), targetWorksite);
+                    rationTimer = RATION_CONSUMPTION_INTERVAL;
+                } else {
+                    rationTimer--;
+                }
 
-                // Visual feedback: swing arm periodically
+                worksite.onWorkerTick(villager.getUuid(), cachedFedState);
+
+                colony.setWorkerStatus(villager.getUuid(),
+                        cachedFedState ? AW2ColonyManager.WorkerState.WORKING : AW2ColonyManager.WorkerState.STARVING,
+                        cachedFedState ? AW2ColonyManager.WorkerBlockedReason.NONE : AW2ColonyManager.WorkerBlockedReason.NO_VILLAGE_FOOD,
+                        targetWorksite, time);
+
                 armSwingTimer++;
                 if (armSwingTimer >= ARM_SWING_INTERVAL) {
                     villager.swingHand(Hand.MAIN_HAND);
                     armSwingTimer = 0;
                 }
 
-                // Look at the worksite while working
                 villager.getLookControl().lookAt(
                         targetWorksite.getX() + 0.5,
                         targetWorksite.getY() + 0.5,
                         targetWorksite.getZ() + 0.5);
             }
             workTicksRemaining--;
+            return;
+        }
+
+        if (pathRetryCooldown <= 0) {
+            boolean started = villager.getNavigation().startMovingTo(
+                    targetWorksite.getX() + 0.5,
+                    targetWorksite.getY(),
+                    targetWorksite.getZ() + 0.5,
+                    0.5);
+
+            colony.setWorkerStatus(villager.getUuid(), AW2ColonyManager.WorkerState.TRAVELING,
+                    started ? AW2ColonyManager.WorkerBlockedReason.OUT_OF_RANGE : AW2ColonyManager.WorkerBlockedReason.PATHING_FAILED,
+                    targetWorksite, time);
+            pathRetryCooldown = PATH_RETRY_COOLDOWN;
         } else {
-            // Not in range - path to worksite
-            if (pathRetryCooldown <= 0) {
-                villager.getNavigation().startMovingTo(
-                        targetWorksite.getX() + 0.5,
-                        targetWorksite.getY(),
-                        targetWorksite.getZ() + 0.5,
-                        0.5);
-                pathRetryCooldown = PATH_RETRY_COOLDOWN;
-            } else {
-                pathRetryCooldown--;
-            }
+            pathRetryCooldown--;
         }
     }
 
@@ -112,13 +136,34 @@ public class WorkAtWorksiteTask extends MultiTickTask<VillagerEntityMCA> {
         if (workTicksRemaining <= 0) return false;
         if (targetWorksite == null) return false;
 
-        // Check if assignment still valid
         WorkerManager manager = WorkerManager.get(world);
-        return manager.getAssignment(villager.getUuid()).isPresent();
+        boolean present = manager.getAssignment(villager.getUuid()).isPresent();
+        if (!present) {
+            AW2ColonyManager.get(world).setWorkerStatus(villager.getUuid(), AW2ColonyManager.WorkerState.IDLE,
+                    AW2ColonyManager.WorkerBlockedReason.NO_ASSIGNMENT, null, time);
+        }
+        return present;
     }
 
     @Override
     protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
         villager.getNavigation().stop();
+        AW2ColonyManager.get(world).setWorkerStatus(villager.getUuid(), AW2ColonyManager.WorkerState.IDLE,
+                AW2ColonyManager.WorkerBlockedReason.NONE, targetWorksite, time);
+    }
+
+    private boolean tryConsumeRation(ServerWorld world, UUID villagerUuid, BlockPos worksitePos) {
+        var villageOpt = VillageManager.get(world).findNearestVillage(worksitePos, 128);
+        if (villageOpt.isEmpty()) {
+            return false;
+        }
+
+        AW2ColonyManager colony = AW2ColonyManager.get(world);
+        boolean consumed = colony.tryConsumeVillageRation(villageOpt.get().getVillageUuid(), colony.getWorkerRationCost());
+        if (!consumed) {
+            colony.setWorkerStatus(villagerUuid, AW2ColonyManager.WorkerState.STARVING,
+                    AW2ColonyManager.WorkerBlockedReason.NO_VILLAGE_FOOD, worksitePos, world.getTime());
+        }
+        return consumed;
     }
 }

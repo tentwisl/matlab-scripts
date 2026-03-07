@@ -1,13 +1,17 @@
 package net.mca.aw2.block;
 
+import net.mca.aw2.AW2BlockEntityTypes;
 import net.mca.aw2.warehouse.WarehouseBlockEntity;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityTicker;
+import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
@@ -46,7 +50,19 @@ public class WarehouseBlock extends BlockWithEntity {
     @Nullable
     @Override
     public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
-        return null;
+        return AW2BlockEntityTypes.WAREHOUSE.get().instantiate(pos, state);
+    }
+
+
+    @Nullable
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
+        if (world.isClient()) return null;
+        return (w, p, s, be) -> {
+            if (be instanceof WarehouseBlockEntity warehouse) {
+                WarehouseBlockEntity.tick(w, p, s, warehouse);
+            }
+        };
     }
 
     @Override
@@ -59,6 +75,12 @@ public class WarehouseBlock extends BlockWithEntity {
             if (warehouse.getOwnerUuid() == null) {
                 warehouse.setOwner(player.getUuid(), player.getName().getString());
             }
+
+            player.sendMessage(Text.literal(String.format(
+                    "§6[Warehouse]§r Logistics last cycle -> Hauled: %d, Supplied: %d",
+                    warehouse.getLastItemsHauledFromWorksites(),
+                    warehouse.getLastItemsSuppliedToWorksites()
+            )), true);
 
             // Open the double-chest GUI
             player.openHandledScreen(warehouse);
