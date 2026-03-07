@@ -34,7 +34,7 @@ public class ResearchManager extends PersistentState {
     }
 
     public static ResearchManager get(ServerWorld world) {
-        return world.getServer().getOverWorld().getPersistentStateManager()
+        return world.getServer().getOverworld().getPersistentStateManager()
                 .getOrCreate(ResearchManager::fromNbt, ResearchManager::new, DATA_KEY);
     }
 

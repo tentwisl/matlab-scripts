@@ -33,7 +33,7 @@ public class WorkerManager extends PersistentState {
     }
 
     public static WorkerManager get(ServerWorld world) {
-        return world.getServer().getOverWorld().getPersistentStateManager()
+        return world.getServer().getOverworld().getPersistentStateManager()
                 .getOrCreate(WorkerManager::fromNbt, WorkerManager::new, DATA_KEY);
     }
 
