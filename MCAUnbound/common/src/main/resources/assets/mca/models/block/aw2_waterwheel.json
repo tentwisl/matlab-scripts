@@ -1,0 +1,8 @@
+{
+	"parent": "minecraft:block/orientable",
+	"textures": {
+		"top": "mca:block/aw2_waterwheel_top",
+		"front": "mca:block/aw2_waterwheel_front",
+		"side": "mca:block/aw2_waterwheel_side"
+	}
+}

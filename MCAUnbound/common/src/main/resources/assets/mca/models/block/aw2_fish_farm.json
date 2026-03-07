@@ -1,0 +1,8 @@
+{
+	"parent": "minecraft:block/orientable",
+	"textures": {
+		"top": "mca:block/aw2_fish_farm_top",
+		"front": "mca:block/aw2_fish_farm_front",
+		"side": "mca:block/aw2_fish_farm_side"
+	}
+}

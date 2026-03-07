@@ -1,0 +1,8 @@
+{
+	"parent": "minecraft:block/orientable",
+	"textures": {
+		"top": "mca:block/aw2_research_table_top_book",
+		"front": "mca:block/aw2_research_table_front",
+		"side": "mca:block/aw2_research_table_side"
+	}
+}

@@ -1,0 +1,8 @@
+{
+	"parent": "minecraft:block/orientable",
+	"textures": {
+		"top": "mca:block/aw2_hand_crank_top",
+		"front": "mca:block/aw2_hand_crank_front",
+		"side": "mca:block/aw2_hand_crank_side"
+	}
+}

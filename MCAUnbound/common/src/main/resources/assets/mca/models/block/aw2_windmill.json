@@ -1,0 +1,8 @@
+{
+	"parent": "minecraft:block/orientable",
+	"textures": {
+		"top": "mca:block/aw2_windmill_top",
+		"front": "mca:block/aw2_windmill_front",
+		"side": "mca:block/aw2_windmill_side"
+	}
+}
