@@ -1,0 +1,8 @@
+{
+	"variants": {
+		"facing=east":  { "y": 90,  "model": "mca:block/aw2_engineering_station" },
+		"facing=north": {            "model": "mca:block/aw2_engineering_station" },
+		"facing=south": { "y": 180, "model": "mca:block/aw2_engineering_station" },
+		"facing=west":  { "y": 270, "model": "mca:block/aw2_engineering_station" }
+	}
+}

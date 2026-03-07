@@ -6,6 +6,7 @@ import net.mca.ParticleTypesMCA;
 import net.mca.SoundsMCA;
 import net.mca.TradeOffersMCA;
 import net.mca.advancement.criterion.CriterionMCA;
+import net.mca.aw2.AW2Integration;
 import net.mca.block.BlocksMCA;
 import net.mca.entity.EntitiesMCA;
 import net.mca.entity.interaction.gifts.GiftLoader;
@@ -36,6 +37,9 @@ public final class MCAForge {
         EntitiesMCA.bootstrap();
         MessagesMCA.bootstrap();
         CriterionMCA.bootstrap();
+
+        // AW2 Integration
+        AW2Integration.bootstrap();
     }
 
     @SubscribeEvent
