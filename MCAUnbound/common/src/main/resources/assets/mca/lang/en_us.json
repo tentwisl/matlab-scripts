@@ -1139,5 +1139,35 @@
   "nation.nevermind":               "Very well. Let me know if you need anything else.",
 
   "item.mca.nation_block":          "Nation Block",
-  "item.mca.nation_block.tooltip":  "The founding charter of your nation. More to come."
+  "item.mca.nation_block.tooltip":  "The founding charter of your nation. More to come.",
+
+  "block.mca.aw2_crop_farm":         "Crop Farm",
+  "block.mca.aw2_animal_farm":       "Animal Farm",
+  "block.mca.aw2_tree_farm":         "Tree Farm",
+  "block.mca.aw2_quarry":            "Quarry",
+  "block.mca.aw2_fish_farm":         "Fish Farm",
+  "block.mca.aw2_auto_crafting":     "Auto Crafting Station",
+  "block.mca.aw2_ore_processor":     "Ore Processor",
+  "block.mca.aw2_hand_crank":        "Hand Crank",
+  "block.mca.aw2_windmill":          "Windmill",
+  "block.mca.aw2_waterwheel":        "Water Wheel",
+  "block.mca.aw2_stirling_generator":"Stirling Generator",
+  "block.mca.aw2_research_table":    "Research Table",
+  "block.mca.aw2_engineering_station":"Engineering Station",
+  "block.mca.aw2_warehouse":         "Warehouse",
+
+  "item.mca.aw2_research_book":      "Research Book",
+  "item.mca.aw2_research_notes":     "Research Notes",
+  "item.mca.aw2_work_order":         "Work Order",
+  "item.mca.aw2_upgrade_size_medium":"Size Upgrade (Medium)",
+  "item.mca.aw2_upgrade_size_large": "Size Upgrade (Large)",
+  "item.mca.aw2_upgrade_enchanted_1":"Enchanted Tools I",
+  "item.mca.aw2_upgrade_enchanted_2":"Enchanted Tools II",
+
+  "container.mca.aw2_warehouse":     "Warehouse",
+
+  "interaction.worksite.assigned":   "%s has been assigned to the %s.",
+  "interaction.worksite.full":       "The %s is already at maximum capacity.",
+  "interaction.worksite.none_nearby":"No AW2 worksite found nearby.",
+  "interaction.worksite.unassigned": "Worksite assignment removed."
 }

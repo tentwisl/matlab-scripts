@@ -1,14 +1,20 @@
 package net.mca.aw2.block;
 
+import net.mca.aw2.WorksiteProductionTracker;
 import net.mca.aw2.worksite.WorksiteBlockEntity;
 import net.mca.aw2.worksite.WorksiteType;
 import net.mca.aw2.worker.WorkerManager;
+import net.mca.server.world.data.Village;
+import net.mca.server.world.data.VillageManager;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.item.ItemStack;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.DirectionProperty;
@@ -21,6 +27,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Optional;
 
 /**
  * Base block for all AW2 worksites. Handles placement, interaction,
@@ -105,6 +113,28 @@ public class WorksiteBlock extends BlockWithEntity {
     }
 
     @Override
+    public void onPlaced(World world, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack itemStack) {
+        super.onPlaced(world, pos, state, placer, itemStack);
+
+        // Auto-register this worksite with the nearest village
+        if (!world.isClient() && world instanceof ServerWorld serverWorld) {
+            VillageManager villageManager = VillageManager.get(serverWorld);
+            Optional<Village> nearestVillage = villageManager.findNearestVillage(pos, Village.BORDER_MARGIN);
+            nearestVillage.ifPresent(village -> {
+                WorksiteProductionTracker tracker = WorksiteProductionTracker.get(serverWorld);
+                tracker.registerWorksite(pos, village.getVillageUuid(), worksiteType.name());
+
+                if (placer instanceof PlayerEntity player) {
+                    player.sendMessage(Text.literal(String.format(
+                            "§6[%s]§r Registered with village: %s",
+                            worksiteType.getDisplayName(), village.getName()
+                    )), true);
+                }
+            });
+        }
+    }
+
+    @Override
     public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
         if (!state.isOf(newState.getBlock())) {
             BlockEntity be = world.getBlockEntity(pos);
@@ -116,6 +146,12 @@ public class WorksiteBlock extends BlockWithEntity {
                 for (int i = 0; i < worksite.getOutputInventory().size(); i++) {
                     Block.dropStack(world, pos, worksite.getOutputInventory().getStack(i));
                 }
+            }
+
+            // Unregister from production tracker
+            if (!world.isClient() && world instanceof ServerWorld serverWorld) {
+                WorksiteProductionTracker tracker = WorksiteProductionTracker.get(serverWorld);
+                tracker.unregisterWorksite(pos);
             }
         }
         super.onStateReplaced(state, world, pos, newState, moved);

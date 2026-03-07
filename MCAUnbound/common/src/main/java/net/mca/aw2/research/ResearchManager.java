@@ -38,6 +38,15 @@ public class ResearchManager extends PersistentState {
                 .getOrCreate(ResearchManager::fromNbt, ResearchManager::new, DATA_KEY);
     }
 
+    /**
+     * Initializes the static research goal tree. Called during bootstrap to
+     * ensure research goals are loaded before any player accesses them.
+     */
+    public static void initializeResearchGoals() {
+        Map<Identifier, ResearchGoal> tree = ResearchGoal.buildDefaultTree();
+        AW2Integration.LOGGER.info("Initialized {} research goals.", tree.size());
+    }
+
     public Map<Identifier, ResearchGoal> getResearchTree() {
         if (researchTree == null) {
             researchTree = ResearchGoal.buildDefaultTree();

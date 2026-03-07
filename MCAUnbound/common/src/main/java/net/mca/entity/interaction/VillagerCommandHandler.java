@@ -201,7 +201,17 @@ public class VillagerCommandHandler extends EntityCommandHandler<VillagerEntityM
             }
             case "stopworking" -> {
                 entity.getVillagerBrain().abandonJob();
+                // Also remove AW2 worksite assignment if present
+                net.mca.aw2.worker.WorkerManager workerMgr = net.mca.aw2.worker.WorkerManager.get((ServerWorld) entity.getWorld());
+                if (workerMgr.isAssigned(entity.getUuid())) {
+                    workerMgr.unassignVillager(entity.getUuid(), (ServerWorld) entity.getWorld());
+                    entity.sendChatMessage(player, "interaction.worksite.unassigned");
+                }
                 return true;
+            }
+            case "assignworksite" -> {
+                // Assign this villager to the nearest AW2 worksite within 16 blocks
+                return handleAssignWorksite(player);
             }
             case "armor" -> {
                 entity.getVillagerBrain().setArmorWear(!entity.getVillagerBrain().getArmorWear());
@@ -343,6 +353,49 @@ public class VillagerCommandHandler extends EntityCommandHandler<VillagerEntityM
         }
 
         Dialogues.getInstance().selectAnswer(entity, player, questionId, question.getRandomAnswer().getName());
+    }
+
+    private boolean handleAssignWorksite(ServerPlayerEntity player) {
+        ServerWorld world = (ServerWorld) entity.getWorld();
+        net.mca.aw2.worker.WorkerManager workerMgr = net.mca.aw2.worker.WorkerManager.get(world);
+
+        // Find nearest AW2 worksite within 16 blocks
+        BlockPos villagerPos = entity.getBlockPos();
+        net.mca.aw2.worksite.WorksiteBlockEntity nearestWorksite = null;
+        double nearestDist = Double.MAX_VALUE;
+
+        for (int dx = -16; dx <= 16; dx++) {
+            for (int dy = -4; dy <= 4; dy++) {
+                for (int dz = -16; dz <= 16; dz++) {
+                    BlockPos checkPos = villagerPos.add(dx, dy, dz);
+                    if (world.getBlockEntity(checkPos) instanceof net.mca.aw2.worksite.WorksiteBlockEntity worksite) {
+                        double dist = villagerPos.getSquaredDistance(checkPos);
+                        if (dist < nearestDist) {
+                            nearestDist = dist;
+                            nearestWorksite = worksite;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (nearestWorksite == null) {
+            player.sendMessage(Text.translatable("interaction.worksite.none_nearby"), true);
+            return true;
+        }
+
+        String villagerName = entity.getName().getString();
+        boolean assigned = workerMgr.assignVillagerToWorksite(
+                entity.getUuid(), villagerName, nearestWorksite.getPos(), world);
+
+        if (assigned) {
+            player.sendMessage(Text.translatable("interaction.worksite.assigned",
+                    villagerName, nearestWorksite.getWorksiteType().getDisplayName()), true);
+        } else {
+            player.sendMessage(Text.translatable("interaction.worksite.full",
+                    nearestWorksite.getWorksiteType().getDisplayName()), true);
+        }
+        return true;
     }
 
     private void payEmeralds(ServerPlayerEntity player, int emeralds) {

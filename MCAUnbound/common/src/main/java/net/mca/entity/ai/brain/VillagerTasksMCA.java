@@ -17,6 +17,7 @@ import net.mca.entity.ai.brain.tasks.chore.ChoppingTask;
 import net.mca.entity.ai.brain.tasks.chore.FishingTask;
 import net.mca.entity.ai.brain.tasks.chore.HarvestingTask;
 import net.mca.entity.ai.brain.tasks.chore.HuntingTask;
+import net.mca.aw2.worker.WorkAtWorksiteTask;
 import net.mca.entity.ai.relationship.AgeState;
 import net.mca.server.world.data.VillageManager;
 import net.mca.server.world.data.villageComponents.VillageGuardsManager;
@@ -397,6 +398,7 @@ public class VillagerTasksMCA {
 
         return ImmutableList.of(
                 getMinimalLookBehavior(),
+                Pair.of(4, new WorkAtWorksiteTask()),
                 Pair.of(5, new RandomTask<>(
                         ImmutableList.of(Pair.of(villagerWorkTask, 7),
                                 Pair.of(GoToIfNearbyTask.create(MemoryModuleType.JOB_SITE, 0.4F, 4), 2),
@@ -566,7 +568,8 @@ public class VillagerTasksMCA {
                 Pair.of(0, new ChoppingTask()),
                 Pair.of(0, new FishingTask()),
                 Pair.of(0, new HarvestingTask()),
-                Pair.of(0, new HuntingTask())
+                Pair.of(0, new HuntingTask()),
+                Pair.of(1, new WorkAtWorksiteTask())
         );
     }
 

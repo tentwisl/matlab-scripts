@@ -8,7 +8,6 @@ import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.Properties;
-import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
@@ -19,6 +18,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Warehouse block. A large shared storage system for the AW2 automation chain.
+ * Opens a double-chest GUI (9x6) when right-clicked.
  */
 public class WarehouseBlock extends BlockWithEntity {
     public static final DirectionProperty FACING = Properties.HORIZONTAL_FACING;
@@ -60,26 +60,11 @@ public class WarehouseBlock extends BlockWithEntity {
                 warehouse.setOwner(player.getUuid(), player.getName().getString());
             }
 
-            warehouse.updateStockLevels();
-            int totalItems = warehouse.getStockLevels().values().stream().mapToInt(Integer::intValue).sum();
-            int uniqueTypes = warehouse.getStockLevels().size();
-
-            player.sendMessage(Text.literal(String.format(
-                    "§6[Warehouse]§r Items: %d total (%d types) | Slots: %d/%d used",
-                    totalItems, uniqueTypes,
-                    countUsedSlots(warehouse), WarehouseBlockEntity.INVENTORY_SIZE
-            )), true);
+            // Open the double-chest GUI
+            player.openHandledScreen(warehouse);
         }
 
         return ActionResult.SUCCESS;
-    }
-
-    private int countUsedSlots(WarehouseBlockEntity warehouse) {
-        int count = 0;
-        for (int i = 0; i < WarehouseBlockEntity.INVENTORY_SIZE; i++) {
-            if (!warehouse.getInventory().getStack(i).isEmpty()) count++;
-        }
-        return count;
     }
 
     @Override
@@ -87,8 +72,9 @@ public class WarehouseBlock extends BlockWithEntity {
         if (!state.isOf(newState.getBlock())) {
             BlockEntity be = world.getBlockEntity(pos);
             if (be instanceof WarehouseBlockEntity warehouse) {
-                for (int i = 0; i < WarehouseBlockEntity.INVENTORY_SIZE; i++) {
-                    Block.dropStack(world, pos, warehouse.getInventory().getStack(i));
+                var inv = warehouse.getInventory();
+                for (int i = 0; i < inv.size(); i++) {
+                    Block.dropStack(world, pos, inv.getStack(i));
                 }
             }
         }

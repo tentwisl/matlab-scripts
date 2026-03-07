@@ -3,12 +3,20 @@ package net.mca.aw2.warehouse;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventories;
+import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.screen.GenericContainerScreenHandler;
+import net.minecraft.screen.NamedScreenHandlerFactory;
+import net.minecraft.screen.ScreenHandler;
+import net.minecraft.text.Text;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -17,16 +25,13 @@ import java.util.*;
  * deposit outputs into and draw inputs from. Acts as the central logistics
  * hub for AW2 automation chains.
  *
- * Ported from AW2's TileWarehouse. Features:
- * - 54-slot main inventory (double chest equivalent)
- * - Item filtering per slot
- * - Auto-input from adjacent worksites
- * - Stock tracking for the nation economy system
+ * Implements NamedScreenHandlerFactory to provide a double-chest GUI
+ * when players right-click the warehouse block.
  */
-public class WarehouseBlockEntity extends BlockEntity {
+public class WarehouseBlockEntity extends BlockEntity implements NamedScreenHandlerFactory {
     public static final int INVENTORY_SIZE = 54;
 
-    private final SimpleInventory inventory = new SimpleInventory(INVENTORY_SIZE);
+    private final WarehouseInventory inventory = new WarehouseInventory(INVENTORY_SIZE, this);
     private UUID ownerUuid;
     private String ownerName = "";
 
@@ -41,10 +46,21 @@ public class WarehouseBlockEntity extends BlockEntity {
         super(type, pos, state);
     }
 
-    /**
-     * Attempts to insert an item stack into the warehouse.
-     * Respects slot filters and stacking rules.
-     */
+    // ==================== SCREEN HANDLER ====================
+
+    @Override
+    public Text getDisplayName() {
+        return Text.translatable("container.mca.aw2_warehouse");
+    }
+
+    @Nullable
+    @Override
+    public ScreenHandler createMenu(int syncId, PlayerInventory playerInventory, PlayerEntity player) {
+        return GenericContainerScreenHandler.createGeneric9x6(syncId, playerInventory, inventory);
+    }
+
+    // ==================== ITEM OPERATIONS ====================
+
     public ItemStack insertItem(ItemStack stack) {
         if (stack.isEmpty()) return ItemStack.EMPTY;
 
@@ -82,9 +98,6 @@ public class WarehouseBlockEntity extends BlockEntity {
         return remaining;
     }
 
-    /**
-     * Extracts items from the warehouse matching the given item.
-     */
     public ItemStack extractItem(ItemStack target, int maxAmount) {
         int extracted = 0;
         ItemStack result = ItemStack.EMPTY;
@@ -110,9 +123,6 @@ public class WarehouseBlockEntity extends BlockEntity {
         return result;
     }
 
-    /**
-     * Counts how many of a specific item are stored.
-     */
     public int countItem(ItemStack target) {
         int count = 0;
         for (int i = 0; i < INVENTORY_SIZE; i++) {
@@ -124,9 +134,6 @@ public class WarehouseBlockEntity extends BlockEntity {
         return count;
     }
 
-    /**
-     * Updates the stock level cache for economy integration.
-     */
     public void updateStockLevels() {
         stockLevels.clear();
         for (int i = 0; i < INVENTORY_SIZE; i++) {
@@ -175,7 +182,7 @@ public class WarehouseBlockEntity extends BlockEntity {
     public UUID getOwnerUuid() { return ownerUuid; }
     public String getOwnerName() { return ownerName; }
 
-    public SimpleInventory getInventory() { return inventory; }
+    public Inventory getInventory() { return inventory; }
 
     // ==================== NBT ====================
 
@@ -194,7 +201,6 @@ public class WarehouseBlockEntity extends BlockEntity {
         }
         Inventories.writeNbt(nbt, stacks);
 
-        // Filters
         NbtCompound filterNbt = new NbtCompound();
         for (Map.Entry<Integer, String> entry : slotFilters.entrySet()) {
             filterNbt.putString("Slot" + entry.getKey(), entry.getValue());
@@ -225,6 +231,27 @@ public class WarehouseBlockEntity extends BlockEntity {
                 if (filterNbt.contains(key)) {
                     slotFilters.put(i, filterNbt.getString(key));
                 }
+            }
+        }
+    }
+
+    /**
+     * Custom inventory wrapper that marks the block entity dirty on changes
+     * and can be used as the backing inventory for GenericContainerScreenHandler.
+     */
+    private static class WarehouseInventory extends SimpleInventory {
+        private final WarehouseBlockEntity owner;
+
+        WarehouseInventory(int size, WarehouseBlockEntity owner) {
+            super(size);
+            this.owner = owner;
+        }
+
+        @Override
+        public void markDirty() {
+            super.markDirty();
+            if (owner != null) {
+                owner.markDirty();
             }
         }
     }

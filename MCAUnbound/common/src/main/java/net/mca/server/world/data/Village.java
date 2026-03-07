@@ -324,6 +324,11 @@ public class Village implements Iterable<Building> {
             cleanReputation();
         }
 
+        // AW2 Integration: collect worksite production into the village economy every 6000 ticks (~5 min)
+        if (time % 6000 == 0) {
+            collectWorksiteProduction(world);
+        }
+
         if (isVillageUpdateTime && lastMoveIn + MOVE_IN_COOLDOWN < time && WorldUtils.isChunkLoaded(world, getCenter())) {
             villageGuardsManager.spawnGuards(world);
             villageInnManager.updateInn(world);
@@ -334,6 +339,33 @@ public class Village implements Iterable<Building> {
                 placeTownHall(world);
             }
         }
+    }
+
+    /**
+     * Collects production data from all AW2 worksites within this village's bounds
+     * and feeds it into the WorksiteProductionTracker for nation economy integration.
+     */
+    private void collectWorksiteProduction(ServerWorld world) {
+        net.mca.aw2.WorksiteProductionTracker tracker = net.mca.aw2.WorksiteProductionTracker.get(world);
+        UUID villageUuid = getVillageUuid();
+
+        // Scan all worksites registered to this village and collect their production logs
+        for (BlockPos wsPos : tracker.getWorksitesForCity(villageUuid)) {
+            if (world.getBlockEntity(wsPos) instanceof net.mca.aw2.worksite.WorksiteBlockEntity worksite) {
+                Map<String, Integer> prodLog = worksite.getProductionLog();
+                if (!prodLog.isEmpty()) {
+                    tracker.recordProduction(wsPos, prodLog);
+                }
+            }
+        }
+    }
+
+    /**
+     * Creates a deterministic UUID from this village's integer ID,
+     * used as the bridge between Village (int id) and WorksiteProductionTracker (UUID cityId).
+     */
+    public UUID getVillageUuid() {
+        return new UUID(0L, (long) id);
     }
 
     public void onEnter(ServerWorld world) {
