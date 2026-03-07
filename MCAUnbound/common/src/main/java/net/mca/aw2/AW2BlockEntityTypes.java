@@ -31,22 +31,34 @@ public interface AW2BlockEntityTypes {
     // ==================== WORKSITES ====================
 
     RegistrySupplier<BlockEntityType<CropFarmBlockEntity>> CROP_FARM =
-            register("aw2_crop_farm", CropFarmBlockEntity::new, List.of(AW2Blocks.CROP_FARM));
+            register("aw2_crop_farm",
+                    (pos, state) -> new CropFarmBlockEntity(AW2BlockEntityTypes.CROP_FARM.get(), pos, state),
+                    List.of(AW2Blocks.CROP_FARM));
 
     RegistrySupplier<BlockEntityType<AnimalFarmBlockEntity>> ANIMAL_FARM =
-            register("aw2_animal_farm", AnimalFarmBlockEntity::new, List.of(AW2Blocks.ANIMAL_FARM));
+            register("aw2_animal_farm",
+                    (pos, state) -> new AnimalFarmBlockEntity(AW2BlockEntityTypes.ANIMAL_FARM.get(), pos, state),
+                    List.of(AW2Blocks.ANIMAL_FARM));
 
     RegistrySupplier<BlockEntityType<TreeFarmBlockEntity>> TREE_FARM =
-            register("aw2_tree_farm", TreeFarmBlockEntity::new, List.of(AW2Blocks.TREE_FARM));
+            register("aw2_tree_farm",
+                    (pos, state) -> new TreeFarmBlockEntity(AW2BlockEntityTypes.TREE_FARM.get(), pos, state),
+                    List.of(AW2Blocks.TREE_FARM));
 
     RegistrySupplier<BlockEntityType<QuarryBlockEntity>> QUARRY =
-            register("aw2_quarry", QuarryBlockEntity::new, List.of(AW2Blocks.QUARRY));
+            register("aw2_quarry",
+                    (pos, state) -> new QuarryBlockEntity(AW2BlockEntityTypes.QUARRY.get(), pos, state),
+                    List.of(AW2Blocks.QUARRY));
 
     RegistrySupplier<BlockEntityType<FishFarmBlockEntity>> FISH_FARM =
-            register("aw2_fish_farm", FishFarmBlockEntity::new, List.of(AW2Blocks.FISH_FARM));
+            register("aw2_fish_farm",
+                    (pos, state) -> new FishFarmBlockEntity(AW2BlockEntityTypes.FISH_FARM.get(), pos, state),
+                    List.of(AW2Blocks.FISH_FARM));
 
     RegistrySupplier<BlockEntityType<AutoCraftingBlockEntity>> AUTO_CRAFTING =
-            register("aw2_auto_crafting", AutoCraftingBlockEntity::new, List.of(AW2Blocks.AUTO_CRAFTING));
+            register("aw2_auto_crafting",
+                    (pos, state) -> new AutoCraftingBlockEntity(AW2BlockEntityTypes.AUTO_CRAFTING.get(), pos, state),
+                    List.of(AW2Blocks.AUTO_CRAFTING));
 
     // ==================== TORQUE GENERATORS ====================
 
