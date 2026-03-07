@@ -57,9 +57,12 @@ public final class NationDebugCommand {
             nearestVillageName = nearestVillage.get().getName();
         }
 
+        final int nearestVillageFoodFinal = nearestVillageFood;
+        final String nearestVillageNameFinal = nearestVillageName;
+
         ctx.getSource().sendFeedback(() -> Text.literal(String.format(
                 "[AW2 Debug] worksites=%d, assignments=%d, workerStatuses=%d, nearestVillage=%s, villageFood=%d",
-                registeredWorksites, assignments, trackedStatuses, nearestVillageName, nearestVillageFood
+                registeredWorksites, assignments, trackedStatuses, nearestVillageNameFinal, nearestVillageFoodFinal
         )), false);
 
         return 1;
