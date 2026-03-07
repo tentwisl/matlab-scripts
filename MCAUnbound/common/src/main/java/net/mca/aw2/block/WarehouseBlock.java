@@ -1,5 +1,6 @@
 package net.mca.aw2.block;
 
+import net.mca.aw2.AW2BlockEntityTypes;
 import net.mca.aw2.warehouse.WarehouseBlockEntity;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntity;
@@ -46,7 +47,7 @@ public class WarehouseBlock extends BlockWithEntity {
     @Nullable
     @Override
     public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
-        return null;
+        return AW2BlockEntityTypes.WAREHOUSE.get().instantiate(pos, state);
     }
 
     @Override

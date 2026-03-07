@@ -1,5 +1,6 @@
 package net.mca.aw2.block;
 
+import net.mca.aw2.AW2BlockEntityTypes;
 import net.mca.aw2.WorksiteProductionTracker;
 import net.mca.aw2.worksite.WorksiteBlockEntity;
 import net.mca.aw2.worksite.WorksiteType;
@@ -67,8 +68,15 @@ public class WorksiteBlock extends BlockWithEntity {
     @Nullable
     @Override
     public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
-        // Subclasses override this
-        return null;
+        return switch (worksiteType) {
+            case CROP_FARM -> AW2BlockEntityTypes.CROP_FARM.get().instantiate(pos, state);
+            case ANIMAL_FARM -> AW2BlockEntityTypes.ANIMAL_FARM.get().instantiate(pos, state);
+            case TREE_FARM -> AW2BlockEntityTypes.TREE_FARM.get().instantiate(pos, state);
+            case QUARRY -> AW2BlockEntityTypes.QUARRY.get().instantiate(pos, state);
+            case FISH_FARM -> AW2BlockEntityTypes.FISH_FARM.get().instantiate(pos, state);
+            case AUTO_CRAFTING -> AW2BlockEntityTypes.AUTO_CRAFTING.get().instantiate(pos, state);
+            case ORE_PROCESSOR -> AW2BlockEntityTypes.AUTO_CRAFTING.get().instantiate(pos, state);
+        };
     }
 
     @Nullable
