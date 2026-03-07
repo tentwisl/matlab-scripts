@@ -1,5 +1,6 @@
 package net.mca.aw2.block;
 
+import net.mca.aw2.AW2BlockEntityTypes;
 import net.mca.aw2.worksite.EngineeringStationBlockEntity;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntity;
@@ -48,7 +49,7 @@ public class EngineeringStationBlock extends BlockWithEntity {
     @Nullable
     @Override
     public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
-        return null;
+        return AW2BlockEntityTypes.ENGINEERING_STATION.get().instantiate(pos, state);
     }
 
     @Override
